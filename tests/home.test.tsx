@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import HomePage from "@/app/page";
 
 describe("CoachConnect home page", () => {
@@ -30,6 +30,13 @@ describe("CoachConnect home page", () => {
     expect(screen.getByText(/3 focused sports/i)).toBeInTheDocument();
   });
 
+  it("shows six coach profiles across the focused sports", () => {
+    render(<HomePage />);
+
+    expect(screen.getAllByRole("button", { name: /view .*'s profile/i })).toHaveLength(6);
+    expect(screen.getAllByText(/Lahore|Karachi|Islamabad/i).length).toBeGreaterThanOrEqual(6);
+  });
+
   it("filters the visible coaches when an athlete chooses a sport", () => {
     render(<HomePage />);
 
@@ -56,6 +63,59 @@ describe("CoachConnect home page", () => {
     expect(screen.queryByRole("heading", { name: "Ayesha Khan" })).not.toBeInTheDocument();
   });
 
+  it("interprets natural-language sport, city, level and budget filters", () => {
+    render(<HomePage />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: /what do you need/i }), {
+      target: { value: "beginner tennis coach in Karachi under Rs 4,500" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /find coaches/i }));
+
+    const filters = screen.getByRole("region", { name: /interpreted search filters/i });
+    expect(within(filters).getByText("Tennis")).toBeInTheDocument();
+    expect(within(filters).getByText("Karachi")).toBeInTheDocument();
+    expect(within(filters).getByText("Beginner")).toBeInTheDocument();
+    expect(within(filters).getByText("Up to Rs 4,500")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(/1 coach/i);
+    expect(screen.getByRole("heading", { name: "Hamza Siddiqui" })).toBeInTheDocument();
+  });
+
+  it("lets athletes remove an interpreted filter to broaden results", () => {
+    render(<HomePage />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: /what do you need/i }), {
+      target: { value: "online tennis in Islamabad under Rs 3,000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /find coaches/i }));
+
+    expect(screen.getByRole("heading", { name: "Omar Farooq" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Sara Ahmed" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /remove tennis filter/i }));
+
+    expect(screen.getByRole("status")).toHaveTextContent(/2 coaches/i);
+    expect(screen.getByRole("heading", { name: "Omar Farooq" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sara Ahmed" })).toBeInTheDocument();
+  });
+
+  it("interprets delivery mode, minimum rating and availability", () => {
+    render(<HomePage />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: /what do you need/i }), {
+      target: { value: "online strength coach rated 4.7 available Wednesday under Rs 3,500" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /find coaches/i }));
+
+    const filters = screen.getByRole("region", { name: /interpreted search filters/i });
+    expect(within(filters).getByText("Strength")).toBeInTheDocument();
+    expect(within(filters).getByText("Online")).toBeInTheDocument();
+    expect(within(filters).getByText("4.7+ rating")).toBeInTheDocument();
+    expect(within(filters).getByText("Wednesday")).toBeInTheDocument();
+    expect(within(filters).getByText("Up to Rs 3,500")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sara Ahmed" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(/1 coach/i);
+  });
+
   it("opens a private, clear service profile from a coach card", () => {
     render(<HomePage />);
 
@@ -70,7 +130,19 @@ describe("CoachConnect home page", () => {
     expect(screen.queryByText(/exact home address/i)).not.toBeInTheDocument();
   });
 
-  it("presents production-ready navigation and keeps unavailable booking disabled", () => {
+  it("shows selectable weekly availability before the account handoff", () => {
+    render(<HomePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
+    expect(screen.getByRole("heading", { name: /weekly availability/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /select saturday at 10:00 am/i }));
+
+    expect(screen.getByRole("status")).toHaveTextContent(/saturday.*10:00 am selected/i);
+    expect(screen.getByRole("link", { name: /sign in to reserve/i })).toHaveAttribute("href", "/account");
+  });
+
+  it("presents production-ready navigation and complete service availability", () => {
     render(<HomePage />);
 
     expect(document.body).not.toHaveTextContent(/\b(sample|phase\s*\d+|demo preview)\b/i);
@@ -85,7 +157,8 @@ describe("CoachConnect home page", () => {
 
     expect(screen.getByText(/60 minutes.*online/i)).toBeInTheDocument();
     expect(screen.getByText(/video-call link/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /availability coming soon/i })).toBeDisabled();
+    expect(screen.getByRole("heading", { name: /weekly availability/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /select monday at 10:00 am/i })).toBeEnabled();
     expect(screen.getByText(/coachconnect does not collect money or issue refunds/i)).toBeInTheDocument();
   });
 
@@ -118,6 +191,39 @@ describe("CoachConnect home page", () => {
       "aria-expanded",
       "false",
     );
+  });
+
+  it("smoothly scrolls section navigation and closes the mobile menu", () => {
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+    render(<HomePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
+    fireEvent.click(screen.getByRole("link", { name: /find a coach/i }));
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    expect(screen.getByRole("button", { name: /open navigation menu/i })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("returns to the hero and focuses search without placing the form under the header", () => {
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+    render(<HomePage />);
+
+    const searchInput = screen.getByRole("textbox", { name: /what do you need/i });
+    fireEvent.click(screen.getByRole("link", { name: /search coaches/i }));
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    expect(searchInput).toHaveFocus();
   });
 
   it("moves focus into the profile and restores it after Escape", () => {

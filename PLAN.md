@@ -1,6 +1,6 @@
 # CoachConnect — Focused Zero-Cost MVP Plan
 
-**Status:** Phase 1 complete; eye-catching home refresh complete; Phase 2 Supabase account foundation in progress.
+**Status:** Polished home and Supabase account foundation complete; public discovery and weekly availability selection implemented. Authenticated booking persistence remains deferred.
 
 **Launch market:** Pakistan  
 **Currency:** Pakistani rupees (PKR), displayed as `Rs 3,000`  
@@ -708,6 +708,8 @@ Checkpoint: `phase-2-profiles`
 
 ### Phase 3 — Discovery and both AI features (1.5 days)
 
+**Current status:** The public zero-cost discovery slice is implemented with keyword/name fallback, local semantic aliases, natural-language extraction for sport, city, mode, level, budget, rating, and weekday availability, visible removable filters, explainable profile reasons, and empty states. The separate preference questionnaire and database-backed publication check remain future work.
+
 Build:
 
 - Browse page
@@ -731,6 +733,8 @@ Ali physically tests:
 Checkpoint: `phase-3-discovery-ai`
 
 ### Phase 4 — Availability, booking, and cancellations (1 day)
+
+**Current status:** Public coach profiles now show selectable weekly availability and an honest account handoff. Saving reservations, conflict-safe slot locking, dashboards, time-off management, and cancellation records require the authenticated database workflow and are deferred with login work.
 
 Build:
 

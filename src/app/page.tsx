@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, type MouseEvent, useEffect, useRef, useState } from "react";
 
 const sports = [
   { id: "all", number: "01", name: "All coaches", detail: "Explore every specialty" },
@@ -21,6 +21,7 @@ const coaches = [
     reason: "Strong fit for beginner batting in Lahore and this price range.",
     badge: "Top match",
     mode: "In person",
+    availability: ["Saturday", "Sunday"],
     image: "/images/coach-ayesha.jpg",
   },
   {
@@ -33,6 +34,7 @@ const coaches = [
     reason: "Beginner-friendly tennis coaching with court equipment available.",
     badge: "Great fit",
     mode: "In person",
+    availability: ["Tuesday", "Saturday"],
     image: "/images/coach-hamza.jpg",
   },
   {
@@ -45,21 +47,154 @@ const coaches = [
     reason: "Online strength coaching designed for limited equipment.",
     badge: "Online",
     mode: "Online",
+    availability: ["Monday", "Wednesday"],
     image: "/images/coach-sara.jpg",
   },
+  {
+    name: "Zainab Malik",
+    location: "Karachi",
+    sport: "Cricket",
+    specialty: "Fast bowling and fielding",
+    rating: "4.8",
+    price: "Rs 3,800",
+    reason: "Focused cricket coaching for improving bowling rhythm and fielding speed.",
+    badge: "Cricket skills",
+    mode: "In person",
+    availability: ["Friday", "Saturday"],
+    image: "/images/coach-zainab.jpg",
+  },
+  {
+    name: "Omar Farooq",
+    location: "Islamabad",
+    sport: "Tennis",
+    specialty: "Serve technique and footwork",
+    rating: "4.7",
+    price: "Rs 2,800",
+    reason: "Flexible tennis coaching for serve mechanics and confident movement.",
+    badge: "Flexible",
+    mode: "Online",
+    availability: ["Saturday", "Sunday"],
+    image: "/images/coach-omar.jpg",
+  },
+  {
+    name: "Bilal Raza",
+    location: "Lahore",
+    sport: "Strength",
+    specialty: "Athletic strength and mobility",
+    rating: "4.9",
+    price: "Rs 3,200",
+    reason: "Athlete-focused strength sessions balancing power, control and mobility.",
+    badge: "Athletic prep",
+    mode: "In person",
+    availability: ["Monday", "Thursday"],
+    image: "/images/coach-bilal.jpg",
+  },
 ];
+
+type SearchFilters = {
+  rawQuery: string;
+  sport: string | null;
+  city: string;
+  level: string | null;
+  mode: string | null;
+  budget: number | null;
+  rating: number | null;
+  availability: string | null;
+  terms: string[];
+};
+
+const sportAliases = {
+  cricket: ["cricket", "batting", "bowling", "fielding"],
+  tennis: ["tennis", "serve", "racquet", "racket"],
+  strength: ["strength", "fitness", "gym", "conditioning", "mobility"],
+};
+const searchableCities = ["lahore", "karachi", "islamabad"];
+const searchableLevels = ["beginner", "intermediate", "advanced"];
+const searchableDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const searchStopWords = new Set([
+  "a", "an", "and", "at", "coach", "coaching", "for", "in", "me", "my", "near",
+  "of", "on", "please", "rs", "session", "sessions", "the", "trainer", "under", "up",
+  "with", "within",
+]);
+
+const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+const formatRupees = (value: number) => `Rs ${value.toLocaleString("en-PK")}`;
+const coachPrice = (price: string) => Number(price.replace(/\D/g, ""));
+
+function parseSearch(query: string, selectedCity: string): SearchFilters {
+  const rawQuery = query.trim();
+  const normalized = rawQuery.toLowerCase();
+  const sport = Object.entries(sportAliases).find(([, aliases]) =>
+    aliases.some((alias) => normalized.includes(alias)),
+  )?.[0] ?? null;
+  const queryCity = searchableCities.find((city) => normalized.includes(city));
+  const level = searchableLevels.find((entry) => normalized.includes(entry)) ?? null;
+  const mode = /\bonline\b/.test(normalized)
+    ? "online"
+    : /\b(in[ -]?person|face[ -]?to[ -]?face|local)\b/.test(normalized)
+      ? "in person"
+      : null;
+  const budgetMatch = normalized.match(/(?:under|below|up\s*to|max(?:imum)?|budget(?:\s+of)?)\D{0,12}(\d[\d,]*)/);
+  const budget = budgetMatch ? Number(budgetMatch[1].replace(/,/g, "")) : null;
+  const ratingMatch = normalized.match(/(?:rated?|rating|at\s+least)\D{0,8}([1-5](?:\.\d)?)/)
+    ?? normalized.match(/([1-5](?:\.\d)?)\s*(?:\+|stars?)/);
+  const rating = ratingMatch ? Number(ratingMatch[1]) : null;
+  const availability = searchableDays.find((day) => normalized.includes(day)) ?? null;
+  const recognizedWords = new Set([
+    ...Object.values(sportAliases).flat(),
+    ...searchableCities,
+    ...searchableLevels,
+    ...searchableDays,
+    "online", "person", "face", "local", "below", "to", "max", "maximum", "budget",
+    "available", "availability", "rated", "rating", "least", "stars", "star",
+  ]);
+  const terms = normalized
+    .replace(/[^a-z\s-]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word && !searchStopWords.has(word) && !recognizedWords.has(word));
+
+  if (level) terms.push(level);
+
+  return {
+    rawQuery,
+    sport,
+    city: queryCity ?? selectedCity,
+    level,
+    mode,
+    budget: Number.isFinite(budget) ? budget : null,
+    rating: Number.isFinite(rating) ? rating : null,
+    availability,
+    terms: [...new Set(terms)],
+  };
+}
+
+const emptySearch = parseSearch("", "any");
 
 export default function HomePage() {
   const [selectedSport, setSelectedSport] = useState("all");
   const [selectedCoach, setSelectedCoach] = useState<(typeof coaches)[number] | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [queryInput, setQueryInput] = useState("");
   const [cityInput, setCityInput] = useState("any");
-  const [appliedSearch, setAppliedSearch] = useState({ query: "", city: "any" });
+  const [appliedSearch, setAppliedSearch] = useState<SearchFilters>(emptySearch);
   const [searchRan, setSearchRan] = useState(false);
   const profileDialogRef = useRef<HTMLElement>(null);
   const profileCloseRef = useRef<HTMLButtonElement>(null);
   const profileTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSectionNavigation = (event: MouseEvent<HTMLAnchorElement>, sectionId: string) => {
+    event.preventDefault();
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.history.replaceState(null, "", `#${sectionId}`);
+    setMobileMenuOpen(false);
+  };
+
+  const handleSearchNavigation = (event: MouseEvent<HTMLAnchorElement>) => {
+    handleSectionNavigation(event, "top");
+    searchInputRef.current?.focus({ preventScroll: true });
+  };
 
   useEffect(() => {
     if (!selectedCoach) return;
@@ -102,25 +237,62 @@ export default function HomePage() {
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSelectedSport("all");
-    setAppliedSearch({ query: queryInput.trim().toLowerCase(), city: cityInput });
+    setAppliedSearch(parseSearch(queryInput, cityInput));
     setSearchRan(true);
   };
 
   const visibleCoaches = coaches.filter((coach) => {
     const matchesSport = selectedSport === "all" || coach.sport.toLowerCase() === selectedSport;
+    const matchesSearchSport = !appliedSearch.sport
+      || coach.sport.toLowerCase() === appliedSearch.sport;
     const matchesCity = appliedSearch.city === "any"
       || coach.location.toLowerCase() === appliedSearch.city;
-    const searchable = [coach.name, coach.sport, coach.specialty, coach.location]
+    const matchesMode = !appliedSearch.mode || coach.mode.toLowerCase() === appliedSearch.mode;
+    const matchesBudget = !appliedSearch.budget || coachPrice(coach.price) <= appliedSearch.budget;
+    const matchesRating = !appliedSearch.rating || Number(coach.rating) >= appliedSearch.rating;
+    const matchesAvailability = !appliedSearch.availability
+      || coach.availability.some((day) => day.toLowerCase() === appliedSearch.availability);
+    const searchable = [coach.name, coach.sport, coach.specialty, coach.location, coach.reason, coach.mode]
       .join(" ")
       .toLowerCase();
-    const queryWords = appliedSearch.query.split(/\s+/).filter(Boolean);
-    const matchesQuery = queryWords.every((word) => searchable.includes(word));
-    return matchesSport && matchesCity && matchesQuery;
+    const matchesQuery = appliedSearch.terms.every((word) => searchable.includes(word));
+    return matchesSport && matchesSearchSport && matchesCity && matchesMode
+      && matchesBudget && matchesRating && matchesAvailability && matchesQuery;
   });
 
   const searchCityLabel = appliedSearch.city === "any"
     ? "any city"
-    : appliedSearch.city.charAt(0).toUpperCase() + appliedSearch.city.slice(1);
+    : titleCase(appliedSearch.city);
+  const interpretedFilters = [
+    appliedSearch.sport && { key: "sport", label: titleCase(appliedSearch.sport) },
+    appliedSearch.city !== "any" && { key: "city", label: titleCase(appliedSearch.city) },
+    appliedSearch.level && { key: "level", label: titleCase(appliedSearch.level) },
+    appliedSearch.mode && { key: "mode", label: titleCase(appliedSearch.mode) },
+    appliedSearch.budget && { key: "budget", label: `Up to ${formatRupees(appliedSearch.budget)}` },
+    appliedSearch.rating && { key: "rating", label: `${appliedSearch.rating.toFixed(1)}+ rating` },
+    appliedSearch.availability && { key: "availability", label: titleCase(appliedSearch.availability) },
+  ].filter(Boolean) as { key: keyof SearchFilters; label: string }[];
+
+  const removeSearchFilter = (key: keyof SearchFilters) => {
+    setAppliedSearch((current) => {
+      if (key === "city") {
+        setCityInput("any");
+        return { ...current, city: "any" };
+      }
+      if (key === "budget") return { ...current, budget: null };
+      if (key === "rating") return { ...current, rating: null };
+      if (key === "availability") return { ...current, availability: null };
+      if (key === "level") {
+        return { ...current, level: null, terms: current.terms.filter((term) => term !== current.level) };
+      }
+      if (key === "sport" || key === "mode") return { ...current, [key]: null };
+      return current;
+    });
+  };
+
+  const availableSlots = selectedCoach
+    ? selectedCoach.availability.flatMap((day) => [`${day} · 10:00 AM`, `${day} · 5:00 PM`])
+    : [];
 
   return (
     <>
@@ -129,11 +301,11 @@ export default function HomePage() {
         <nav className="container nav" aria-label="Main navigation">
           <a className="brand" href="#top" aria-label="CoachConnect home">Coach<span>Connect</span></a>
           <div className={`desktop-nav${mobileMenuOpen ? " mobile-open" : ""}`}>
-            <a href="#coaches">Find a Coach</a>
-            <a href="#how-it-works">How it works</a>
-            <a className="nav-phase" href="#become-a-coach">Coach applications</a>
+            <a href="#coaches" onClick={(event) => handleSectionNavigation(event, "coaches")}>Find a Coach</a>
+            <a href="#how-it-works" onClick={(event) => handleSectionNavigation(event, "how-it-works")}>How it works</a>
+            <a className="nav-phase" href="#become-a-coach" onClick={(event) => handleSectionNavigation(event, "become-a-coach")}>Coach applications</a>
             <a className="nav-phase" href="/account">Sign in</a>
-            <a className="button button-primary button-small" href="#search">Get Started</a>
+            <a className="button button-small nav-cta" href="#top" onClick={handleSearchNavigation}>Search coaches <span aria-hidden="true">↓</span></a>
           </div>
           <button
             className="menu-button"
@@ -160,7 +332,7 @@ export default function HomePage() {
               <form className="search-console" id="search" onSubmit={handleSearch}>
                 <div className="search-field search-main">
                   <label htmlFor="coach-search">What do you need?</label>
-                  <input id="coach-search" name="query" placeholder="Cricket, tennis or strength" value={queryInput} onChange={(event) => setQueryInput(event.target.value)} />
+                  <input ref={searchInputRef} id="coach-search" name="query" placeholder="Cricket, tennis or strength" value={queryInput} onChange={(event) => setQueryInput(event.target.value)} />
                 </div>
                 <div className="search-field">
                   <label htmlFor="search-city">City</label>
@@ -170,11 +342,23 @@ export default function HomePage() {
                 </div>
                 <button className="button button-accent" type="submit">Find coaches <span aria-hidden="true">→</span></button>
               </form>
-              <p className="search-example">Search by sport, specialty or city.</p>
+              <p className="search-example">Try “beginner tennis in Karachi under Rs 4,500” or search by name.</p>
+              {searchRan && interpretedFilters.length > 0 && (
+                <div className="interpreted-filters" role="region" aria-label="Interpreted search filters">
+                  <strong>We understood</strong>
+                  <div>
+                    {interpretedFilters.map((filter) => (
+                      <button key={filter.key} type="button" onClick={() => removeSearchFilter(filter.key)} aria-label={`Remove ${filter.label} filter`}>
+                        <span>{filter.label}</span><b aria-hidden="true">×</b>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {searchRan && (
                 <p className="search-status" role="status">
                   {visibleCoaches.length} {visibleCoaches.length === 1 ? "coach" : "coaches"} found
-                  {appliedSearch.query ? ` for “${appliedSearch.query}”` : ""} in {searchCityLabel}.
+                  {appliedSearch.sport ? ` for ${appliedSearch.sport}` : ""} in {searchCityLabel}.
                 </p>
               )}
             </div>
@@ -213,7 +397,7 @@ export default function HomePage() {
                     setSelectedSport(sport.id);
                     setQueryInput("");
                     setCityInput("any");
-                    setAppliedSearch({ query: "", city: "any" });
+                    setAppliedSearch(emptySearch);
                     setSearchRan(false);
                   }}
                 >
@@ -244,7 +428,7 @@ export default function HomePage() {
                     <h3>{coach.name}</h3>
                     <p className="specialty">{coach.specialty}</p>
                     <p className="match-reason">{coach.reason}</p>
-                    <div className="coach-footer"><div><small>Starting from</small><strong>{coach.price}</strong></div><button type="button" className="text-button" aria-label={`View ${coach.name}'s profile`} onClick={(event) => { profileTriggerRef.current = event.currentTarget; setSelectedCoach(coach); }}>View profile</button></div>
+                    <div className="coach-footer"><div><small>Starting from</small><strong>{coach.price}</strong></div><button type="button" className="text-button" aria-label={`View ${coach.name}'s profile`} onClick={(event) => { profileTriggerRef.current = event.currentTarget; setSelectedSlot(null); setSelectedCoach(coach); }}>View profile</button></div>
                   </div>
                 </article>
               ))}
@@ -306,7 +490,35 @@ export default function HomePage() {
                 </div>
               </div>
               <p className="policy-note"><strong>Direct-payment cancellation:</strong> CoachConnect does not collect money or issue refunds. If an athlete pays a coach directly, a full refund is due when the athlete cancels at least 24 hours before, or whenever the coach cancels.</p>
-              <button className="button button-accent" type="button" disabled aria-label="Availability coming soon">Availability coming soon</button>
+              <section className="availability-panel" aria-labelledby="availability-heading">
+                <div className="availability-heading">
+                  <div><p className="eyebrow">Choose a time</p><h3 id="availability-heading">Weekly availability</h3></div>
+                  <span>60-minute session</span>
+                </div>
+                <div className="slot-grid">
+                  {availableSlots.map((slot) => {
+                    const [day, time] = slot.split(" · ");
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        className={selectedSlot === slot ? "is-selected" : ""}
+                        aria-pressed={selectedSlot === slot}
+                        aria-label={`Select ${day} at ${time}`}
+                        onClick={() => setSelectedSlot(slot)}
+                      >
+                        <strong>{day}</strong><span>{time}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedSlot && (
+                  <div className="booking-handoff">
+                    <p role="status"><strong>{selectedSlot.replace(" · ", " at ")} selected.</strong> Sign in to verify the live slot and reserve it.</p>
+                    <a className="button button-accent" href="/account">Sign in to reserve</a>
+                  </div>
+                )}
+              </section>
             </div>
           </section>
         </div>

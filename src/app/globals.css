@@ -46,6 +46,9 @@ a { color: inherit; text-decoration: none; }
 .desktop-nav > a:not(.button):hover { color: var(--lime); }
 .nav-phase { color: #d5e2de; font-weight: 800; white-space: nowrap; }
 .nav-phase:hover { color: var(--lime); }
+.nav-cta { border: 1px solid rgba(255,255,255,.22); color: var(--ink); background: #fff; box-shadow: 0 7px 20px rgba(0,0,0,.16); }
+.nav-cta > span { display: grid; place-items: center; width: 25px; height: 25px; margin: -5px -8px -5px 1px; border-radius: 50%; color: #fff; background: var(--coral); font-size: .72rem; }
+.nav-cta:hover { color: var(--ink); background: var(--lime); border-color: var(--lime); }
 .menu-button { display: none; border: 1px solid rgba(255,255,255,.25); color: #fff; background: rgba(255,255,255,.08); border-radius: 999px; padding: 9px 14px; font-weight: 850; }
 
 .button {
@@ -127,6 +130,13 @@ a { color: inherit; text-decoration: none; }
 .search-field input, .search-field select { width: 100%; border: 0; background: transparent; color: var(--ink); padding: 8px 0; font-weight: 700; }
 .search-field input:focus, .search-field select:focus { outline: 0; }
 .search-example { color: #91a8a0; font-size: .77rem; margin: 10px 5px 0; }
+.interpreted-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 12px 5px 0; color: #dce9e4; }
+.interpreted-filters > strong { color: #aebfba; font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; }
+.interpreted-filters > div { display: flex; flex-wrap: wrap; gap: 7px; }
+.interpreted-filters button { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 5px 7px 5px 11px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; color: #fff; background: rgba(255,255,255,.1); font-size: .75rem; font-weight: 850; }
+.interpreted-filters button b { display: grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; color: var(--ink); background: var(--lime); line-height: 1; }
+.interpreted-filters button:hover { border-color: var(--lime); background: rgba(201,244,90,.13); }
+.interpreted-filters button:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
 .search-status { margin: 9px 5px 0; color: var(--lime); font-size: .85rem; font-weight: 850; }
 
 .hero-stage { position: relative; min-height: 530px; }
@@ -241,6 +251,21 @@ a { color: inherit; text-decoration: none; }
 .service-details h3 { margin: 0 0 7px; font-size: .92rem; }
 .service-details ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: .82rem; }
 .policy-note { font-size: .84rem; color: #52645d; }
+.availability-panel { margin-top: 20px; padding: 20px; border-radius: 18px; color: #fff; background: var(--ink); }
+.availability-heading { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
+.availability-heading .eyebrow { margin-bottom: 5px; color: #bdd0ca; }
+.availability-heading h3 { margin: 0; font-size: 1.35rem; }
+.availability-heading > span { color: #adc0b9; font-size: .78rem; }
+.slot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin-top: 16px; }
+.slot-grid button { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 11px 12px; border: 1px solid rgba(255,255,255,.17); border-radius: 12px; color: #fff; background: rgba(255,255,255,.07); text-align: left; }
+.slot-grid button span { color: #b8cac4; font-size: .76rem; }
+.slot-grid button:hover { border-color: var(--lime); background: rgba(201,244,90,.1); }
+.slot-grid button.is-selected { border-color: var(--lime); color: var(--ink); background: var(--lime); }
+.slot-grid button.is-selected span { color: #355048; }
+.booking-handoff { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.14); }
+.booking-handoff p { margin: 0; color: #bdd0ca; font-size: .8rem; }
+.booking-handoff p strong { display: block; color: #fff; }
+.booking-handoff .button { flex: none; }
 
 @media (max-width: 980px) {
   .nav { position: relative; }
@@ -286,6 +311,8 @@ a { color: inherit; text-decoration: none; }
   .cta-row { padding: 30px 24px; }
   .service-title { flex-direction: column; }
   .service-details { grid-template-columns: 1fr; }
+  .availability-heading, .booking-handoff { align-items: flex-start; flex-direction: column; }
+  .slot-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 .account-page { min-height: 100vh; display: grid; grid-template-columns: 1.05fr .95fr; background: var(--paper); }
