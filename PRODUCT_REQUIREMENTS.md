@@ -129,7 +129,7 @@ CoachConnect does not hold money in this MVP and cannot issue a financial refund
 - No unauthorized cross-account access.
 - Dockerized final application.
 - Unit, database, and browser tests.
-- Plain-language testing guides after every phase.
+- Brief plain-language testing steps delivered in chat after every phase.
 
 ## Out of scope now
 

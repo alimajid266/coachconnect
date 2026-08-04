@@ -631,10 +631,9 @@ Every phase ends with:
 
 1. A working application state.
 2. Automated tests for the phase.
-3. A simple manual test checklist for Ali.
-4. A short `PHASE-N-SUMMARY.md` written in plain language.
-5. A local Git commit and tag so the project can be restored.
-6. No remote GitHub push without explicit permission.
+3. Brief manual testing steps sent directly to Ali in chat.
+4. A local Git commit and tag so the project can be restored.
+5. No remote GitHub push without explicit permission.
 
 ### Phase 0 — Scope, screens, and local safety (0.5 day)
 
@@ -899,35 +898,15 @@ Docker installation will be handled with careful, copy-paste steps before Phase 
 
 ## 14. Testing Approach for a Non-Engineer
 
-Ali will not be asked to inspect code to verify features.
+Ali will not be asked to inspect code or read separate testing-instruction files.
 
-Each phase's manual test guide will use this format:
-
-```text
-Purpose: What this test proves
-Starting point: Which account/page to open
-Steps: Numbered clicks and text to enter
-Expected result: Exactly what should appear
-Failure evidence: Screenshot and visible message to send back
-Reset: One command or button to restore demo data
-```
-
-Example:
+After each phase, testing steps will be sent briefly in chat using plain actions such as:
 
 ```text
-Purpose: Prove that one coach cannot be double-booked.
-
-1. Sign in as the demo athlete.
-2. Open Ayesha Khan's profile.
-3. Reserve Saturday at 3:00 PM.
-4. Sign out and sign in as the second demo athlete.
-5. Open the same coach and date.
-
-Expected result:
-Saturday at 3:00 PM is no longer available.
+Open this page → click this button → enter this text → expect this result.
 ```
 
-Automated tests will run behind the scenes, but Ali's acceptance test will always focus on visible behavior.
+Automated tests run behind the scenes. Ali only checks visible behavior and can send a screenshot if something looks wrong.
 
 ---
 

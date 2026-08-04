@@ -29,7 +29,7 @@ Both previews support:
 - Pakistan locations
 - Public contact/location privacy
 
-Follow `PHASE-0-TESTING.md`.
+Testing steps are provided briefly in chat rather than stored as a separate testing-instructions file.
 
 ## Automated verification
 
