@@ -59,6 +59,10 @@ Firefox's headless renderer failed in this environment with `RenderCompositorSWG
 - Booking button explains that booking arrives in Phase 4.
 - Automated rendered screenshots remain unverified due to the headless-renderer limitation; Ali's normal-browser review is the visual acceptance gate.
 
+## Selected direction
+
+Ali selected the hybrid direction: Calm Athletic structure with the Energetic Marketplace search console and stronger primary-action buttons. This becomes the Phase 1 production baseline.
+
 ## Scope safety
 
 Future scope changes will be recorded in `SCOPE.md`, impact-assessed, and applied from the latest known-good local Git checkpoint.

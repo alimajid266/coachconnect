@@ -57,6 +57,7 @@ Estimates are revised from actual project state rather than blindly added to the
 |---|---|---|---|---|
 | 2026-08-04 | Initial Pakistan/PKR, zero-cost scope | Accepted as baseline | Establishes MVP | Phase 0 onward |
 | 2026-08-04 | Scope may increase or decrease later | Accepted; use this change process | Tiny | All phases |
+| 2026-08-04 | Select hybrid visual direction | Calm structure with energetic search and primary actions | Small | Phase 1 onward |
 
 ## Current optional backlog
 

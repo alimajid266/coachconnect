@@ -12,19 +12,15 @@ Two intentionally different options are available. They contain the same product
 | Strongest quality | Trust and readability | Momentum and immediate action |
 | Main tradeoff | Less energetic | Slightly busier |
 
-## Recommendation
+## Selected production direction
 
-Use **Calm Athletic** as the safer baseline for CoachConnect.
+Ali selected the **Hybrid** direction on 2026-08-04.
 
-Why:
+Phase 1 will use:
 
-- Coaching requires trust before urgency.
-- The information-heavy service profile remains readable.
-- It is less likely to become cluttered as booking controls are added.
-- Deep green and cream feel locally adaptable without resembling Airbnb too closely.
+- Calm Athletic's spacious structure, trust-led presentation, deep green/cream foundation, and readable coach-profile information.
+- Energetic Marketplace's raised search console, stronger action buttons, and clearer interaction emphasis.
+- Restrained coral only for primary actions; it will not compete with every section.
+- The calm layout density so booking controls can be added later without clutter.
 
-The energetic option has a stronger demonstration impact. If selected, later screens must be kept disciplined so the bold style does not become crowded.
-
-A hybrid is also possible: Calm Athletic structure with the Energetic Marketplace's raised search console and stronger coral calls to action.
-
-No production design is locked until Ali selects a direction. The preview files are disposable and may be changed without affecting application code.
+The two preview files remain disposable comparison artifacts. Production components will be implemented and tested separately in Phase 1.
