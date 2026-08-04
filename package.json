@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "pretest": "DATABASE_URL=file:/tmp/coachconnect-test.db prisma db push",
+    "pretest": "DATABASE_URL=file:/tmp/coachconnect-test.db prisma db push --force-reset",
     "test:phase0": "node --test scripts/phase0-preview-check.mjs",
     "test:watch": "vitest",
     "db:generate": "prisma generate",
@@ -21,6 +21,8 @@
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.112.0",
     "better-sqlite3": "^13.0.2",
     "dotenv": "^17.4.2",
     "next": "16.3.0",
@@ -38,6 +40,7 @@
     "eslint-config-next": "16.3.0",
     "jsdom": "^27.2.0",
     "prisma": "^7.9.1",
+    "supabase": "^2.111.0",
     "typescript": "^5.9.0",
     "vitest": "4.1.10"
   }

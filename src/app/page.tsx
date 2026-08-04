@@ -131,8 +131,8 @@ export default function HomePage() {
           <div className={`desktop-nav${mobileMenuOpen ? " mobile-open" : ""}`}>
             <a href="#coaches">Find a Coach</a>
             <a href="#how-it-works">How it works</a>
-            <button className="nav-phase" type="button" disabled aria-label="Coach applications — Phase 2">Coach applications · Phase 2</button>
-            <button className="nav-phase" type="button" disabled aria-label="Sign in — Phase 2">Sign in · Phase 2</button>
+            <a className="nav-phase" href="/account">Coach applications</a>
+            <a className="nav-phase" href="/account">Sign in</a>
             <a className="button button-primary button-small" href="#search">Get Started</a>
           </div>
           <button
@@ -149,11 +149,13 @@ export default function HomePage() {
 
       <main id="main-content">
         <section className="hero" id="top">
+          <div className="hero-glow hero-glow-one" aria-hidden="true" />
+          <div className="hero-glow hero-glow-two" aria-hidden="true" />
           <div className="container hero-grid">
             <div className="hero-copy">
-              <p className="eyebrow">Sports coaching across Pakistan</p>
-              <h1>Find the right coach. Reach your next goal.</h1>
-              <p className="hero-lead">Explore sample cricket, tennis and strength profiles for focused one-to-one sessions—online or near you.</p>
+              <p className="eyebrow light">Pakistan&apos;s coaching marketplace</p>
+              <h1><span>Train smarter.</span><span className="headline-accent">Play bolder.</span></h1>
+              <p className="hero-lead">Find focused cricket, tennis and strength coaching built for your level, your city and your next breakthrough.</p>
               <p className="demo-notice"><strong>Demo preview:</strong> Sample profiles, names, ratings and match reasons are not real coaches or reviews.</p>
               <form className="search-console" id="search" onSubmit={handleSearch}>
                 <div className="search-field search-main">
@@ -166,7 +168,7 @@ export default function HomePage() {
                     <option value="any">Any city</option><option value="lahore">Lahore</option><option value="karachi">Karachi</option><option value="islamabad">Islamabad</option>
                   </select>
                 </div>
-                <button className="button button-accent" type="submit">Find coaches</button>
+                <button className="button button-accent" type="submit">Find coaches <span aria-hidden="true">→</span></button>
               </form>
               <p className="search-example">Ordinary search is ready. Natural-language search arrives in Phase 3.</p>
               {searchRan && (
@@ -176,9 +178,21 @@ export default function HomePage() {
                 </p>
               )}
             </div>
-            <div className="hero-photo" role="img" aria-label="Athlete training with a coach">
-              <div className="hero-note"><strong>Clear matches.</strong><span>Private by design.</span></div>
+            <div className="hero-stage">
+              <div className="hero-orbit" aria-hidden="true" />
+              <div className="hero-photo" role="img" aria-label="Athlete training with a coach" />
+              <div className="hero-chip hero-chip-top" aria-label="One-to-one coaching — built around you"><span aria-hidden="true">01</span><strong>One-to-one coaching</strong><small>Built around you</small></div>
+              <div className="hero-chip hero-chip-bottom"><span className="pulse-dot" /><strong>Pakistan-wide energy</strong><small>Local, private, focused</small></div>
+              <div className="hero-wordmark" aria-hidden="true">MOVE</div>
             </div>
+          </div>
+        </section>
+
+        <section className="momentum-strip" aria-label="CoachConnect launch focus">
+          <div className="container momentum-grid">
+            <div><span>Launch focus</span><strong>3 focused sports</strong></div>
+            <p>Karachi <b>•</b> Lahore <b>•</b> Islamabad</p>
+            <div className="momentum-promise"><span>Built for progress</span><strong>One clear next step →</strong></div>
           </div>
         </section>
 
@@ -264,7 +278,7 @@ export default function HomePage() {
         </section>
 
         <section className="section coach-cta" id="become-a-coach">
-          <div className="container cta-row"><div><p className="eyebrow">For coaches</p><h2>Help athletes make meaningful progress.</h2></div><button className="button button-primary" type="button" disabled aria-label="Coach applications — Phase 2">Coach applications · Phase 2</button></div>
+          <div className="container cta-row"><div><p className="eyebrow">For coaches</p><h2>Help athletes make meaningful progress.</h2></div><a className="button button-primary" href="/account">Coach applications</a></div>
         </section>
       </main>
 

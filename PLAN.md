@@ -1,6 +1,6 @@
 # CoachConnect — Focused Zero-Cost MVP Plan
 
-**Status:** Planning complete; implementation has not started.
+**Status:** Phase 1 complete; eye-catching home refresh complete; Phase 2 Supabase account foundation in progress.
 
 **Launch market:** Pakistan  
 **Currency:** Pakistani rupees (PKR), displayed as `Rs 3,000`  
@@ -148,17 +148,17 @@ Because CoachConnect does not hold money, it cannot actually issue the refund. T
 
 The README and interface must state that the coach handles any direct refund. This is honest and testable.
 
-### Local zero-cost services
+### Zero-cost services
 
-- **Database:** SQLite file stored locally
-- **Images:** local project assets
-- **Authentication:** local database sessions
+- **Database:** Supabase PostgreSQL on the Free plan; committed SQL migrations keep local/cloud schemas reproducible
+- **Images:** local licensed project assets initially; Supabase Storage may be used later within the Free allowance
+- **Authentication:** Supabase Auth with server-managed HTTP-only cookies and row-level security
 - **AI/recommendations:** local algorithms and a small local semantic model; no paid AI API
 - **Notifications:** in-app status messages rather than email or SMS
-- **Analytics/error services:** excluded; local logs only
-- **Hosting:** local Docker application for the required deliverable
+- **Analytics/error services:** excluded; application logs only
+- **Hosting:** local hardened Docker application; optional Vercel deployment only after approval
 
-Optional cloud deployment can be considered later, but it is not required for the Rs 0 build and free-service terms must be checked at that time.
+The MVP must remain within published free allowances. Supabase Free projects may pause after one week of inactivity, so the interface must fail clearly if the backend is paused. No service may be upgraded or billed without explicit approval.
 
 ---
 
@@ -168,35 +168,32 @@ Optional cloud deployment can be considered later, but it is not required for th
 Athlete / Coach / Administrator
               |
               v
-     CoachConnect website
+     CoachConnect Next.js website
      - pages and forms
-     - login and permissions
+     - server-side auth cookies
      - search and recommendations
      - booking rules
               |
               v
-       Local SQLite database
-     - users
-     - coach profiles
-     - services
-     - availability
-     - bookings
-     - reviews
+         Supabase Free
+     - Auth identities and sessions
+     - PostgreSQL + row-level security
+     - private account profiles
+     - approved coach profiles
+     - later availability and bookings
 ```
 
-Everything runs as one organized application. This is easier to build, test, explain, and restore than a collection of separate services.
+The application remains one focused Next.js product, with Supabase as the single external backend. This removes custom password/session maintenance while keeping schema and access rules versioned in Git.
 
 ### Recommended technical stack
 
 - Next.js with TypeScript
-- Tailwind CSS
-- shadcn/ui components
-- SQLite
-- Prisma
-- Auth.js or an equally small secure session system
-- Vitest for rule tests
-- Playwright for real browser tests
-- Docker
+- Purpose-built accessible CSS components
+- Supabase Auth, PostgreSQL, Row-Level Security, and later Storage
+- `@supabase/ssr` for server-managed sessions
+- Vitest for interface and rule tests
+- Supabase integration tests for real RLS/auth behavior
+- Docker for the local web application
 - Git for local phase checkpoints
 - GitHub Actions after repository publishing is approved
 

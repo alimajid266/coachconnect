@@ -9,6 +9,9 @@ services:
     environment:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: "1"
+    env_file:
+      - path: .env.local
+        required: false
     restart: unless-stopped
     read_only: true
     cap_drop:

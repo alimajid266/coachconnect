@@ -9,16 +9,25 @@ describe("CoachConnect home page", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: /find the right coach\. reach your next goal\./i,
+        name: /train smarter.*play bolder/i,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/sports coaching across pakistan/i)).toBeInTheDocument();
+    expect(screen.getByText(/pakistan's coaching marketplace/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /cricket/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /tennis/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /strength/i })).toBeInTheDocument();
     expect(screen.getByText(/sample coach profiles/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Rs\s[0-9,]+/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/exact meeting locations.*stay private/i)).toBeInTheDocument();
+  });
+
+  it("presents an energetic Pakistan-focused visual identity", () => {
+    render(<HomePage />);
+
+    expect(screen.getByRole("heading", { name: /train smarter.*play bolder/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/one-to-one coaching.*built around you/i)).toBeInTheDocument();
+    expect(screen.getByText(/karachi.*lahore.*islamabad/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 focused sports/i)).toBeInTheDocument();
   });
 
   it("filters the visible coaches when an athlete chooses a sport", () => {
@@ -61,13 +70,13 @@ describe("CoachConnect home page", () => {
     expect(screen.queryByText(/exact home address/i)).not.toBeInTheDocument();
   });
 
-  it("labels preview data honestly and keeps future-phase actions non-interactive", () => {
+  it("labels preview data, enables Phase 2 accounts, and keeps future availability disabled", () => {
     render(<HomePage />);
 
     expect(screen.getByText(/sample profiles.*not real coaches or reviews/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /sign in.*phase 2/i })).toBeDisabled();
-    for (const button of screen.getAllByRole("button", { name: /coach applications.*phase 2/i })) {
-      expect(button).toBeDisabled();
+    expect(screen.getByRole("link", { name: /^sign in$/i })).toHaveAttribute("href", "/account");
+    for (const link of screen.getAllByRole("link", { name: /coach applications/i })) {
+      expect(link).toHaveAttribute("href", "/account");
     }
 
     fireEvent.click(screen.getByRole("button", { name: /view sara ahmed's profile/i }));

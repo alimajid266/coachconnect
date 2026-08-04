@@ -11,3 +11,5 @@ screenshots/
 src/generated/prisma/
 *.db
 *.db-journal
+.vercel
+.env*
