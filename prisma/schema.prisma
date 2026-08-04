@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Coach {
+  id              Int      @id @default(autoincrement())
+  name            String
+  sport           String
+  city            String
+  broadArea       String?
+  sessionPricePkr Int
+  offersOnline    Boolean  @default(false)
+  approved        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([approved, sport, city])
+}

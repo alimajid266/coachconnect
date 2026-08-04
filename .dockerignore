@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+screenshots
+sketches
+*.log
+.env*
+PLAN.md
+PHASE-0-SUMMARY.md
+DESIGN_COMPARISON.md
+PRODUCT_REQUIREMENTS.md
+SCREEN_MAP.md
+SCOPE.md

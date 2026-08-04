@@ -36,7 +36,7 @@ Testing steps are provided briefly in chat rather than stored as a separate test
 Command:
 
 ```bash
-node --test tests/phase0-preview.test.mjs
+node --test scripts/phase0-preview-check.mjs
 ```
 
 Verified result before checkpoint: 2 tests passed, 0 failed.

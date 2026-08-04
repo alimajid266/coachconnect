@@ -660,24 +660,28 @@ Deliverable brief:
 
 ### Phase 1 — Foundation and polished home page (1 day)
 
+**Status:** Completed locally and awaiting Ali's manual approval.
+
 Build:
 
 - Next.js project
 - Shared visual system
 - Responsive navigation
 - Complete home page
-- Seeded coach cards
+- Clearly labeled fictional sample coach cards
+- Ordinary sport/city search foundation
+- Privacy-safe service profile dialog
 - SQLite and Prisma foundation
-- Docker files
-- Basic automated checks
+- Hardened Docker files and health check
+- Automated accessibility, interaction, database, and build checks
 
 Ali physically tests:
 
-1. Starts the site using one copy-paste command.
-2. Opens the local address in Chrome.
-3. Checks home page on desktop.
-4. Uses Chrome's phone preview.
-5. Opens every navigation link.
+1. Opens the local address in Chrome.
+2. Searches for Tennis in Karachi and confirms one sample coach appears.
+3. Uses the sport buttons and opens a sample profile.
+4. Confirms Phase 2 and Phase 4 controls are visibly disabled rather than broken.
+5. Uses Chrome's phone preview and confirms navigation opens and closes.
 6. Confirms no clutter, overlap, or horizontal scrolling.
 
 Checkpoint: `phase-1-home`
