@@ -9,8 +9,7 @@ afterEach(() => {
 
 describe("password recovery UI", () => {
   it("requests a reset email from the sign-in form", async () => {
-    const confirmationMessage =
-      "If an account exists for this email, a password reset link has been sent.";
+    const confirmationMessage = "Check your inbox for password reset instructions.";
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ message: confirmationMessage }),
@@ -25,6 +24,7 @@ describe("password recovery UI", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("/api/auth/forgot-password");
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ email: "athlete@example.com" });
     expect(await screen.findByRole("status")).toHaveTextContent(confirmationMessage);
+    expect(screen.queryByText(/if an account exists/i)).not.toBeInTheDocument();
   });
 
   it("changes a matching password and returns to sign in", async () => {

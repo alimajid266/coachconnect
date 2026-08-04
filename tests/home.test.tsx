@@ -16,7 +16,7 @@ describe("CoachConnect home page", () => {
     expect(screen.getByRole("button", { name: /cricket/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /tennis/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /strength/i })).toBeInTheDocument();
-    expect(screen.getByText(/sample coach profiles/i)).toBeInTheDocument();
+    expect(screen.getByText(/recommended coaches/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Rs\s[0-9,]+/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/exact meeting locations.*stay private/i)).toBeInTheDocument();
   });
@@ -51,7 +51,7 @@ describe("CoachConnect home page", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /find coaches/i }));
 
-    expect(screen.getByRole("status")).toHaveTextContent(/1 sample coach.*tennis.*karachi/i);
+    expect(screen.getByRole("status")).toHaveTextContent(/1 coach.*tennis.*karachi/i);
     expect(screen.getByRole("heading", { name: "Hamza Siddiqui" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Ayesha Khan" })).not.toBeInTheDocument();
   });
@@ -70,20 +70,22 @@ describe("CoachConnect home page", () => {
     expect(screen.queryByText(/exact home address/i)).not.toBeInTheDocument();
   });
 
-  it("labels preview data, enables Phase 2 accounts, and keeps future availability disabled", () => {
+  it("presents production-ready navigation and keeps unavailable booking disabled", () => {
     render(<HomePage />);
 
-    expect(screen.getByText(/sample profiles.*not real coaches or reviews/i)).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/\b(sample|phase\s*\d+|demo preview)\b/i);
     expect(screen.getByRole("link", { name: /^sign in$/i })).toHaveAttribute("href", "/account");
-    for (const link of screen.getAllByRole("link", { name: /coach applications/i })) {
-      expect(link).toHaveAttribute("href", "/account");
-    }
+    const applicationLinks = screen.getAllByRole("link", { name: /coach applications/i });
+    expect(applicationLinks.some((link) => link.getAttribute("href") === "#become-a-coach")).toBe(true);
+    expect(applicationLinks.some((link) => link.getAttribute("href") === "/account")).toBe(true);
+    expect(screen.getByRole("link", { name: /find a coach/i })).toHaveAttribute("href", "#coaches");
+    expect(screen.getByRole("link", { name: /how it works/i })).toHaveAttribute("href", "#how-it-works");
 
     fireEvent.click(screen.getByRole("button", { name: /view sara ahmed's profile/i }));
 
     expect(screen.getByText(/60 minutes.*online/i)).toBeInTheDocument();
     expect(screen.getByText(/video-call link/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /availability.*phase 4/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /availability coming soon/i })).toBeDisabled();
     expect(screen.getByText(/coachconnect does not collect money or issue refunds/i)).toBeInTheDocument();
   });
 

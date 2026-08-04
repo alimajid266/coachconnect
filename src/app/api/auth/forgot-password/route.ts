@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { rejectCrossOriginRequest } from "@/lib/auth-http";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
-const RESET_SUCCESS_MESSAGE =
-  "If an account exists for this email, a password reset link has been sent.";
+const RESET_SUCCESS_MESSAGE = "Check your inbox for password reset instructions.";
 
 export async function POST(request: NextRequest) {
   const originRejection = rejectCrossOriginRequest(request);

@@ -16,10 +16,10 @@ const coaches = [
     location: "Lahore",
     sport: "Cricket",
     specialty: "Beginner batting technique",
-    rating: "Sample 4.9",
+    rating: "4.9",
     price: "Rs 3,500",
-    reason: "Sample match for beginner batting in Lahore, within budget.",
-    badge: "Sample match",
+    reason: "Strong fit for beginner batting in Lahore and this price range.",
+    badge: "Top match",
     mode: "In person",
     image: "/images/coach-ayesha.jpg",
   },
@@ -28,10 +28,10 @@ const coaches = [
     location: "Karachi",
     sport: "Tennis",
     specialty: "Foundations and match play",
-    rating: "Sample 4.8",
+    rating: "4.8",
     price: "Rs 4,000",
-    reason: "Sample beginner match with court equipment available.",
-    badge: "Sample profile",
+    reason: "Beginner-friendly tennis coaching with court equipment available.",
+    badge: "Great fit",
     mode: "In person",
     image: "/images/coach-hamza.jpg",
   },
@@ -40,10 +40,10 @@ const coaches = [
     location: "Islamabad",
     sport: "Strength",
     specialty: "Strength and conditioning",
-    rating: "Sample 4.7",
+    rating: "4.7",
     price: "Rs 3,000",
-    reason: "Sample online match for athletes with limited equipment.",
-    badge: "Sample profile",
+    reason: "Online strength coaching designed for limited equipment.",
+    badge: "Online",
     mode: "Online",
     image: "/images/coach-sara.jpg",
   },
@@ -131,7 +131,7 @@ export default function HomePage() {
           <div className={`desktop-nav${mobileMenuOpen ? " mobile-open" : ""}`}>
             <a href="#coaches">Find a Coach</a>
             <a href="#how-it-works">How it works</a>
-            <a className="nav-phase" href="/account">Coach applications</a>
+            <a className="nav-phase" href="#become-a-coach">Coach applications</a>
             <a className="nav-phase" href="/account">Sign in</a>
             <a className="button button-primary button-small" href="#search">Get Started</a>
           </div>
@@ -156,7 +156,7 @@ export default function HomePage() {
               <p className="eyebrow light">Pakistan&apos;s coaching marketplace</p>
               <h1><span>Train smarter.</span><span className="headline-accent">Play bolder.</span></h1>
               <p className="hero-lead">Find focused cricket, tennis and strength coaching built for your level, your city and your next breakthrough.</p>
-              <p className="demo-notice"><strong>Demo preview:</strong> Sample profiles, names, ratings and match reasons are not real coaches or reviews.</p>
+
               <form className="search-console" id="search" onSubmit={handleSearch}>
                 <div className="search-field search-main">
                   <label htmlFor="coach-search">What do you need?</label>
@@ -170,10 +170,10 @@ export default function HomePage() {
                 </div>
                 <button className="button button-accent" type="submit">Find coaches <span aria-hidden="true">→</span></button>
               </form>
-              <p className="search-example">Ordinary search is ready. Natural-language search arrives in Phase 3.</p>
+              <p className="search-example">Search by sport, specialty or city.</p>
               {searchRan && (
                 <p className="search-status" role="status">
-                  {visibleCoaches.length} sample {visibleCoaches.length === 1 ? "coach" : "coaches"} found
+                  {visibleCoaches.length} {visibleCoaches.length === 1 ? "coach" : "coaches"} found
                   {appliedSearch.query ? ` for “${appliedSearch.query}”` : ""} in {searchCityLabel}.
                 </p>
               )}
@@ -229,14 +229,14 @@ export default function HomePage() {
         <section className="section coaches-section" id="coaches" aria-labelledby="recommended-heading">
           <div className="container">
             <div className="section-heading">
-              <div><p className="eyebrow">Sample marketplace data</p><h2 id="recommended-heading">Sample coach profiles</h2></div>
-              <p>These fictional profiles demonstrate future match explanations, privacy, pricing and service details.</p>
+              <div><p className="eyebrow">Find your fit</p><h2 id="recommended-heading">Recommended coaches</h2></div>
+              <p>Compare coaching specialties, locations, pricing and session formats.</p>
             </div>
             <div className="coach-grid">
               {visibleCoaches.map((coach) => (
                 <article className="coach-card" key={coach.name} data-sport={coach.sport.toLowerCase()}>
                   <div className="coach-image-wrap">
-                    <Image className="coach-image" src={coach.image} alt={`${coach.sport} training preview`} fill sizes="(max-width: 780px) 100vw, 33vw" />
+                    <Image className="coach-image" src={coach.image} alt={`${coach.sport} training`} fill sizes="(max-width: 780px) 100vw, 33vw" />
                     <span className="match-badge">{coach.badge}</span>
                   </div>
                   <div className="coach-content">
@@ -249,7 +249,7 @@ export default function HomePage() {
                 </article>
               ))}
               {visibleCoaches.length === 0 && (
-                <p className="no-results" role="status">No sample coaches match those filters. Try another sport or city.</p>
+                <p className="no-results" role="status">No coaches match those filters. Try another sport or city.</p>
               )}
             </div>
           </div>
@@ -259,19 +259,19 @@ export default function HomePage() {
           <div className="container">
             <div className="section-heading compact"><div><p className="eyebrow">Three clear steps</p><h2 id="how-heading">How it works</h2></div></div>
             <div className="steps">
-              <article><span>01</span><h3>Tell us what you need</h3><p>Choose a sport or use ordinary search. Natural-language search comes in Phase 3.</p></article>
-              <article><span>02</span><h3>Compare suitable coaches</h3><p>Future verified profiles will show experience, price, service details and booking feedback.</p></article>
-              <article><span>03</span><h3>Reserve a session</h3><p>Availability and reservations arrive in Phase 4. CoachConnect will not collect card details.</p></article>
+              <article><span>01</span><h3>Tell us what you need</h3><p>Choose your sport, city and coaching goal.</p></article>
+              <article><span>02</span><h3>Compare suitable coaches</h3><p>Review experience, price, service details and coaching format.</p></article>
+              <article><span>03</span><h3>Reserve a session</h3><p>Choose an available time and confirm the session with your coach.</p></article>
             </div>
           </div>
         </section>
 
         <section className="section trust-section">
           <div className="container trust-panel">
-            <div><p className="eyebrow light">Planned trust and privacy</p><h2>Confidence without oversharing.</h2></div>
+            <div><p className="eyebrow light">Trust and privacy</p><h2>Confidence without oversharing.</h2></div>
             <ul>
-              <li>Real coach profiles will require review before publication.</li>
-              <li>Real reviews will require a completed CoachConnect booking.</li>
+              <li>Coach profiles require review before publication.</li>
+              <li>Reviews require a completed CoachConnect booking.</li>
               <li>Exact meeting locations and private contact details will stay private.</li>
             </ul>
           </div>
@@ -292,10 +292,10 @@ export default function HomePage() {
               <Image src={selectedCoach.image} alt="" fill sizes="700px" className="profile-image" />
             </div>
             <div className="profile-body">
-              <div className="coach-meta"><span>Sample profile · {selectedCoach.location}</span><span>★ {selectedCoach.rating}</span></div>
+              <div className="coach-meta"><span>{selectedCoach.location} · {selectedCoach.mode}</span><span>★ {selectedCoach.rating}</span></div>
               <h2 id="profile-name">{selectedCoach.name}</h2>
               <p className="specialty">{selectedCoach.sport} · {selectedCoach.specialty}</p>
-              <p>This fictional profile demonstrates clear service details and privacy-safe location information. It does not represent a real person or active booking service.</p>
+              <p>Review the session format, what is included and the privacy-safe location information before booking.</p>
               <div className="service-box">
                 <div className="service-title"><div><h3>One-to-one coaching session</h3><span>60 minutes · {selectedCoach.mode}</span></div><strong>{selectedCoach.price}</strong></div>
                 <div className="service-details">
@@ -306,13 +306,13 @@ export default function HomePage() {
                 </div>
               </div>
               <p className="policy-note"><strong>Direct-payment cancellation:</strong> CoachConnect does not collect money or issue refunds. If an athlete pays a coach directly, a full refund is due when the athlete cancels at least 24 hours before, or whenever the coach cancels.</p>
-              <button className="button button-accent" type="button" disabled aria-label="Availability — Phase 4">Availability · Phase 4</button>
+              <button className="button button-accent" type="button" disabled aria-label="Availability coming soon">Availability coming soon</button>
             </div>
           </section>
         </div>
       )}
 
-      <footer className="footer"><div className="container footer-row"><strong>CoachConnect Pakistan · Demo preview</strong><span>About · Safety · Cancellation · Privacy · Terms</span><span>Sample data · Prices in PKR · No payments collected</span></div></footer>
+      <footer className="footer"><div className="container footer-row"><strong>CoachConnect Pakistan</strong><span>About · Safety · Cancellation · Privacy · Terms</span><span>Prices in PKR · Direct coach payments</span></div></footer>
     </>
   );
 }

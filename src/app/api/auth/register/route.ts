@@ -30,8 +30,22 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const duplicateAccount = error?.code === "user_already_exists"
+      || error?.message.toLowerCase() === "user already registered";
+    if (duplicateAccount) {
+      return applyCookies(NextResponse.json(
+        { error: "An account already exists for this email. Sign in instead." },
+        { status: 409 },
+      ));
+    }
     if (error) return applyCookies(NextResponse.json({ error: error.message }, { status: 400 }));
     if (!data.user) return applyCookies(NextResponse.json({ error: "Account could not be created." }, { status: 400 }));
+    if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      return applyCookies(NextResponse.json(
+        { error: "An account already exists for this email. Sign in instead." },
+        { status: 409 },
+      ));
+    }
     if (!data.session) {
       return applyCookies(NextResponse.json({ pendingEmailConfirmation: true }, { status: 202 }));
     }

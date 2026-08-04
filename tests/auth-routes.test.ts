@@ -81,6 +81,47 @@ describe("Supabase authentication routes", () => {
     expect(mocks.applyCookies).toHaveBeenCalledOnce();
   });
 
+  it("reports an existing account when Supabase returns no new identity", async () => {
+    mocks.signUp.mockResolvedValue({
+      data: {
+        user: { id: "existing-user", email: "athlete@example.com", identities: [] },
+        session: null,
+      },
+      error: null,
+    });
+
+    const response = await register(request("/api/auth/register", {
+      displayName: "Ali Athlete",
+      email: "athlete@example.com",
+      password: "Private-Test-Passphrase-42",
+      role: "ATHLETE",
+    }));
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "An account already exists for this email. Sign in instead.",
+    });
+  });
+
+  it("reports an existing account when Supabase returns its duplicate error", async () => {
+    mocks.signUp.mockResolvedValue({
+      data: { user: null, session: null },
+      error: { code: "user_already_exists", message: "User already registered" },
+    });
+
+    const response = await register(request("/api/auth/register", {
+      displayName: "Ali Athlete",
+      email: "athlete@example.com",
+      password: "Private-Test-Passphrase-42",
+      role: "ATHLETE",
+    }));
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "An account already exists for this email. Sign in instead.",
+    });
+  });
+
   it("uses generic login failures and returns a private profile session", async () => {
     mocks.signInWithPassword.mockResolvedValue({
       data: { user: null, session: null },

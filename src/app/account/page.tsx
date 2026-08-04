@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type Mode = "login" | "register";
 type Role = "ATHLETE" | "COACH";
@@ -27,6 +27,16 @@ export default function AccountPage() {
   const [emailConfirmationPending, setEmailConfirmationPending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [emailActionBusy, setEmailActionBusy] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const resendCoolingDown = resendCooldown > 0;
+
+  useEffect(() => {
+    if (!resendCoolingDown) return;
+    const timer = window.setInterval(() => {
+      setResendCooldown((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendCoolingDown]);
 
   function changeMode(nextMode: Mode) {
     setMode(nextMode);
@@ -54,6 +64,7 @@ export default function AccountPage() {
         return;
       }
       setStatusMessage(result.message);
+      if (endpoint === "/api/auth/resend-confirmation") setResendCooldown(30);
     } catch {
       setMessage("The account service could not be reached. Please try again.");
     } finally {
@@ -115,12 +126,12 @@ export default function AccountPage() {
 
   return (
     <main className="account-page">
-      <section className="account-art" aria-label="CoachConnect account introduction">
+      <section className="account-art" aria-label="Athlete training with a coach">
         <Link className="brand account-brand" href="/" aria-label="CoachConnect home">Coach<span>Connect</span></Link>
         <div>
-          <p className="eyebrow light">Phase 2 · Supabase accounts</p>
+          <p className="eyebrow light">For athletes and coaches</p>
           <h1 aria-label="Your next move starts here.">Your next move<br /><span aria-hidden="true">starts here.</span></h1>
-          <p>Create a private account to prepare for coaching, profiles and future bookings—without public exposure.</p>
+          <p>Create a private account to find coaching, manage your profile and stay ready for every session.</p>
         </div>
         <div className="account-safety"><strong>Private by default</strong><span>Your email never appears on public coach profiles.</span></div>
       </section>
@@ -144,10 +155,14 @@ export default function AccountPage() {
                 <button
                   className="auth-resend"
                   type="button"
-                  disabled={emailActionBusy || !email.trim()}
+                  disabled={emailActionBusy || resendCooldown > 0 || !email.trim()}
                   onClick={() => requestEmailAction("/api/auth/resend-confirmation", "Unable to resend the confirmation email.")}
                 >
-                  {emailActionBusy ? "Sending…" : "Resend confirmation email"}
+                  {emailActionBusy
+                    ? "Sending…"
+                    : resendCooldown > 0
+                      ? `Resend available in ${resendCooldown}s`
+                      : "Resend confirmation email"}
                 </button>
               ) : (
                 <Link className="button button-accent" href="/dashboard">Open my dashboard</Link>
@@ -197,10 +212,12 @@ export default function AccountPage() {
                   <button
                     className="auth-resend"
                     type="button"
-                    disabled={emailActionBusy || !email.trim()}
+                    disabled={emailActionBusy || resendCooldown > 0 || !email.trim()}
                     onClick={() => requestEmailAction("/api/auth/resend-confirmation", "Unable to resend the confirmation email.")}
                   >
-                    Resend confirmation email
+                    {resendCooldown > 0
+                      ? `Resend available in ${resendCooldown}s`
+                      : "Resend confirmation email"}
                   </button>
                 </div>
               )}

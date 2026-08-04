@@ -71,7 +71,7 @@ export default function DashboardPage() {
 
       <section className="dashboard-actions" aria-label={`${roleLabel} actions`}>
         {user.role === "ATHLETE" && (
-          <article><span>01</span><h2>Find your next coach</h2><p>Explore sample coaching options while discovery features are developed.</p><Link className="button button-primary" href="/#coaches">Find a coach</Link></article>
+          <article><span>01</span><h2>Find your next coach</h2><p>Explore coach profiles and compare specialties, locations and prices.</p><Link className="button button-primary" href="/#coaches">Find a coach</Link></article>
         )}
         {user.role === "COACH" && (
           <article><span>01</span><h2>Build your coach profile</h2><p>Add privacy-safe service details and submit them for administrator approval.</p><Link className="button button-primary" href="/coach/profile">Build my coach profile</Link></article>
@@ -79,7 +79,7 @@ export default function DashboardPage() {
         {user.role === "ADMIN" && (
           <article><span>01</span><h2>Review coach applications</h2><p>Approve complete profiles before they can become public.</p><Link className="button button-primary" href="/admin/coaches">Approve coach profiles</Link></article>
         )}
-        <article className="dashboard-muted"><span>Next</span><h2>Bookings</h2><p>Availability and booking controls arrive in Phase 4. No payment information is collected.</p><button className="button" type="button" disabled>Phase 4</button></article>
+        <article className="dashboard-muted"><span>Next</span><h2>Bookings</h2><p>Booking tools are not available yet. No payment information is collected.</p><button className="button" type="button" disabled>Coming soon</button></article>
       </section>
     </main>
   );

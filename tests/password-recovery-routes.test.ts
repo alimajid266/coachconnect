@@ -46,7 +46,7 @@ describe("password recovery routes", () => {
     }));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      message: "If an account exists for this email, a password reset link has been sent.",
+      message: "Check your inbox for password reset instructions.",
     });
     expect(mocks.resetPasswordForEmail).toHaveBeenCalledWith(
       "athlete@example.com",

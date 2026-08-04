@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import AccountPage from "@/app/account/page";
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -11,6 +12,8 @@ describe("account page", () => {
     render(<AccountPage />);
 
     expect(screen.getByRole("heading", { name: /your next move starts here/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /athlete training/i })).toBeInTheDocument();
+    expect(screen.queryByText(/phase\s*2/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^sign in$/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
@@ -121,5 +124,26 @@ describe("account page", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/passwords do not match/i);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("enables another confirmation email after a 30 second cooldown", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: "Confirmation email requested." }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AccountPage />);
+
+    fireEvent.change(screen.getByLabelText(/^email/i), {
+      target: { value: "ali@example.com" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /resend confirmation email/i }));
+    });
+
+    expect(screen.getByRole("button", { name: /resend available in 30s/i })).toBeDisabled();
+    act(() => vi.advanceTimersByTime(30_000));
+    expect(screen.getByRole("button", { name: /resend confirmation email/i })).toBeEnabled();
   });
 });
