@@ -4,13 +4,13 @@ CoachConnect is a narrowly scoped sports-coach marketplace MVP for adults in Pak
 
 ## Current status
 
-- Phase 1 home/search/profile preview: complete and checkpointed at `phase-1-home`.
-- Eye-catching athletic home refresh: implemented.
-- Phase 2: Supabase account foundation in progress.
-- Public deployment: not performed.
+- Simple public home page and dedicated `/coaches` catalog are implemented.
+- The catalog shows all approved sample coaches and supports search, city, sport, format, and sorting controls.
+- Supabase account foundation is active; marketplace records still need migration to Supabase.
+- Public deployment: `https://coachconnect-sigma.vercel.app`.
 - Monetary cost: Rs 0.
 
-All coaches, ratings, availability, and recommendation labels currently shown on the home page are fictional sample data.
+All coaches, ratings, availability, and recommendation labels currently shown in the catalog are fictional sample data.
 
 ## Architecture
 

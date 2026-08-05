@@ -84,7 +84,8 @@ Administrator Dashboard
 
 ```text
 Home
-  → Search results
+  → Dedicated coach catalog (`/coaches`)
+  → Search, filter, or sort the complete approved list
   → Coach profile
   → Service and available time
   → Booking review
@@ -95,7 +96,8 @@ Home
 
 ## Navigation rules
 
-- Visitors see no dashboard links until signed in.
+- The catalog checks the existing session: signed-in members see Dashboard; visitors see Sign in.
+- Moving from the dashboard to `/coaches` must never call logout or clear session cookies.
 - Every signed-in member can use athlete tools.
 - A member with approved coach capability can switch between athlete and coach areas without another account.
 - A member without coach capability sees an application action, not coach management controls.

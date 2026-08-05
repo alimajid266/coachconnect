@@ -71,7 +71,7 @@ export default function DashboardPage() {
 
       <section className="dashboard-actions" aria-label={`${roleLabel} actions`}>
         {user.role === "ATHLETE" && (
-          <article><span>01</span><h2>Find your next coach</h2><p>Explore coach profiles and compare specialties, locations and prices.</p><Link className="button button-primary" href="/#coaches">Find a coach</Link></article>
+          <article><span>01</span><h2>Find your next coach</h2><p>Explore coach profiles and compare specialties, locations and prices.</p><Link className="button button-primary" href="/coaches">Find a coach</Link></article>
         )}
         {user.role === "COACH" && (
           <article><span>01</span><h2>Build your coach profile</h2><p>Add privacy-safe service details and submit them for administrator approval.</p><Link className="button button-primary" href="/coach/profile">Build my coach profile</Link></article>
