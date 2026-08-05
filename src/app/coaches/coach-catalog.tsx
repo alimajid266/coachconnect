@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { coaches, formatCoachPrice, type Coach } from "@/lib/coaches";
+import { allSports, coaches, formatCoachPrice, type Coach } from "@/lib/coaches";
 
 type SessionUser = {
   id: string;
@@ -47,12 +47,12 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
       .split(/\s+/)
       .filter((term) => term && !["a", "coach", "coaches", "coaching", "for", "the"].includes(term));
     const matches = coaches.filter((coach) => {
-      const searchable = [coach.name, coach.sport, coach.specialty, coach.location, coach.mode]
+      const searchable = [coach.name, ...coach.sports, coach.specialty, coach.location, coach.mode]
         .join(" ")
         .toLowerCase();
       return (queryTerms.length === 0 || queryTerms.every((term) => searchable.includes(term)))
         && (city === "any" || coach.location === city)
-        && (sport === "any" || coach.sport === sport)
+        && (sport === "any" || coach.sports.includes(sport as (typeof coach.sports)[number]))
         && (mode === "any" || coach.mode === mode);
     });
 
@@ -92,7 +92,7 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
           <div>
             <p>Coach catalog</p>
             <h1>Find a coach</h1>
-            <span>Browse every approved coach, then narrow the list when you need to.</span>
+            <span>Browse every sample coach, then narrow the list when you need to.</span>
           </div>
         </section>
 
@@ -119,9 +119,7 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
             <span>Sport</span>
             <select aria-label="Sport" value={sport} onChange={(event) => setSport(event.target.value)}>
               <option value="any">Any sport</option>
-              <option value="Cricket">Cricket</option>
-              <option value="Strength">Strength</option>
-              <option value="Tennis">Tennis</option>
+              {allSports.map((entry) => <option value={entry} key={entry}>{entry}</option>)}
             </select>
           </label>
           <label>
@@ -144,9 +142,11 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
           <button type="button" onClick={clearFilters}>Clear filters</button>
         </section>
 
+        <p className="catalog-demo-note">Prototype notice: names, profiles and reviews are fictional sample data. Photography illustrates the sport, not the fictional identity.</p>
+
         <div className="catalog-results-heading">
           <p role="status">{visibleCoaches.length} {visibleCoaches.length === 1 ? "coach" : "coaches"}</p>
-          <span>Approved profiles only</span>
+          <span>Sample profiles</span>
         </div>
 
         {visibleCoaches.length > 0 ? (
@@ -156,7 +156,7 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
                 <div className="catalog-card-image">
                   <Image
                     src={coach.image}
-                    alt={`${coach.name}, ${coach.sport} coach`}
+                    alt={`${coach.name}, ${coach.sports.join(" and ")} coach`}
                     fill
                     sizes="(max-width: 680px) 100vw, (max-width: 1050px) 50vw, 33vw"
                   />
@@ -167,7 +167,7 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
                     <h2>{coach.name}</h2>
                     <span aria-label={`${coach.rating} out of 5 stars`}>★ {coach.rating}</span>
                   </div>
-                  <p>{coach.location} · {coach.sport} · {coach.mode}</p>
+                  <p>{coach.location} · {coach.sports.join(" · ")} · {coach.mode}</p>
                   <strong>{coach.specialty}</strong>
                   <div className="catalog-card-footer">
                     <span><b>{formatCoachPrice(coach.price)}</b> per session</span>
@@ -204,13 +204,31 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
               <Image src={selectedCoach.image} alt="" fill sizes="(max-width: 680px) 100vw, 520px" />
             </div>
             <div className="catalog-profile-body">
-              <p>{selectedCoach.location} · {selectedCoach.sport} · {selectedCoach.mode}</p>
+              <p>{selectedCoach.location} · {selectedCoach.sports.join(" · ")} · {selectedCoach.mode}</p>
               <h2 id="catalog-profile-name">{selectedCoach.name}</h2>
               <strong>{selectedCoach.specialty}</strong>
-              <p>{selectedCoach.reason}</p>
+              <div className="catalog-profile-sports" aria-label="Sports coached">
+                {selectedCoach.sports.map((entry) => <span key={entry}>{entry}</span>)}
+              </div>
               <div className="catalog-profile-summary">
                 <span><b>★ {selectedCoach.rating}</b>{selectedCoach.reviewCount} reviews</span>
                 <span><b>{formatCoachPrice(selectedCoach.price)}</b>60-minute session</span>
+              </div>
+              <section className="catalog-profile-about">
+                <h3>About {selectedCoach.name.split(" ")[0]}</h3>
+                <p>{selectedCoach.bio}</p>
+              </section>
+              <div className="catalog-profile-details">
+                <section>
+                  <h3>Experience and credentials</h3>
+                  <strong>{selectedCoach.experience}</strong>
+                  <ul>{selectedCoach.credentials.map((credential) => <li key={credential}>{credential}</li>)}</ul>
+                </section>
+                <section>
+                  <h3>Coaching style</h3>
+                  <p>{selectedCoach.coachingStyle}</p>
+                  <span><b>Languages</b>{selectedCoach.languages.join(" · ")}</span>
+                </section>
               </div>
               <section className="catalog-profile-availability">
                 <h3>Weekly availability</h3>

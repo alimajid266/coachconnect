@@ -3,11 +3,12 @@ import { describe, expect, it } from "vitest";
 import HomePage from "@/app/page";
 
 describe("CoachConnect home page", () => {
-  it("introduces the service without pretending to be the full catalog", () => {
+  it("uses the stronger athletic homepage layout without becoming the catalog", () => {
     render(<HomePage />);
 
-    expect(screen.getByRole("heading", { level: 1, name: /find the right coach/i })).toBeInTheDocument();
-    expect(screen.getByText(/cricket, tennis and strength coaches/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /train smarter.*play bolder/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /athlete training with a coach/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/12 sports/i).length).toBeGreaterThan(0);
     expect(screen.queryByRole("region", { name: /coach results/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /view .*profile/i })).not.toBeInTheDocument();
   });

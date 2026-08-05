@@ -1,8 +1,10 @@
+export type Sport = "Badminton" | "Basketball" | "Boxing" | "Cricket" | "Football" | "Ice Hockey" | "Running" | "Strength" | "Swimming" | "Table Tennis" | "Tennis" | "Yoga";
+
 export type Coach = {
   id: string;
   name: string;
   location: "Islamabad" | "Karachi" | "Lahore";
-  sport: "Cricket" | "Strength" | "Tennis";
+  sports: Sport[];
   specialty: string;
   rating: number;
   reviewCount: number;
@@ -13,14 +15,21 @@ export type Coach = {
   availability: string[];
   image: string;
   rank: number;
+  bio: string;
+  experience: string;
+  credentials: string[];
+  coachingStyle: string;
+  languages: string[];
 };
 
-export const coaches: Coach[] = [
+type BaseCoach = Omit<Coach, "bio" | "experience" | "credentials" | "coachingStyle" | "languages">;
+
+const baseCoaches: BaseCoach[] = [
   {
     id: "ayesha-khan",
     name: "Ayesha Khan",
     location: "Lahore",
-    sport: "Cricket",
+    sports: ["Cricket"],
     specialty: "Beginner batting technique",
     rating: 4.9,
     reviewCount: 48,
@@ -36,7 +45,7 @@ export const coaches: Coach[] = [
     id: "hamza-siddiqui",
     name: "Hamza Siddiqui",
     location: "Karachi",
-    sport: "Tennis",
+    sports: ["Tennis", "Badminton"],
     specialty: "Foundations and match play",
     rating: 4.8,
     reviewCount: 36,
@@ -52,7 +61,7 @@ export const coaches: Coach[] = [
     id: "sara-ahmed",
     name: "Sara Ahmed",
     location: "Islamabad",
-    sport: "Strength",
+    sports: ["Strength"],
     specialty: "Strength and conditioning",
     rating: 4.7,
     reviewCount: 29,
@@ -68,7 +77,7 @@ export const coaches: Coach[] = [
     id: "zainab-malik",
     name: "Zainab Malik",
     location: "Karachi",
-    sport: "Cricket",
+    sports: ["Cricket"],
     specialty: "Fast bowling and fielding",
     rating: 4.8,
     reviewCount: 31,
@@ -84,7 +93,7 @@ export const coaches: Coach[] = [
     id: "omar-farooq",
     name: "Omar Farooq",
     location: "Islamabad",
-    sport: "Tennis",
+    sports: ["Tennis"],
     specialty: "Serve technique and footwork",
     rating: 4.7,
     reviewCount: 22,
@@ -100,7 +109,7 @@ export const coaches: Coach[] = [
     id: "bilal-raza",
     name: "Bilal Raza",
     location: "Lahore",
-    sport: "Strength",
+    sports: ["Strength", "Football"],
     specialty: "Athletic strength and mobility",
     rating: 4.9,
     reviewCount: 41,
@@ -112,6 +121,195 @@ export const coaches: Coach[] = [
     image: "/images/coach-bilal.jpg",
     rank: 6,
   },
+  {
+    id: "danish-iqbal",
+    name: "Danish Iqbal",
+    location: "Karachi",
+    sports: ["Football"],
+    specialty: "Ball control and attacking movement",
+    rating: 4.8,
+    reviewCount: 54,
+    price: 3600,
+    reason: "Practical football sessions for sharper control, passing and movement.",
+    badge: "Popular",
+    mode: "In person",
+    availability: ["Wednesday", "Sunday"],
+    image: "/images/coach-danish.jpg",
+    rank: 7,
+  },
+  {
+    id: "hira-noor",
+    name: "Hira Noor",
+    location: "Lahore",
+    sports: ["Badminton"],
+    specialty: "Footwork, serves and rally confidence",
+    rating: 4.9,
+    reviewCount: 39,
+    price: 3000,
+    reason: "Friendly technical coaching for new and returning badminton players.",
+    badge: "Player favorite",
+    mode: "In person",
+    availability: ["Tuesday", "Friday"],
+    image: "/images/coach-hira.jpg",
+    rank: 8,
+  },
+  {
+    id: "farhan-akram",
+    name: "Farhan Akram",
+    location: "Islamabad",
+    sports: ["Swimming"],
+    specialty: "Stroke efficiency and water confidence",
+    rating: 4.8,
+    reviewCount: 46,
+    price: 4200,
+    reason: "Structured pool sessions for breathing, technique and endurance.",
+    badge: "Technique first",
+    mode: "In person",
+    availability: ["Thursday", "Saturday"],
+    image: "/images/coach-farhan.jpg",
+    rank: 9,
+  },
+  {
+    id: "mariam-shah",
+    name: "Mariam Shah",
+    location: "Karachi",
+    sports: ["Boxing"],
+    specialty: "Boxing fundamentals and conditioning",
+    rating: 4.9,
+    reviewCount: 33,
+    price: 3900,
+    reason: "Beginner-safe coaching covering stance, defense and controlled combinations.",
+    badge: "Beginner friendly",
+    mode: "In person",
+    availability: ["Monday", "Saturday"],
+    image: "/images/coach-mariam.jpg",
+    rank: 10,
+  },
+  {
+    id: "usman-tariq",
+    name: "Usman Tariq",
+    location: "Lahore",
+    sports: ["Basketball"],
+    specialty: "Shooting mechanics and court awareness",
+    rating: 4.7,
+    reviewCount: 28,
+    price: 3400,
+    reason: "Skill-focused basketball coaching for confident decisions under pressure.",
+    badge: "Skills coach",
+    mode: "In person",
+    availability: ["Friday", "Sunday"],
+    image: "/images/coach-usman.jpg",
+    rank: 11,
+  },
+  {
+    id: "nadia-hussain",
+    name: "Nadia Hussain",
+    location: "Islamabad",
+    sports: ["Running"],
+    specialty: "Running form and sustainable endurance",
+    rating: 4.8,
+    reviewCount: 61,
+    price: 2600,
+    reason: "Flexible coaching plans for safer mileage and stronger race preparation.",
+    badge: "Flexible plan",
+    mode: "Online",
+    availability: ["Tuesday", "Sunday"],
+    image: "/images/coach-nadia.jpg",
+    rank: 12,
+  },
+  {
+    id: "rida-aslam",
+    name: "Rida Aslam",
+    location: "Lahore",
+    sports: ["Yoga"],
+    specialty: "Mobility, balance and recovery",
+    rating: 4.9,
+    reviewCount: 57,
+    price: 2700,
+    reason: "Accessible sessions that support mobility, control and athletic recovery.",
+    badge: "Recovery",
+    mode: "Online",
+    availability: ["Wednesday", "Saturday"],
+    image: "/images/coach-rida.jpg",
+    rank: 13,
+  },
+  {
+    id: "sameer-qureshi",
+    name: "Sameer Qureshi",
+    location: "Karachi",
+    sports: ["Ice Hockey"],
+    specialty: "Skating, puck control and positional play",
+    rating: 4.7,
+    reviewCount: 35,
+    price: 3500,
+    reason: "Game-aware ice hockey coaching for cleaner skills and better positioning.",
+    badge: "Team sport",
+    mode: "In person",
+    availability: ["Thursday", "Sunday"],
+    image: "/images/coach-sameer.jpg",
+    rank: 14,
+  },
+  {
+    id: "iqra-javed",
+    name: "Iqra Javed",
+    location: "Islamabad",
+    sports: ["Table Tennis"],
+    specialty: "Spin, placement and match tactics",
+    rating: 4.8,
+    reviewCount: 43,
+    price: 2900,
+    reason: "Technical sessions for reliable strokes, spin reading and smarter rallies.",
+    badge: "Match tactics",
+    mode: "In person",
+    availability: ["Monday", "Friday"],
+    image: "/images/coach-iqra.jpg",
+    rank: 15,
+  },
 ];
+
+const credentialsBySport: Record<Sport, string[]> = {
+  Badminton: ["National badminton coaching workshop", "First-aid trained"],
+  Basketball: ["Basketball skills development certificate", "Youth coaching workshop"],
+  Boxing: ["Amateur boxing coaching certificate", "First-aid trained"],
+  Cricket: ["PCB Level 1", "Safe sport fundamentals"],
+  Football: ["AFC grassroots coaching certificate", "First-aid trained"],
+  "Ice Hockey": ["Ice hockey coaching foundation certificate", "Team development workshop"],
+  Running: ["Endurance coaching foundation", "Running gait assessment workshop"],
+  Strength: ["Certified strength coach", "Movement screening certificate"],
+  Swimming: ["Learn-to-swim instructor certificate", "Pool safety and rescue training"],
+  "Table Tennis": ["Table tennis coaching foundation", "Match analysis workshop"],
+  Tennis: ["ITF coaching foundation", "Player development workshop"],
+  Yoga: ["200-hour yoga teacher training", "Mobility and recovery workshop"],
+};
+
+const styleBySport: Record<Sport, string> = {
+  Badminton: "Clear demonstrations, repeatable footwork patterns and rally-based progress.",
+  Basketball: "Skill repetitions followed by realistic decisions and short competitive games.",
+  Boxing: "Controlled technical rounds with safety, defense and confidence before intensity.",
+  Cricket: "Simple technical cues, video feedback and game-like practice with a clear weekly goal.",
+  Football: "Ball-heavy sessions that move from technique into realistic small-sided situations.",
+  "Ice Hockey": "Fast skill blocks, positional scenarios and practical team-play feedback.",
+  Running: "Sustainable progress through form cues, manageable volume and honest recovery checks.",
+  Strength: "Measured progress, clear movement coaching and programs adapted to available equipment.",
+  Swimming: "Calm pool instruction using short drills, breathing control and visible technique goals.",
+  "Table Tennis": "High-repetition stroke work followed by spin-reading and point construction.",
+  Tennis: "Technical foundations, purposeful drills and match situations without information overload.",
+  Yoga: "Accessible movement sequences with patient cues and options for different mobility levels.",
+};
+
+export const coaches: Coach[] = baseCoaches.map((coach) => {
+  const primarySport = coach.sports[0];
+  const isAyesha = coach.id === "ayesha-khan";
+  return {
+    ...coach,
+    bio: `${coach.name} helps athletes build useful, repeatable skills without making sessions feel intimidating. ${coach.reason}`,
+    experience: `${isAyesha ? 8 : 4 + (coach.rank % 8)} years coaching`,
+    credentials: credentialsBySport[primarySport],
+    coachingStyle: styleBySport[primarySport],
+    languages: isAyesha ? ["English", "Urdu"] : coach.location === "Lahore" ? ["English", "Urdu", "Punjabi"] : ["English", "Urdu"],
+  };
+});
+
+export const allSports: Sport[] = Array.from(new Set(coaches.flatMap((coach) => coach.sports))).sort();
 
 export const formatCoachPrice = (price: number) => `Rs ${price.toLocaleString("en-PK")}`;

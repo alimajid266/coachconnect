@@ -1,6 +1,6 @@
 # CoachConnect
 
-CoachConnect is a narrowly scoped sports-coach marketplace MVP for adults in Pakistan. The launch sports are cricket, tennis, and strength & conditioning; the launch locations are Karachi, Lahore, and Islamabad/Rawalpindi.
+CoachConnect is a sports-coach marketplace MVP for adults in Pakistan. The prototype catalog spans team, racquet, combat, endurance, aquatic, strength, and mobility sports across Karachi, Lahore, and Islamabad/Rawalpindi. One coach profile may represent multiple sports when the coach has the relevant capability.
 
 ## Current status
 

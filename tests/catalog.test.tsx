@@ -17,8 +17,10 @@ describe("coach catalog", () => {
     renderCatalog();
 
     expect(screen.getByRole("heading", { level: 1, name: /find a coach/i })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("6 coaches");
-    expect(screen.getAllByRole("article")).toHaveLength(6);
+    const resultCount = Number(screen.getByRole("status").textContent?.match(/\d+/)?.[0]);
+    expect(resultCount).toBeGreaterThan(10);
+    expect(screen.getAllByRole("article").length).toBeGreaterThan(10);
+    expect(screen.getByText(/names, profiles and reviews are fictional sample data/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bilal Raza" })).toBeInTheDocument();
   });
@@ -34,7 +36,20 @@ describe("coach catalog", () => {
     expect(screen.queryByRole("heading", { name: "Zainab Malik" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /clear filters/i }));
-    expect(screen.getByRole("status")).toHaveTextContent("6 coaches");
+    expect(screen.getByRole("status")).toHaveTextContent("15 coaches");
+  });
+
+  it("allows one coach to be discovered through each sport they teach", () => {
+    renderCatalog();
+
+    expect(screen.getByRole("option", { name: "Badminton" })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox", { name: /sport/i }), { target: { value: "Badminton" } });
+
+    expect(screen.getByRole("status")).toHaveTextContent("2 coaches");
+    const hamzaCard = screen.getByRole("heading", { name: "Hamza Siddiqui" }).closest("article");
+    expect(hamzaCard).not.toBeNull();
+    expect(within(hamzaCard as HTMLElement).getByText(/Tennis · Badminton/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Hira Noor" })).toBeInTheDocument();
   });
 
   it("accepts ordinary searches such as tennis coach", () => {
@@ -52,8 +67,8 @@ describe("coach catalog", () => {
 
     fireEvent.change(screen.getByRole("combobox", { name: /sort/i }), { target: { value: "price-low" } });
     const cards = screen.getAllByRole("article");
-    expect(within(cards[0]).getByRole("heading", { name: "Omar Farooq" })).toBeInTheDocument();
-    expect(within(cards[5]).getByRole("heading", { name: "Hamza Siddiqui" })).toBeInTheDocument();
+    expect(within(cards[0]).getByRole("heading", { name: "Nadia Hussain" })).toBeInTheDocument();
+    expect(within(cards[cards.length - 1]).getByRole("heading", { name: "Farhan Akram" })).toBeInTheDocument();
   });
 
   it("opens clear profile details from a catalog card", () => {
@@ -64,6 +79,12 @@ describe("coach catalog", () => {
     const dialog = screen.getByRole("dialog", { name: /ayesha khan/i });
     expect(dialog).toBeInTheDocument();
     expect(within(dialog).getByText(/beginner batting technique/i)).toBeInTheDocument();
+    expect(within(dialog).getByRole("heading", { name: /about ayesha/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole("heading", { name: /experience and credentials/i })).toBeInTheDocument();
+    expect(within(dialog).getByText(/8 years coaching/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/PCB Level 1/i)).toBeInTheDocument();
+    expect(within(dialog).getByRole("heading", { name: /coaching style/i })).toBeInTheDocument();
+    expect(within(dialog).getByText(/English · Urdu/i)).toBeInTheDocument();
     expect(within(dialog).getByRole("heading", { name: /weekly availability/i })).toBeInTheDocument();
     expect(within(dialog).getByRole("link", { name: /sign in to reserve/i })).toHaveAttribute("href", "/account");
 

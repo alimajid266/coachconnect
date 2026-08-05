@@ -12,7 +12,8 @@ This is a changeable baseline, not an irreversible contract. Scope changes are m
 - Currency: Pakistani rupees, displayed as `Rs 3,000`
 - Language: English
 - Audience: adults aged 18+
-- Sports: cricket, tennis, strength and conditioning
+- Sports: broad, extensible catalog across team, racquet, combat, endurance, aquatic, strength, and mobility sports
+- Coach capabilities: one approved coach profile may list multiple verified sports
 - Cities: Karachi, Lahore, Islamabad/Rawalpindi
 - Formats: online and in-person one-to-one coaching
 - Cost to run locally: Rs 0
