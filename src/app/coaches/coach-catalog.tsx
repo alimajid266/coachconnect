@@ -92,7 +92,7 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
           <div>
             <p>Coach catalog</p>
             <h1>Find a coach</h1>
-            <span>Browse every sample coach, then narrow the list when you need to.</span>
+            <span>Browse coaches across every sport, city and training format.</span>
           </div>
         </section>
 
@@ -142,11 +142,9 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
           <button type="button" onClick={clearFilters}>Clear filters</button>
         </section>
 
-        <p className="catalog-demo-note">Prototype notice: names, profiles and reviews are fictional sample data. Photography illustrates the sport, not the fictional identity.</p>
-
         <div className="catalog-results-heading">
           <p role="status">{visibleCoaches.length} {visibleCoaches.length === 1 ? "coach" : "coaches"}</p>
-          <span>Sample profiles</span>
+          <span>Available coaches</span>
         </div>
 
         {visibleCoaches.length > 0 ? (
@@ -267,7 +265,6 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
                   ))}
                 </div>
               </section>
-              <p className="catalog-profile-privacy">Exact meeting details stay private until a booking is confirmed.</p>
               <Link className="catalog-profile-reserve" href={user ? "/dashboard" : "/account"}>
                 {user ? "Continue to reserve" : "Sign in to reserve"}
               </Link>

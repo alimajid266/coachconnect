@@ -15,6 +15,7 @@ describe("role-aware dashboard", () => {
     expect(await screen.findByRole("heading", { name: /good to see you, ali athlete/i })).toBeInTheDocument();
     expect(screen.getByText(/member dashboard/i)).toBeInTheDocument();
     expect(screen.getByText(/find coaching/i)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/private|sample|prototype|fictional/i);
     expect(screen.queryByText(/athlete dashboard/i)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /find a coach/i })).toHaveAttribute("href", "/coaches");
     expect(screen.queryByRole("link", { name: /build my coach profile/i })).not.toBeInTheDocument();

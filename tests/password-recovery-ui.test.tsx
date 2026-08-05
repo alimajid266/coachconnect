@@ -34,6 +34,7 @@ describe("password recovery UI", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     render(<ResetPasswordPage />);
+    expect(document.body.textContent).not.toMatch(/private by default|sample|prototype|fictional/i);
     fireEvent.change(screen.getByLabelText(/^new password$/i), {
       target: { value: "New-Private-Passphrase-42" },
     });

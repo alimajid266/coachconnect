@@ -130,9 +130,9 @@ export default function AccountPage() {
         <div>
           <p className="eyebrow light">For athletes and coaches</p>
           <h1 aria-label="Your next move starts here.">Your next move<br /><span aria-hidden="true">starts here.</span></h1>
-          <p>Create a private account to find coaching, manage your profile and stay ready for every session.</p>
+          <p>Create one account to find coaching, manage your profile and stay ready for every session.</p>
         </div>
-        <div className="account-safety"><strong>Private by default</strong><span>Your email never appears on public coach profiles.</span></div>
+        <div className="account-safety"><strong>One account, two ways to train</strong><span>Find a coach now and apply to offer coaching whenever you are ready.</span></div>
       </section>
 
       <section className="account-panel" aria-labelledby="account-heading">
@@ -178,7 +178,7 @@ export default function AccountPage() {
                 </>
               )}
 
-              <label htmlFor="account-email">Email <span>Private</span></label>
+              <label htmlFor="account-email">Email</label>
               <input id="account-email" type="email" autoComplete="email" maxLength={254} required value={email} onChange={(event) => setEmail(event.target.value)} />
 
               <label htmlFor="account-password">Password</label>

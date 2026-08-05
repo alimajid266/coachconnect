@@ -14,6 +14,7 @@ describe("account page", () => {
     expect(screen.getByRole("heading", { name: /your next move starts here/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /athlete training/i })).toBeInTheDocument();
     expect(screen.queryByText(/phase\s*2/i)).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/private by default|private account|sample|prototype|fictional/i);
     expect(screen.getByRole("button", { name: /^sign in$/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));

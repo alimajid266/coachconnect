@@ -52,7 +52,7 @@ export default function ResetPasswordPage() {
           <h1>Choose a new<br /><span>password.</span></h1>
           <p>Your recovery link creates a short-lived secure session. After the update, that session is signed out automatically.</p>
         </div>
-        <div className="account-safety"><strong>Private by default</strong><span>Your password is handled by Supabase and is never stored by CoachConnect.</span></div>
+        <div className="account-safety"><strong>Protected recovery</strong><span>Your new password is securely handled by Supabase.</span></div>
       </section>
 
       <section className="account-panel" aria-labelledby="reset-heading">

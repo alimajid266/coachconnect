@@ -13,14 +13,14 @@ function renderCatalog(user: object | null = null) {
 }
 
 describe("coach catalog", () => {
-  it("shows every approved sample coach on a dedicated catalog page", async () => {
+  it("shows every approved coach without prototype language", async () => {
     renderCatalog();
 
     expect(screen.getByRole("heading", { level: 1, name: /find a coach/i })).toBeInTheDocument();
     const resultCount = Number(screen.getByRole("status").textContent?.match(/\d+/)?.[0]);
     expect(resultCount).toBeGreaterThan(10);
     expect(screen.getAllByRole("article").length).toBeGreaterThan(10);
-    expect(screen.getByText(/names, profiles and reviews are fictional sample data/i)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/sample|prototype|fictional/i);
     expect(screen.getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bilal Raza" })).toBeInTheDocument();
   });
@@ -157,6 +157,7 @@ describe("coach catalog", () => {
     expect(within(dialog).getByRole("heading", { name: /coaching style/i })).toBeInTheDocument();
     expect(within(dialog).getByText(/English · Urdu/i)).toBeInTheDocument();
     expect(within(dialog).getByRole("heading", { name: /weekly availability/i })).toBeInTheDocument();
+    expect(within(dialog).queryByText(/stay private|private by default/i)).not.toBeInTheDocument();
     expect(within(dialog).getByRole("link", { name: /sign in to reserve/i })).toHaveAttribute("href", "/account");
 
     fireEvent.click(screen.getByRole("button", { name: /close coach profile/i }));

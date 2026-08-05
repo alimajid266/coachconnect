@@ -82,7 +82,7 @@ export default function HomePage() {
         <section className="momentum-strip" aria-label="CoachConnect marketplace range">
           <div className="container momentum-grid">
             <div><span>Explore widely</span><strong>12 sports</strong></div>
-            <p>15 sample coach profiles</p>
+            <p>15 coaches available</p>
             <div className="momentum-promise"><span>One coach, more possibilities</span><strong>Multi-sport profiles →</strong></div>
           </div>
         </section>
@@ -136,15 +136,15 @@ export default function HomePage() {
             <div className="steps">
               <article><span>01</span><h3>Browse approved coaches</h3><p>Explore every active coach and all the sports they teach.</p></article>
               <article><span>02</span><h3>Choose the right fit</h3><p>Compare experience, style, credentials, price and availability.</p></article>
-              <article><span>03</span><h3>Reserve safely</h3><p>Sign in when you are ready. Private details stay private.</p></article>
+              <article><span>03</span><h3>Book a session</h3><p>Choose a time that works for you and continue to reserve.</p></article>
             </div>
           </div>
         </section>
 
         <section className="section trust-section">
           <div className="container trust-panel">
-            <div><p className="eyebrow light">Trust and privacy</p><h2>Confidence without oversharing.</h2></div>
-            <ul><li>Coach profiles require review before publication.</li><li>Coaches can list multiple verified sport capabilities.</li><li>Exact locations and contact details remain private until booking.</li></ul>
+            <div><p className="eyebrow light">Coach standards</p><h2>Know who you&apos;re training with.</h2></div>
+            <ul><li>Coach profiles are reviewed before publication.</li><li>Compare sports, experience and credentials.</li><li>Use lesson history and reviews to choose confidently.</li></ul>
           </div>
         </section>
 
@@ -153,7 +153,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="footer"><div className="container footer-row"><strong>CoachConnect Pakistan</strong><span>12 sports · 3 cities · Online and in-person</span><span>Sample marketplace data</span></div></footer>
+      <footer className="footer"><div className="container footer-row"><strong>CoachConnect Pakistan</strong><span>12 sports · 3 cities · Online and in-person</span><span>Find your next coach</span></div></footer>
     </div>
   );
 }

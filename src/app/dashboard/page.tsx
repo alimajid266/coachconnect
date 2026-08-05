@@ -41,9 +41,9 @@ export default function DashboardPage() {
     return (
       <main className="dashboard-state">
         <Link className="brand dashboard-brand" href="/">Coach<span>Connect</span></Link>
-        <p className="eyebrow">{signedOut ? "Signed out safely" : "Private area"}</p>
+        <p className="eyebrow">{signedOut ? "Signed out" : "Member access"}</p>
         <h1>{signedOut ? "You are signed out." : "Sign in to open your dashboard."}</h1>
-        <p>{signedOut ? "Your local session has been revoked." : "Your role determines which private tools are available here."}</p>
+        <p>{signedOut ? "You can sign in again whenever you are ready." : "Your account determines which dashboard tools are available here."}</p>
         <Link className="button button-accent" href="/account">{signedOut ? "Sign in again" : "Go to sign in"}</Link>
       </main>
     );
@@ -69,7 +69,7 @@ export default function DashboardPage() {
           <h1 aria-label={`Good to see you, ${user.displayName}`}>
             Good to see you,<br /><span aria-hidden="true">{user.displayName}</span>
           </h1>
-          <p>Your email stays inside your private account and never appears on a public coach profile.</p>
+          <p>Manage your coaching activity and profile from one place.</p>
         </div>
         <div className="role-token"><span>Capabilities</span><strong>{capabilityLabel}</strong></div>
       </section>
@@ -77,12 +77,12 @@ export default function DashboardPage() {
       <section className="dashboard-actions" aria-label={`${accountLabel} actions`}>
         <article><span>01</span><h2>Find your next coach</h2><p>Explore coach profiles and compare specialties, locations and prices.</p><Link className="button button-primary" href="/coaches">Find a coach</Link></article>
         {user.role === "COACH" && (
-          <article><span>02</span><h2>Build your coach profile</h2><p>Add privacy-safe service details and submit them for administrator approval.</p><Link className="button button-primary" href="/coach/profile">Build my coach profile</Link></article>
+          <article><span>02</span><h2>Build your coach profile</h2><p>Add your sports, experience, services and availability for administrator approval.</p><Link className="button button-primary" href="/coach/profile">Build my coach profile</Link></article>
         )}
         {user.role === "ADMIN" && (
           <article><span>01</span><h2>Review coach applications</h2><p>Approve complete profiles before they can become public.</p><Link className="button button-primary" href="/admin/coaches">Approve coach profiles</Link></article>
         )}
-        <article className="dashboard-muted"><span>Next</span><h2>Bookings</h2><p>Booking tools are not available yet. No payment information is collected.</p><button className="button" type="button" disabled>Coming soon</button></article>
+
       </section>
     </main>
   );

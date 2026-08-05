@@ -11,6 +11,7 @@ describe("CoachConnect home page", () => {
     expect(screen.getAllByText(/12 sports/i).length).toBeGreaterThan(0);
     expect(screen.queryByRole("region", { name: /coach results/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /view .*profile/i })).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/sample|prototype|fictional|private by default|sample marketplace data/i);
   });
 
   it("uses the dedicated coach catalog for every discovery link", () => {
@@ -36,6 +37,6 @@ describe("CoachConnect home page", () => {
 
     expect(screen.getByRole("heading", { name: /how coachconnect works/i })).toBeInTheDocument();
     expect(screen.getByText(/browse approved coaches/i)).toBeInTheDocument();
-    expect(screen.getByText(/private details stay private/i)).toBeInTheDocument();
+    expect(screen.getByText(/choose a time that works for you/i)).toBeInTheDocument();
   });
 });
