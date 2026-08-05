@@ -46,4 +46,21 @@ describe("password recovery UI", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(/password updated/i);
     expect(screen.getByRole("link", { name: /return to sign in/i })).toHaveAttribute("href", "/account");
   });
+
+  it("requires the two new-password entries to match before submitting", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ResetPasswordPage />);
+
+    fireEvent.change(screen.getByLabelText(/^new password$/i), {
+      target: { value: "First-Private-Passphrase-42" },
+    });
+    fireEvent.change(screen.getByLabelText(/re-enter new password/i), {
+      target: { value: "Different-Private-Passphrase-42" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /update password/i }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Passwords do not match.");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
