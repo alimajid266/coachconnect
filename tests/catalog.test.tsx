@@ -37,6 +37,16 @@ describe("coach catalog", () => {
     expect(screen.getByRole("status")).toHaveTextContent("6 coaches");
   });
 
+  it("accepts ordinary searches such as tennis coach", () => {
+    renderCatalog();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: /search/i }), { target: { value: "tennis coach" } });
+    fireEvent.change(screen.getByRole("combobox", { name: /city/i }), { target: { value: "Karachi" } });
+
+    expect(screen.getByRole("status")).toHaveTextContent("1 coach");
+    expect(screen.getByRole("heading", { name: "Hamza Siddiqui" })).toBeInTheDocument();
+  });
+
   it("sorts visible coaches by price", () => {
     renderCatalog();
 

@@ -43,11 +43,14 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
 
   const visibleCoaches = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
+    const queryTerms = normalizedQuery
+      .split(/\s+/)
+      .filter((term) => term && !["a", "coach", "coaches", "coaching", "for", "the"].includes(term));
     const matches = coaches.filter((coach) => {
       const searchable = [coach.name, coach.sport, coach.specialty, coach.location, coach.mode]
         .join(" ")
         .toLowerCase();
-      return (!normalizedQuery || searchable.includes(normalizedQuery))
+      return (queryTerms.length === 0 || queryTerms.every((term) => searchable.includes(term)))
         && (city === "any" || coach.location === city)
         && (sport === "any" || coach.sport === sport)
         && (mode === "any" || coach.mode === mode);
