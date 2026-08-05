@@ -23,6 +23,8 @@ This is a changeable baseline, not an irreversible contract. Scope changes are m
 
 CoachConnect uses **one account per person**, not separate athlete and coach accounts. "Athlete" and "coach" are capabilities that can exist together.
 
+Registration creates a neutral member account. It does not ask the person to choose a permanent athlete or coach account type. Every member can immediately find and book coaching; offering coaching begins from the same dashboard and requires a separate coach-profile application and approval.
+
 ### Visitor
 
 - View the home page.
@@ -45,7 +47,7 @@ Every registered member can act as an athlete, including an approved coach.
 
 ### Coach capability
 
-Any registered member may apply to add the coach capability to the same account. Approval adds coach tools without removing athlete tools.
+Any registered member may start a coach application from the same account. Approval adds coach tools without removing athlete tools.
 
 - Create and edit a coach profile draft.
 - Submit the profile for administrator approval.
@@ -71,6 +73,7 @@ Administrator access is granted through a protected process and cannot be self-s
 ### Capability rules
 
 - Do not ask an existing member to create a second account to become a coach or athlete.
+- Do not use registration intent as authorization. Coach tools depend on coach-profile status and approval.
 - Email identity, private profile, and sign-in session remain shared.
 - Athlete preferences and coach business data remain separate.
 - Becoming a coach means adding coach tools, not changing or replacing the account.
@@ -96,8 +99,8 @@ Administrator access is granted through a protected process and cannot be self-s
 
 ### Coach joins marketplace
 
-1. Coach creates an account.
-2. Coach completes a profile and services.
+1. Member creates the same neutral account used by every other member.
+2. Member chooses to offer coaching and completes a coach profile and services.
 3. Coach submits for review.
 4. Administrator approves or rejects it.
 5. Only approved profiles become public.

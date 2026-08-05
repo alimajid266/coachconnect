@@ -50,7 +50,7 @@ describe("Supabase authentication routes", () => {
     mocks.applyCookies.mockImplementation(<T>(response: T) => response);
   });
 
-  it("registers through Supabase with safe role metadata", async () => {
+  it("registers one neutral member account without accepting a self-selected role", async () => {
     mocks.signUp.mockResolvedValue({
       data: {
         user: { id: "user-1", email: "athlete@example.com" },
@@ -63,7 +63,6 @@ describe("Supabase authentication routes", () => {
       displayName: "Ali Athlete",
       email: "athlete@example.com",
       password: "Private-Test-Passphrase-42",
-      role: "ATHLETE",
     }));
 
     expect(response.status).toBe(201);

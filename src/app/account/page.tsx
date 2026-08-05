@@ -4,10 +4,9 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
 type Mode = "login" | "register";
-type Role = "ATHLETE" | "COACH";
 
 type AuthResult = {
-  user?: { id: string; displayName: string; email: string; role: Role | "ADMIN" };
+  user?: { id: string; displayName: string; email: string; role: "ATHLETE" | "COACH" | "ADMIN" };
   authenticated?: boolean;
   pendingEmailConfirmation?: boolean;
   message?: string;
@@ -20,7 +19,7 @@ export default function AccountPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
-  const [role, setRole] = useState<Role>("ATHLETE");
+
   const [message, setMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [complete, setComplete] = useState(false);
@@ -86,7 +85,7 @@ export default function AccountPage() {
     try {
       const endpoint = mode === "register" ? "/api/auth/register" : "/api/auth/login";
       const payload = mode === "register"
-        ? { displayName, email, password, role }
+        ? { displayName, email, password }
         : { email, password };
       const response = await fetch(endpoint, {
         method: "POST",
@@ -175,12 +174,7 @@ export default function AccountPage() {
                 <>
                   <label htmlFor="display-name">Display name</label>
                   <input id="display-name" autoComplete="name" minLength={2} maxLength={60} required value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
-
-                  <label htmlFor="account-role">Account type</label>
-                  <select id="account-role" value={role} onChange={(event) => setRole(event.target.value as Role)}>
-                    <option value="ATHLETE">Athlete — find coaching</option>
-                    <option value="COACH">Coach — create a profile</option>
-                  </select>
+                  <p className="auth-account-note">One account lets you find coaching and apply to coach. You can do both at any time.</p>
                 </>
               )}
 

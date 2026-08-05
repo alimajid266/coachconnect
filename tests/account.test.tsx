@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 describe("account page", () => {
-  it("offers sign-in and safe athlete or coach registration", () => {
+  it("creates one member account without locking athlete or coach roles", () => {
     render(<AccountPage />);
 
     expect(screen.getByRole("heading", { name: /your next move starts here/i })).toBeInTheDocument();
@@ -21,11 +21,8 @@ describe("account page", () => {
     expect(screen.getByLabelText(/^email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^password$/i)).toHaveAttribute("minLength", "12");
     expect(screen.getByLabelText(/re-enter your password/i)).toHaveAttribute("minLength", "12");
-
-    const role = screen.getByRole("combobox", { name: /account type/i });
-    expect(role).toHaveTextContent(/athlete/i);
-    expect(role).toHaveTextContent(/coach/i);
-    expect(role).not.toHaveTextContent(/administrator/i);
+    expect(screen.queryByRole("combobox", { name: /account type/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/one account lets you find coaching and apply to coach/i)).toBeInTheDocument();
   });
 
   it("accepts the Supabase login contract and shows the dashboard handoff", async () => {
@@ -98,7 +95,8 @@ describe("account page", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(fetchMock.mock.calls[0][0]).toBe("/api/auth/register");
     const submitted = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(submitted).toMatchObject({ email: "ali@example.com", role: "ATHLETE" });
+    expect(submitted).toMatchObject({ email: "ali@example.com" });
+    expect(submitted).not.toHaveProperty("role");
     expect(screen.queryByDisplayValue("Private-Test-Passphrase-42")).not.toBeInTheDocument();
     expect(await screen.findByRole("link", { name: /open my dashboard/i })).toHaveAttribute(
       "href",

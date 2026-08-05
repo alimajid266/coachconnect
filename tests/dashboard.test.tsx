@@ -13,6 +13,9 @@ describe("role-aware dashboard", () => {
     render(<DashboardPage />);
 
     expect(await screen.findByRole("heading", { name: /good to see you, ali athlete/i })).toBeInTheDocument();
+    expect(screen.getByText(/member dashboard/i)).toBeInTheDocument();
+    expect(screen.getByText(/find coaching/i)).toBeInTheDocument();
+    expect(screen.queryByText(/athlete dashboard/i)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /find a coach/i })).toHaveAttribute("href", "/coaches");
     expect(screen.queryByRole("link", { name: /build my coach profile/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/approve coach profiles/i)).not.toBeInTheDocument();
@@ -30,6 +33,7 @@ describe("role-aware dashboard", () => {
     render(<DashboardPage />);
 
     expect(await screen.findByRole("link", { name: /build my coach profile/i })).toHaveAttribute("href", "/coach/profile");
+    expect(screen.getByRole("link", { name: /find a coach/i })).toHaveAttribute("href", "/coaches");
     fireEvent.click(screen.getByRole("button", { name: /sign out/i }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(fetchMock.mock.calls[1][0]).toBe("/api/auth/logout");

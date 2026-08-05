@@ -338,6 +338,7 @@ a { color: inherit; text-decoration: none; }
 .auth-form label span { float: right; color: var(--muted); font-size: .66rem; text-transform: uppercase; letter-spacing: .1em; }
 .auth-form input, .auth-form select { width: 100%; min-height: 50px; border: 1px solid #c9d3ce; border-radius: 12px; background: #fff; padding: 0 14px; color: var(--ink); font-weight: 700; }
 .auth-form input:focus, .auth-form select:focus { border-color: var(--coral); outline: 3px solid rgba(255,107,87,.16); }
+.auth-account-note { margin: 8px 0 3px; padding: 11px 13px; border-left: 3px solid #789783; border-radius: 8px; color: #43564f; background: #edf3ef; font-size: .78rem; line-height: 1.45; }
 .auth-form small { color: var(--muted); font-size: .72rem; }
 .auth-email-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 11px; }
 .auth-resend { min-height: 46px; border: 1px solid #c5d2cc; border-radius: 13px; padding: 10px 13px; color: var(--ink-soft); background: #edf3ef; font-size: .76rem; font-weight: 900; line-height: 1.2; }

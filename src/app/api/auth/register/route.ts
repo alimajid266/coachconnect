@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { rejectCrossOriginRequest } from "@/lib/auth-http";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
-type AccountRole = "ATHLETE" | "COACH";
-
 export async function POST(request: NextRequest) {
   const originRejection = rejectCrossOriginRequest(request);
   if (originRejection) return originRejection;
@@ -13,12 +11,12 @@ export async function POST(request: NextRequest) {
     const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const password = typeof body.password === "string" ? body.password : "";
-    const role = body.role as AccountRole;
+    const role = "ATHLETE" as const;
 
     if (displayName.length < 2 || displayName.length > 60) throw new Error("Display name must be 2 to 60 characters.");
     if (!email || !email.includes("@")) throw new Error("Enter a valid email address.");
     if (password.length < 12) throw new Error("Password must be at least 12 characters.");
-    if (role !== "ATHLETE" && role !== "COACH") throw new Error("Choose athlete or coach.");
+
 
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
     const { data, error } = await supabase.auth.signUp({

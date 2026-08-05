@@ -49,7 +49,12 @@ export default function DashboardPage() {
     );
   }
 
-  const roleLabel = user.role === "ATHLETE" ? "Athlete" : user.role === "COACH" ? "Coach" : "Administrator";
+  const accountLabel = user.role === "ADMIN" ? "Administrator" : "Member";
+  const capabilityLabel = user.role === "COACH"
+    ? "Find coaching + coach tools"
+    : user.role === "ADMIN"
+      ? "Find coaching + administration"
+      : "Find coaching";
 
   return (
     <main className="dashboard-page">
@@ -60,21 +65,19 @@ export default function DashboardPage() {
 
       <section className="dashboard-hero">
         <div>
-          <p className="eyebrow light">{roleLabel} dashboard</p>
+          <p className="eyebrow light">{accountLabel} dashboard</p>
           <h1 aria-label={`Good to see you, ${user.displayName}`}>
             Good to see you,<br /><span aria-hidden="true">{user.displayName}</span>
           </h1>
           <p>Your email stays inside your private account and never appears on a public coach profile.</p>
         </div>
-        <div className="role-token"><span>Role</span><strong>{roleLabel}</strong></div>
+        <div className="role-token"><span>Capabilities</span><strong>{capabilityLabel}</strong></div>
       </section>
 
-      <section className="dashboard-actions" aria-label={`${roleLabel} actions`}>
-        {user.role === "ATHLETE" && (
-          <article><span>01</span><h2>Find your next coach</h2><p>Explore coach profiles and compare specialties, locations and prices.</p><Link className="button button-primary" href="/coaches">Find a coach</Link></article>
-        )}
+      <section className="dashboard-actions" aria-label={`${accountLabel} actions`}>
+        <article><span>01</span><h2>Find your next coach</h2><p>Explore coach profiles and compare specialties, locations and prices.</p><Link className="button button-primary" href="/coaches">Find a coach</Link></article>
         {user.role === "COACH" && (
-          <article><span>01</span><h2>Build your coach profile</h2><p>Add privacy-safe service details and submit them for administrator approval.</p><Link className="button button-primary" href="/coach/profile">Build my coach profile</Link></article>
+          <article><span>02</span><h2>Build your coach profile</h2><p>Add privacy-safe service details and submit them for administrator approval.</p><Link className="button button-primary" href="/coach/profile">Build my coach profile</Link></article>
         )}
         {user.role === "ADMIN" && (
           <article><span>01</span><h2>Review coach applications</h2><p>Approve complete profiles before they can become public.</p><Link className="button button-primary" href="/admin/coaches">Approve coach profiles</Link></article>
