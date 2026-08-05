@@ -771,17 +771,18 @@ Checkpoint: `phase-2-profiles`
 
 ### Phase 3 — Discovery and both AI features (1.5 days)
 
-**Current status:** The public zero-cost discovery slice is implemented with keyword/name fallback, local semantic aliases, natural-language extraction for sport, city, mode, level, budget, rating, and weekday availability, visible removable filters, explainable profile reasons, and empty states. The separate preference questionnaire and database-backed publication check remain future work.
+**Current status:** The public catalog provides name, specialty, and sport search; city, sport, and format filters; sorting; multi-sport discovery; detailed profiles; and explainable coach summaries. The first Mapbox slice is implemented locally with synchronized filtered results, approximate neighborhood/public training-area pins, online-only coach handling, accessible marker controls, and map-to-profile handoff. Database-backed publication checks, distance search, the preference questionnaire, broader natural-language interpretation, and the recommendation engine remain future work.
 
 Build:
 
 - Browse page
 - Normal keyword search
-- Sport, city, mode, level, budget, rating, and availability filters
+- Sport, city, mode, budget, rating, and availability filters
+- Synchronized list and map discovery using public or approximate training areas
 - Explainable coach recommendations
 - Natural-language search
 - Local semantic matching
-- Loading, empty, unclear-query, and model-failure states
+- Loading, empty, unclear-query, map-failure, and model-failure states
 
 Ali physically tests:
 

@@ -6,6 +6,7 @@ CoachConnect is a sports-coach marketplace MVP for adults in Pakistan. The proto
 
 - Simple public home page and dedicated `/coaches` catalog are implemented.
 - The catalog shows all approved sample coaches and supports search, city, sport, format, and sorting controls.
+- The optional Mapbox view keeps visible coach cards synchronized with approximate public training areas; online-only coaches are not pinned.
 - Supabase account foundation is active; marketplace records still need migration to Supabase.
 - Public deployment: `https://coachconnect-sigma.vercel.app`.
 - Monetary cost: Rs 0.
@@ -19,6 +20,7 @@ All coaches, ratings, availability, and recommendation labels currently shown in
 - Supabase PostgreSQL with Row-Level Security for private account/profile data
 - `@supabase/ssr` with server-managed HTTP-only cookies
 - Vitest and Testing Library
+- Mapbox GL JS with an origin-restricted public browser token
 - Hardened loopback-only Docker runtime
 - Prisma/SQLite retained only for the original Phase 1 sample repository while marketplace data moves to Supabase
 
@@ -32,7 +34,7 @@ The approved product model now uses one member identity with athlete access by d
 2. In the project dashboard, keep email/password authentication enabled.
 3. For this Rs 0 MVP, disable mandatory email confirmation so registration does not depend on paid/custom SMTP.
 4. Copy `.env.example` to `.env.local`.
-5. Add the project URL and **publishable** key. Never add the secret/service-role key to the web application.
+5. Add the project URL, **publishable** key, and the public `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN`. Never add a Supabase secret/service-role key or Mapbox secret token to the web application.
 6. Link the CLI and apply committed migrations:
 
 ```bash
@@ -50,7 +52,7 @@ The Free plan may pause an inactive project after one week. No paid upgrade is a
 ```bash
 npm ci
 cp .env.example .env.local
-# Fill only SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY
+# Fill SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, and NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
 npm run dev
 ```
 
@@ -81,6 +83,7 @@ Compose optionally reads ignored `.env.local`, publishes only `127.0.0.1:3000`, 
 ## Privacy and payments
 
 - Public profiles never show account email, exact home address, private residential location, or precise GPS coordinates.
+- Public map pins represent general neighborhoods or public training areas; exact meeting details belong in the booking workflow.
 - CoachConnect never holds payment funds. Athletes arrange payment directly with coaches.
 - If a direct prepayment is refundable, the coach—not CoachConnect—must issue the refund.
 - Client cancellation at least 24 hours before: full refund due if prepaid directly.

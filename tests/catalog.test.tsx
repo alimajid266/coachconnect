@@ -25,6 +25,40 @@ describe("coach catalog", () => {
     expect(screen.getByRole("heading", { name: "Bilal Raza" })).toBeInTheDocument();
   });
 
+  it("opens a map view without removing the coach list", () => {
+    renderCatalog();
+
+    fireEvent.click(screen.getByRole("button", { name: /show map/i }));
+
+    expect(screen.getByRole("region", { name: /coach locations/i })).toBeInTheDocument();
+    expect(screen.getByText(/11 training areas/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /hide map/i })).toBeInTheDocument();
+  });
+
+  it("keeps map results synchronized with catalog filters", () => {
+    renderCatalog();
+
+    fireEvent.click(screen.getByRole("button", { name: /show map/i }));
+    fireEvent.change(screen.getByRole("combobox", { name: /city/i }), { target: { value: "Lahore" } });
+
+    const map = screen.getByRole("region", { name: /coach locations/i });
+    expect(within(map).getByText(/4 training areas in Lahore/i)).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("5 coaches");
+  });
+
+  it("opens coach details from a map marker", () => {
+    renderCatalog();
+
+    fireEvent.click(screen.getByRole("button", { name: /show map/i }));
+    const map = screen.getByRole("region", { name: /coach locations/i });
+    fireEvent.click(within(map).getByRole("button", { name: /show ayesha khan in gulberg on map/i }));
+
+    expect(within(map).getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
+    expect(within(map).getByText(/Gulberg, Lahore/i)).toBeInTheDocument();
+    expect(within(map).getByRole("button", { name: /view ayesha khan's profile/i })).toBeInTheDocument();
+  });
+
   it("filters the catalog without hiding the complete list behind search", () => {
     renderCatalog();
 

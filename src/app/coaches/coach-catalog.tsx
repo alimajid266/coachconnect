@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import CoachMap from "@/app/coaches/coach-map";
 import { allSports, coaches, formatCoachPrice, type Coach } from "@/lib/coaches";
 
 type SessionUser = {
@@ -25,6 +26,7 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
   const [sport, setSport] = useState("any");
   const [mode, setMode] = useState("any");
   const [sort, setSort] = useState<SortOption>("recommended");
+  const [showMap, setShowMap] = useState(false);
   const [user, setUser] = useState<SessionUser | null>();
   const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
 
@@ -144,10 +146,17 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
 
         <div className="catalog-results-heading">
           <p role="status">{visibleCoaches.length} {visibleCoaches.length === 1 ? "coach" : "coaches"}</p>
-          <span>Available coaches</span>
+          <div>
+            <span>Available coaches</span>
+            <button type="button" onClick={() => setShowMap((current) => !current)}>
+              {showMap ? "Hide map" : "Show map"}
+            </button>
+          </div>
         </div>
 
-        {visibleCoaches.length > 0 ? (
+        <div className={`catalog-content${showMap ? " catalog-content-with-map" : ""}`}>
+          {showMap && <CoachMap city={city} coaches={visibleCoaches} onViewProfile={setSelectedCoach} />}
+          {visibleCoaches.length > 0 ? (
           <section className="catalog-grid" aria-label="Coach results">
             {visibleCoaches.map((coach) => (
               <article className="catalog-card" key={coach.id}>
@@ -165,7 +174,7 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
                     <h2>{coach.name}</h2>
                     <span aria-label={`${coach.rating} out of 5 stars`}>★ {coach.rating}</span>
                   </div>
-                  <p>{coach.location} · {coach.sports.join(" · ")} · {coach.mode}</p>
+                  <p>{coach.coordinates ? `${coach.area}, ` : ""}{coach.location} · {coach.sports.join(" · ")} · {coach.mode}</p>
                   <strong>{coach.specialty}</strong>
                   <div className="catalog-card-footer">
                     <span><b>{formatCoachPrice(coach.price)}</b> per session</span>
@@ -183,13 +192,14 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
               </article>
             ))}
           </section>
-        ) : (
+          ) : (
           <section className="catalog-empty">
             <h2>No coaches match these filters</h2>
             <p>Clear the filters to see every approved coach again.</p>
             <button type="button" onClick={clearFilters}>Show all coaches</button>
           </section>
-        )}
+          )}
+        </div>
       </main>
 
       {selectedCoach && (
@@ -202,7 +212,7 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
               <Image src={selectedCoach.image} alt="" fill sizes="(max-width: 680px) 100vw, 520px" />
             </div>
             <div className="catalog-profile-body">
-              <p>{selectedCoach.location} · {selectedCoach.sports.join(" · ")} · {selectedCoach.mode}</p>
+              <p>{selectedCoach.coordinates ? `${selectedCoach.area}, ` : ""}{selectedCoach.location} · {selectedCoach.sports.join(" · ")} · {selectedCoach.mode}</p>
               <h2 id="catalog-profile-name">{selectedCoach.name}</h2>
               <strong>{selectedCoach.specialty}</strong>
               <div className="catalog-profile-sports" aria-label="Sports coached">

@@ -12,6 +12,8 @@ export type Coach = {
   reason: string;
   badge: string;
   mode: "In person" | "Online";
+  area: string;
+  coordinates: [longitude: number, latitude: number] | null;
   availability: string[];
   image: string;
   rank: number;
@@ -27,7 +29,7 @@ export type Coach = {
   faqs: Array<{ question: string; answer: string }>;
 };
 
-type BaseCoach = Omit<Coach, "bio" | "experience" | "credentials" | "coachingStyle" | "languages" | "lessonCount" | "audiences" | "levels" | "lessonPlan" | "faqs">;
+type BaseCoach = Omit<Coach, "area" | "coordinates" | "bio" | "experience" | "credentials" | "coachingStyle" | "languages" | "lessonCount" | "audiences" | "levels" | "lessonPlan" | "faqs">;
 
 const baseCoaches: BaseCoach[] = [
   {
@@ -302,11 +304,30 @@ const styleBySport: Record<Sport, string> = {
   Yoga: "Accessible movement sequences with patient cues and options for different mobility levels.",
 };
 
+const trainingAreaByCoach: Record<string, { area: string; coordinates: Coach["coordinates"] }> = {
+  "ayesha-khan": { area: "Gulberg", coordinates: [74.3587, 31.5204] },
+  "hamza-siddiqui": { area: "Clifton", coordinates: [67.0307, 24.8138] },
+  "sara-ahmed": { area: "Online", coordinates: null },
+  "zainab-malik": { area: "DHA", coordinates: [67.0556, 24.799] },
+  "omar-farooq": { area: "Online", coordinates: null },
+  "bilal-raza": { area: "DHA Phase 5", coordinates: [74.4013, 31.4697] },
+  "danish-iqbal": { area: "Gulshan-e-Iqbal", coordinates: [67.0971, 24.9207] },
+  "hira-noor": { area: "Model Town", coordinates: [74.3239, 31.4834] },
+  "farhan-akram": { area: "F-8", coordinates: [73.0398, 33.7102] },
+  "mariam-shah": { area: "PECHS", coordinates: [67.0617, 24.8686] },
+  "usman-tariq": { area: "Johar Town", coordinates: [74.2728, 31.4697] },
+  "nadia-hussain": { area: "Online", coordinates: null },
+  "rida-aslam": { area: "Online", coordinates: null },
+  "sameer-qureshi": { area: "North Nazimabad", coordinates: [67.0424, 24.9372] },
+  "iqra-javed": { area: "I-8", coordinates: [73.0751, 33.6682] },
+};
+
 export const coaches: Coach[] = baseCoaches.map((coach) => {
   const primarySport = coach.sports[0];
   const isAyesha = coach.id === "ayesha-khan";
   return {
     ...coach,
+    ...trainingAreaByCoach[coach.id],
     bio: `${coach.name} helps athletes build useful, repeatable skills without making sessions feel intimidating. ${coach.reason}`,
     experience: `${isAyesha ? 8 : 4 + (coach.rank % 8)} years of coaching experience`,
     credentials: credentialsBySport[primarySport],
