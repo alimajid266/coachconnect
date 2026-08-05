@@ -171,7 +171,7 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
                   <strong>{coach.specialty}</strong>
                   <div className="catalog-card-footer">
                     <span><b>{formatCoachPrice(coach.price)}</b> per session</span>
-                    <span>{coach.reviewCount} reviews</span>
+                    <span>{coach.reviewCount} reviews · {coach.lessonCount} lessons</span>
                   </div>
                   <button
                     className="catalog-profile-button"
@@ -212,12 +212,23 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
               </div>
               <div className="catalog-profile-summary">
                 <span><b>★ {selectedCoach.rating}</b>{selectedCoach.reviewCount} reviews</span>
+                <span aria-label={`${selectedCoach.lessonCount} lessons taught`}><b>{selectedCoach.lessonCount}</b>lessons taught</span>
                 <span><b>{formatCoachPrice(selectedCoach.price)}</b>60-minute session</span>
               </div>
               <section className="catalog-profile-about">
                 <h3>About {selectedCoach.name.split(" ")[0]}</h3>
                 <p>{selectedCoach.bio}</p>
               </section>
+              <div className="catalog-profile-fit-grid">
+                <section className="catalog-profile-fit">
+                  <h3>Who {selectedCoach.name.split(" ")[0]} teaches</h3>
+                  <div>{selectedCoach.audiences.map((audience) => <span key={audience}>{audience}</span>)}</div>
+                </section>
+                <section className="catalog-profile-fit">
+                  <h3>Levels supported</h3>
+                  <div>{selectedCoach.levels.map((level) => <span key={level}>{level}</span>)}</div>
+                </section>
+              </div>
               <div className="catalog-profile-details">
                 <section>
                   <h3>Experience and credentials</h3>
@@ -230,9 +241,31 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
                   <span><b>Languages</b>{selectedCoach.languages.join(" · ")}</span>
                 </section>
               </div>
+              <section className="catalog-profile-plan">
+                <h3>Lesson plan</h3>
+                <ol>
+                  {selectedCoach.lessonPlan.map((step) => (
+                    <li key={step.title}>
+                      <strong>{step.title}</strong>
+                      <p>{step.description}</p>
+                    </li>
+                  ))}
+                </ol>
+              </section>
               <section className="catalog-profile-availability">
                 <h3>Weekly availability</h3>
                 <div>{selectedCoach.availability.map((day) => <span key={day}>{day}</span>)}</div>
+              </section>
+              <section className="catalog-profile-faq">
+                <h3>Frequently asked questions</h3>
+                <div>
+                  {selectedCoach.faqs.map((faq) => (
+                    <details key={faq.question}>
+                      <summary>{faq.question}</summary>
+                      <p>{faq.answer}</p>
+                    </details>
+                  ))}
+                </div>
               </section>
               <p className="catalog-profile-privacy">Exact meeting details stay private until a booking is confirmed.</p>
               <Link className="catalog-profile-reserve" href={user ? "/dashboard" : "/account"}>

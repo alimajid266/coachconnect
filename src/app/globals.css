@@ -591,9 +591,9 @@ a { color: inherit; text-decoration: none; }
 .catalog-profile-button { width: 100%; min-height: 42px; margin-top: 13px; border: 1px solid #294a41; border-radius: 10px; color: #fff; background: #294a41; font-weight: 750; }
 .catalog-profile-button:hover { border-color: #17352e; background: #17352e; }
 .catalog-profile-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 24px; background: rgba(0,0,0,.52); }
-.catalog-profile { position: relative; overflow: auto; width: min(980px, 100%); max-height: 92vh; display: grid; grid-template-columns: .82fr 1.18fr; border-radius: 24px; background: #fff; box-shadow: 0 28px 90px rgba(0,0,0,.24); }
+.catalog-profile { position: relative; overflow: auto; align-items: start; width: min(980px, 100%); max-height: 92vh; display: grid; grid-template-columns: .82fr 1.18fr; border-radius: 24px; background: #fff; box-shadow: 0 28px 90px rgba(0,0,0,.24); }
 .catalog-profile-close { position: absolute; right: 12px; top: 12px; z-index: 2; width: 40px; height: 40px; border: 1px solid #ddd; border-radius: 50%; color: #222; background: #fff; font-size: 1.3rem; }
-.catalog-profile-image { position: relative; min-height: 100%; background: #eef1ef; }
+.catalog-profile-image { position: sticky; top: 0; min-height: 620px; height: 92vh; background: #eef1ef; }
 .catalog-profile-image img { object-fit: cover; }
 .catalog-profile-body { padding: 42px 38px 36px; }
 .catalog-profile-body > p:first-child { margin: 0; color: #666; font-size: .78rem; }
@@ -602,22 +602,41 @@ a { color: inherit; text-decoration: none; }
 .catalog-profile-body > p { color: #666; }
 .catalog-profile-sports { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
 .catalog-profile-sports span { padding: 6px 10px; border-radius: 999px; color: #24443c; background: #e8f2ee; font-size: .76rem; font-weight: 750; }
-.catalog-profile-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
+.catalog-profile-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 20px 0; }
 .catalog-profile-summary span { display: grid; gap: 2px; padding: 12px; border-radius: 10px; background: #f3f3f0; color: #666; font-size: .72rem; }
 .catalog-profile-summary b { color: #222; font-size: .9rem; }
 .catalog-profile-about { padding: 18px 0; border-top: 1px solid #e2e2e2; }
 .catalog-profile-about h3, .catalog-profile-details h3 { margin: 0 0 7px; font-size: 1rem; }
 .catalog-profile-about p, .catalog-profile-details p { margin: 0; color: #5f6663; font-size: .84rem; }
+.catalog-profile-fit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.catalog-profile-fit { padding: 14px; border: 1px solid #dfe6e2; border-radius: 14px; }
+.catalog-profile-fit h3 { margin: 0 0 10px; font-size: .9rem; }
+.catalog-profile-fit div { display: flex; flex-wrap: wrap; gap: 6px; }
+.catalog-profile-fit span { padding: 6px 9px; border-radius: 999px; color: #3f4c47; background: #f1f4f2; font-size: .72rem; font-weight: 700; }
 .catalog-profile-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
 .catalog-profile-details section { padding: 15px; border: 1px solid #dfe6e2; border-radius: 14px; background: #f8faf9; }
 .catalog-profile-details section > strong { font-size: .82rem; }
 .catalog-profile-details ul { margin: 8px 0 0; padding-left: 17px; color: #5f6663; font-size: .77rem; }
 .catalog-profile-details span { display: grid; gap: 2px; margin-top: 10px; color: #5f6663; font-size: .76rem; }
 .catalog-profile-details span b { color: #222; }
+.catalog-profile-plan { padding: 18px 0; border-top: 1px solid #e2e2e2; }
+.catalog-profile-plan h3, .catalog-profile-faq h3 { margin: 0 0 12px; font-size: 1rem; }
+.catalog-profile-plan ol { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: lesson-step; }
+.catalog-profile-plan li { position: relative; padding: 12px 12px 12px 45px; border-radius: 12px; background: #f8faf9; counter-increment: lesson-step; }
+.catalog-profile-plan li::before { position: absolute; left: 12px; top: 12px; display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; color: #fff; background: #294a41; content: counter(lesson-step); font-size: .72rem; font-weight: 800; }
+.catalog-profile-plan strong { display: block; font-size: .8rem; }
+.catalog-profile-plan p { margin: 3px 0 0; color: #5f6663; font-size: .76rem; line-height: 1.45; }
 .catalog-profile-availability { padding-top: 17px; border-top: 1px solid #e2e2e2; }
 .catalog-profile-availability h3 { margin: 0 0 10px; font-size: 1rem; }
 .catalog-profile-availability div { display: flex; flex-wrap: wrap; gap: 7px; }
 .catalog-profile-availability span { padding: 7px 10px; border: 1px solid #d4d4d4; border-radius: 999px; font-size: .78rem; }
+.catalog-profile-faq { margin-top: 18px; padding-top: 18px; border-top: 1px solid #e2e2e2; }
+.catalog-profile-faq details { border-bottom: 1px solid #e2e2e2; }
+.catalog-profile-faq summary { position: relative; padding: 12px 28px 12px 0; cursor: pointer; list-style: none; font-size: .82rem; font-weight: 750; }
+.catalog-profile-faq summary::-webkit-details-marker { display: none; }
+.catalog-profile-faq summary::after { position: absolute; right: 2px; content: "+"; color: #294a41; font-size: 1.1rem; }
+.catalog-profile-faq details[open] summary::after { content: "−"; }
+.catalog-profile-faq details p { margin: -2px 28px 12px 0; color: #5f6663; font-size: .78rem; line-height: 1.5; }
 .catalog-profile-privacy { font-size: .76rem; }
 .catalog-profile-reserve { display: flex; align-items: center; justify-content: center; min-height: 46px; margin-top: 17px; border-radius: 10px; color: #fff; background: var(--ink); font-weight: 800; }
 .catalog-empty { padding: 50px 24px; border: 1px dashed #bbb; border-radius: 14px; text-align: center; }
@@ -644,9 +663,9 @@ a { color: inherit; text-decoration: none; }
   .catalog-results-heading span { display: none; }
   .catalog-profile-backdrop { padding: 10px; }
   .catalog-profile { grid-template-columns: 1fr; }
-  .catalog-profile-image { min-height: 220px; }
+  .catalog-profile-image { position: relative; min-height: 220px; height: 220px; }
   .catalog-profile-body { padding: 27px 22px 24px; }
-  .catalog-profile-details { grid-template-columns: 1fr; }
+  .catalog-profile-summary, .catalog-profile-fit-grid, .catalog-profile-details { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

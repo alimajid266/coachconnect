@@ -20,9 +20,14 @@ export type Coach = {
   credentials: string[];
   coachingStyle: string;
   languages: string[];
+  lessonCount: number;
+  audiences: string[];
+  levels: string[];
+  lessonPlan: Array<{ title: string; description: string }>;
+  faqs: Array<{ question: string; answer: string }>;
 };
 
-type BaseCoach = Omit<Coach, "bio" | "experience" | "credentials" | "coachingStyle" | "languages">;
+type BaseCoach = Omit<Coach, "bio" | "experience" | "credentials" | "coachingStyle" | "languages" | "lessonCount" | "audiences" | "levels" | "lessonPlan" | "faqs">;
 
 const baseCoaches: BaseCoach[] = [
   {
@@ -303,10 +308,41 @@ export const coaches: Coach[] = baseCoaches.map((coach) => {
   return {
     ...coach,
     bio: `${coach.name} helps athletes build useful, repeatable skills without making sessions feel intimidating. ${coach.reason}`,
-    experience: `${isAyesha ? 8 : 4 + (coach.rank % 8)} years coaching`,
+    experience: `${isAyesha ? 8 : 4 + (coach.rank % 8)} years of coaching experience`,
     credentials: credentialsBySport[primarySport],
     coachingStyle: styleBySport[primarySport],
     languages: isAyesha ? ["English", "Urdu"] : coach.location === "Lahore" ? ["English", "Urdu", "Punjabi"] : ["English", "Urdu"],
+    lessonCount: 82 + (coach.rank * 14),
+    audiences: ["Children", "Teenagers", "Adults", "Seniors"],
+    levels: ["Beginner", "Intermediate", "Advanced"],
+    lessonPlan: [
+      {
+        title: "Goal check and warm-up",
+        description: "A short check-in, safe movement preparation and one clear goal for the session.",
+      },
+      {
+        title: "Focused skill work",
+        description: `Demonstrations and repeatable drills focused on ${coach.specialty.toLowerCase()}.`,
+      },
+      {
+        title: "Guided practice and next steps",
+        description: "Apply the skill in a realistic exercise, then leave with focused feedback and a simple practice target.",
+      },
+    ],
+    faqs: [
+      {
+        question: "Is this suitable for someone new to the sport?",
+        answer: "Yes. Sessions are adapted to the athlete's current ability, confidence and goals.",
+      },
+      {
+        question: "What should I bring?",
+        answer: "Bring water, comfortable sportswear and any personal equipment you already use. Venue-specific requirements are confirmed before the lesson.",
+      },
+      {
+        question: "How long is each lesson?",
+        answer: "The listed price covers one 60-minute lesson unless a different duration is agreed during booking.",
+      },
+    ],
   };
 });
 

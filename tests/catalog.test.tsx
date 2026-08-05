@@ -71,6 +71,77 @@ describe("coach catalog", () => {
     expect(within(cards[cards.length - 1]).getByRole("heading", { name: "Farhan Akram" })).toBeInTheDocument();
   });
 
+  it("shows lesson counts before a member opens a profile", () => {
+    renderCatalog();
+
+    const ayeshaCard = screen.getByRole("heading", { name: "Ayesha Khan" }).closest("article");
+    expect(ayeshaCard).not.toBeNull();
+    expect(within(ayeshaCard as HTMLElement).getByText(/96 lessons/i)).toBeInTheDocument();
+  });
+
+  it("shows the age groups a coach teaches", () => {
+    renderCatalog();
+
+    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
+
+    const dialog = screen.getByRole("dialog", { name: /ayesha khan/i });
+    expect(within(dialog).getByRole("heading", { name: /who ayesha teaches/i })).toBeInTheDocument();
+    expect(within(dialog).getByText("Children")).toBeInTheDocument();
+    expect(within(dialog).getByText("Adults")).toBeInTheDocument();
+    expect(within(dialog).getByText("Seniors")).toBeInTheDocument();
+  });
+
+  it("shows supported levels without adding a level filter", () => {
+    renderCatalog();
+
+    expect(screen.queryByRole("combobox", { name: /level/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
+
+    const dialog = screen.getByRole("dialog", { name: /ayesha khan/i });
+    expect(within(dialog).getByRole("heading", { name: /levels supported/i })).toBeInTheDocument();
+    expect(within(dialog).getByText("Beginner")).toBeInTheDocument();
+    expect(within(dialog).getByText("Intermediate")).toBeInTheDocument();
+    expect(within(dialog).getByText("Advanced")).toBeInTheDocument();
+  });
+
+  it("shows how many lessons a coach has taught", () => {
+    renderCatalog();
+
+    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
+
+    const dialog = screen.getByRole("dialog", { name: /ayesha khan/i });
+    expect(within(dialog).getByLabelText("96 lessons taught")).toBeInTheDocument();
+  });
+
+  it("explains the structure of a typical lesson", () => {
+    renderCatalog();
+
+    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
+
+    const dialog = screen.getByRole("dialog", { name: /ayesha khan/i });
+    const heading = within(dialog).getByRole("heading", { name: /lesson plan/i });
+    const section = heading.closest("section");
+    expect(section).not.toBeNull();
+    expect(within(section as HTMLElement).getByText("Goal check and warm-up")).toBeInTheDocument();
+    expect(within(section as HTMLElement).getByText("Focused skill work")).toBeInTheDocument();
+    expect(within(section as HTMLElement).getByText("Guided practice and next steps")).toBeInTheDocument();
+  });
+
+  it("provides accessible expandable profile FAQs", () => {
+    renderCatalog();
+
+    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
+
+    const dialog = screen.getByRole("dialog", { name: /ayesha khan/i });
+    expect(within(dialog).getByRole("heading", { name: /frequently asked questions/i })).toBeInTheDocument();
+    const question = within(dialog).getByText("Is this suitable for someone new to the sport?");
+    const details = question.closest("details");
+    expect(details).not.toHaveAttribute("open");
+    fireEvent.click(question);
+    expect(details).toHaveAttribute("open");
+    expect(within(details as HTMLElement).getByText(/sessions are adapted to the athlete's current ability/i)).toBeInTheDocument();
+  });
+
   it("opens clear profile details from a catalog card", () => {
     renderCatalog();
 
@@ -78,10 +149,10 @@ describe("coach catalog", () => {
 
     const dialog = screen.getByRole("dialog", { name: /ayesha khan/i });
     expect(dialog).toBeInTheDocument();
-    expect(within(dialog).getByText(/beginner batting technique/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/^beginner batting technique$/i)).toBeInTheDocument();
     expect(within(dialog).getByRole("heading", { name: /about ayesha/i })).toBeInTheDocument();
     expect(within(dialog).getByRole("heading", { name: /experience and credentials/i })).toBeInTheDocument();
-    expect(within(dialog).getByText(/8 years coaching/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/8 years of coaching experience/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/PCB Level 1/i)).toBeInTheDocument();
     expect(within(dialog).getByRole("heading", { name: /coaching style/i })).toBeInTheDocument();
     expect(within(dialog).getByText(/English · Urdu/i)).toBeInTheDocument();

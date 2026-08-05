@@ -2,7 +2,7 @@
 
 ## Purpose
 
-CoachConnect helps adults in Pakistan discover suitable sports coaches, understand each service, reserve available sessions, and leave verified reviews.
+CoachConnect helps people in Pakistan discover suitable sports coaches, understand each service, reserve available sessions, and leave verified reviews.
 
 This is a changeable baseline, not an irreversible contract. Scope changes are managed through `SCOPE.md`.
 
@@ -11,7 +11,7 @@ This is a changeable baseline, not an irreversible contract. Scope changes are m
 - Country: Pakistan
 - Currency: Pakistani rupees, displayed as `Rs 3,000`
 - Language: English
-- Audience: adults aged 18+
+- Audience: children, teenagers, adults, and seniors. A guardian-managed booking and safeguarding workflow is required before real under-18 bookings launch.
 - Sports: broad, extensible catalog across team, racquet, combat, endurance, aquatic, strength, and mobility sports
 - Coach capabilities: one approved coach profile may list multiple verified sports
 - Cities: Karachi, Lahore, Islamabad/Rawalpindi
@@ -80,6 +80,18 @@ Administrator access is granted through a protected process and cannot be self-s
 - A coach cannot book, rate, or review their own service.
 - Coach suspension removes public coach visibility and coach actions, not ordinary athlete access.
 - Full account suspension is a separate administrator action with a recorded reason.
+
+### Public coach-profile information
+
+Each public coach profile should clearly show:
+
+- Sports taught, location, lesson format, price, and weekly availability.
+- Verified reviews and the number of lessons taught.
+- Age groups taught: children, teenagers, adults, and seniors.
+- Supported levels: beginner, intermediate, and advanced. Level-specific catalog filtering and individually varied level offerings are deferred.
+- Years of coaching experience and credentials.
+- A concise typical lesson plan.
+- Expandable frequently asked questions covering suitability, equipment, and lesson duration.
 
 ## Required user journeys
 
