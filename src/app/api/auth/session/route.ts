@@ -19,12 +19,23 @@ export async function GET(request: NextRequest) {
       return applyCookies(NextResponse.json({ error: "Account profile is unavailable." }, { status: 503 }));
     }
 
+    const { data: coachApplication } = await supabase
+      .from("coach_applications")
+      .select("status")
+      .eq("user_id", authData.user.id)
+      .maybeSingle();
+    const coachStatus = coachApplication?.status ?? (profile.role === "COACH" ? "APPROVED" : null);
+
     return applyCookies(NextResponse.json({
       user: {
         id: authData.user.id,
         displayName: profile.display_name,
         email: authData.user.email ?? "",
         role: profile.role,
+        capabilities: {
+          administrator: profile.role === "ADMIN",
+          coachStatus,
+        },
       },
     }));
   } catch {

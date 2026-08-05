@@ -7,7 +7,8 @@ CoachConnect is a sports-coach marketplace MVP for adults in Pakistan. The proto
 - Simple public home page and dedicated `/coaches` catalog are implemented.
 - The catalog shows all approved sample coaches and supports search, city, sport, format, and sorting controls.
 - The optional Mapbox view keeps visible coach cards synchronized with approximate public training areas; online-only coaches are not pinned.
-- Supabase account foundation is active; marketplace records still need migration to Supabase.
+- Supabase account foundation and Phase 2B coach applications are implemented. Members can save and submit applications; administrators can review, approve, reject, or suspend them.
+- Public coach discovery remains fixture-backed until the approved-profile catalog migration is completed.
 - Public deployment: `https://coachconnect-sigma.vercel.app`.
 - Monetary cost: Rs 0.
 
@@ -24,9 +25,9 @@ All coaches, ratings, availability, and recommendation labels currently shown in
 - Hardened loopback-only Docker runtime
 - Prisma/SQLite retained only for the original Phase 1 sample repository while marketplace data moves to Supabase
 
-Supabase SQL migrations live in `supabase/migrations/`. The first migration creates private account profiles, maps current Auth users to an initial athlete/coach onboarding role, blocks public admin self-assignment, and restricts profile access with RLS.
+Supabase SQL migrations live in `supabase/migrations/`. The account migration creates private member profiles and restricts them with RLS. The Phase 2B migration adds member-owned coach applications, protected submission and administrator-review functions, additive coach capability, and the `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, `REJECTED`, and `SUSPENDED` lifecycle.
 
-The approved product model now uses one member identity with athlete access by default and optional coach/admin capabilities. The current single `role` column is transitional and must be migrated before dual athlete/coach behavior is considered complete.
+The product uses one member identity with ordinary customer access plus optional coach or administrator capabilities. Registration cannot grant a trusted capability. The legacy `role` column remains transitional compatibility storage; coach state comes from the protected application lifecycle.
 
 ## Supabase project setup
 

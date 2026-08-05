@@ -13,11 +13,15 @@ function publicClient(): SupabaseClient {
   });
 }
 
-runIntegration("Supabase account profile policies", () => {
+function serviceClient(): SupabaseClient {
+  return createClient(apiUrl!, serviceRoleKey!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+runIntegration("Supabase account and coach capability policies", () => {
   afterAll(async () => {
-    const admin = createClient(apiUrl!, serviceRoleKey!, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const admin = serviceClient();
     await Promise.all(createdUserIds.map((id) => admin.auth.admin.deleteUser(id)));
   });
 
@@ -58,7 +62,7 @@ runIntegration("Supabase account profile policies", () => {
     createdUserIds.push(coachSignup.data.user!.id);
 
     const coachProfile = await coach.from("profiles").select("role").single();
-    expect(coachProfile.data?.role).toBe("COACH");
+    expect(coachProfile.data?.role).toBe("ATHLETE");
 
     const crossAccountRead = await coach
       .from("profiles")
@@ -66,5 +70,95 @@ runIntegration("Supabase account profile policies", () => {
       .eq("id", athleteSignup.data.user!.id);
     expect(crossAccountRead.error).toBeNull();
     expect(crossAccountRead.data).toEqual([]);
+  });
+
+  it("enforces the coach application and administrator review lifecycle", async () => {
+    const password = `Cc-${crypto.randomUUID()}-9x`;
+    const applicant = publicClient();
+    const applicantSignup = await applicant.auth.signUp({
+      email: `applicant-${crypto.randomUUID()}@coachconnect.local`,
+      password,
+      options: { data: { display_name: "Coach Applicant", role: "COACH" } },
+    });
+    expect(applicantSignup.error).toBeNull();
+    const applicantId = applicantSignup.data.user!.id;
+    createdUserIds.push(applicantId);
+
+    const reviewer = publicClient();
+    const reviewerSignup = await reviewer.auth.signUp({
+      email: `reviewer-${crypto.randomUUID()}@coachconnect.local`,
+      password,
+      options: { data: { display_name: "Review Admin", role: "ADMIN" } },
+    });
+    expect(reviewerSignup.error).toBeNull();
+    const reviewerId = reviewerSignup.data.user!.id;
+    createdUserIds.push(reviewerId);
+
+    const promote = await serviceClient().from("profiles").update({ role: "ADMIN" }).eq("id", reviewerId);
+    expect(promote.error).toBeNull();
+
+    const saved = await applicant.from("coach_applications").upsert({
+      user_id: applicantId,
+      headline: "Patient tennis coach for confident match play",
+      bio: "I help teenagers and adults build dependable technique, movement and match confidence through structured sessions that adapt to individual goals.",
+      sports: ["Tennis"],
+      experience_years: 8,
+      qualifications: "Pakistan Tennis Federation coaching certification",
+      audiences: ["Teenagers", "Adults"],
+      levels: ["Beginner", "Intermediate"],
+      lesson_plan: "We begin with a movement warm-up, assess one priority, practise focused drills, apply the skill in match play and finish with a development plan.",
+      session_price_pkr: 4500,
+      offers_online: false,
+      offers_in_person: true,
+      city: "Lahore",
+      public_area: "Gulberg",
+      availability: [],
+      faqs: [],
+    });
+    expect(saved.error).toBeNull();
+
+    const selfApproval = await applicant
+      .from("coach_applications")
+      .update({ status: "APPROVED" })
+      .eq("user_id", applicantId);
+    expect(selfApproval.error).not.toBeNull();
+
+    const submitted = await applicant.rpc("submit_coach_application");
+    expect(submitted.error).toBeNull();
+    expect(submitted.data?.status).toBe("SUBMITTED");
+
+    const unauthorizedReview = await applicant.rpc("review_coach_application", {
+      target_user_id: applicantId,
+      decision: "APPROVED",
+      note: "Self approval attempt",
+    });
+    expect(unauthorizedReview.error).not.toBeNull();
+
+    const queue = await reviewer.from("coach_applications").select("user_id,status");
+    expect(queue.error).toBeNull();
+    expect(queue.data).toContainEqual({ user_id: applicantId, status: "SUBMITTED" });
+
+    const approved = await reviewer.rpc("review_coach_application", {
+      target_user_id: applicantId,
+      decision: "APPROVED",
+      note: "Profile and qualifications checked.",
+    });
+    expect(approved.error).toBeNull();
+    expect(approved.data?.status).toBe("APPROVED");
+
+    const approvedEdit = await applicant
+      .from("coach_applications")
+      .update({ headline: "Updated tennis coaching for confident match play" })
+      .eq("user_id", applicantId);
+    expect(approvedEdit.error).toBeNull();
+
+    const reviewerDraft = await reviewer.from("coach_applications").insert({ user_id: reviewerId });
+    expect(reviewerDraft.error).toBeNull();
+    const selfReview = await reviewer.rpc("review_coach_application", {
+      target_user_id: reviewerId,
+      decision: "UNDER_REVIEW",
+      note: "Self review attempt",
+    });
+    expect(selfReview.error?.message).toContain("Self-review");
   });
 });

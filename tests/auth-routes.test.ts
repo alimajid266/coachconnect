@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
   signOut: vi.fn(),
   profileSingle: vi.fn(),
+  applicationMaybeSingle: vi.fn(),
   applyCookies: vi.fn(<T>(response: T) => response),
 }));
 
@@ -19,9 +20,11 @@ vi.mock("@/lib/supabase/route", () => ({
         getUser: mocks.getUser,
         signOut: mocks.signOut,
       },
-      from: () => ({
+      from: (table: string) => ({
         select: () => ({
-          eq: () => ({ single: mocks.profileSingle }),
+          eq: () => table === "profiles"
+            ? { single: mocks.profileSingle }
+            : { maybeSingle: mocks.applicationMaybeSingle },
         }),
       }),
     },
@@ -48,6 +51,7 @@ describe("Supabase authentication routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.applyCookies.mockImplementation(<T>(response: T) => response);
+    mocks.applicationMaybeSingle.mockResolvedValue({ data: null, error: null });
   });
 
   it("registers one neutral member account without accepting a self-selected role", async () => {
@@ -141,10 +145,20 @@ describe("Supabase authentication routes", () => {
       data: { display_name: "Coach Account", role: "COACH" },
       error: null,
     });
+    mocks.applicationMaybeSingle.mockResolvedValue({
+      data: { status: "APPROVED" },
+      error: null,
+    });
     const session = await getSession(request("/api/auth/session"));
     expect(session.status).toBe(200);
     expect(await session.json()).toEqual({
-      user: { id: "user-2", displayName: "Coach Account", email: "coach@example.com", role: "COACH" },
+      user: {
+        id: "user-2",
+        displayName: "Coach Account",
+        email: "coach@example.com",
+        role: "COACH",
+        capabilities: { administrator: false, coachStatus: "APPROVED" },
+      },
     });
   });
 

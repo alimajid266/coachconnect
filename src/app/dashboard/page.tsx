@@ -4,11 +4,24 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type User = {
-  id: number;
+  id: string | number;
   displayName: string;
   email: string;
   role: "ATHLETE" | "COACH" | "ADMIN";
+  capabilities?: {
+    administrator: boolean;
+    coachStatus: "DRAFT" | "SUBMITTED" | "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED" | null;
+  };
 };
+
+const coachStatusCopy = {
+  DRAFT: { heading: "Continue your coach application", status: "Application draft saved", action: "Continue application" },
+  SUBMITTED: { heading: "Coach application submitted", status: "Application submitted", action: "View application" },
+  UNDER_REVIEW: { heading: "Coach application under review", status: "Application under review", action: "View application" },
+  APPROVED: { heading: "Manage your coach profile", status: "Application approved", action: "Manage coach profile" },
+  REJECTED: { heading: "Update your coach application", status: "Application needs changes", action: "Update application" },
+  SUSPENDED: { heading: "Coach profile status", status: "Coach profile suspended", action: "View profile status" },
+} as const;
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>();
@@ -49,11 +62,16 @@ export default function DashboardPage() {
     );
   }
 
-  const accountLabel = user.role === "ADMIN" ? "Administrator" : "Member";
-  const capabilityLabel = user.role === "COACH"
+  const isAdministrator = user.capabilities?.administrator ?? user.role === "ADMIN";
+  const coachStatus = user.capabilities?.coachStatus ?? (user.role === "COACH" ? "APPROVED" : null);
+  const coachAction = coachStatus ? coachStatusCopy[coachStatus] : null;
+  const accountLabel = isAdministrator ? "Administrator" : "Member";
+  const capabilityLabel = coachStatus === "APPROVED"
     ? "Find coaching + coach tools"
-    : user.role === "ADMIN"
+    : isAdministrator
       ? "Find coaching + administration"
+      : coachStatus
+        ? "Find coaching + coach application"
       : "Find coaching";
 
   return (
@@ -76,11 +94,17 @@ export default function DashboardPage() {
 
       <section className="dashboard-actions" aria-label={`${accountLabel} actions`}>
         <article><span>01</span><h2>Find your next coach</h2><p>Explore coach profiles and compare specialties, locations and prices.</p><Link className="button button-primary" href="/coaches">Find a coach</Link></article>
-        {user.role === "COACH" && (
-          <article><span>02</span><h2>Build your coach profile</h2><p>Add your sports, experience, services and availability for administrator approval.</p><Link className="button button-primary" href="/coach/profile">Build my coach profile</Link></article>
+        {!isAdministrator && (
+          <article>
+            <span>02</span>
+            <h2>{coachAction?.heading ?? "Become a coach"}</h2>
+            <p className="dashboard-application-status">{coachAction?.status ?? "Application not started"}</p>
+            <p>{coachStatus === "APPROVED" ? "Update your sports, experience, services and public training area." : "Create a professional coaching profile from this account and submit it for review."}</p>
+            <Link className="button button-primary" href="/coach/apply">{coachAction?.action ?? "Become a coach"}</Link>
+          </article>
         )}
-        {user.role === "ADMIN" && (
-          <article><span>01</span><h2>Review coach applications</h2><p>Approve complete profiles before they can become public.</p><Link className="button button-primary" href="/admin/coaches">Approve coach profiles</Link></article>
+        {isAdministrator && (
+          <article><span>02</span><h2>Review coach applications</h2><p>Approve complete profiles before they can become public.</p><Link className="button button-primary" href="/admin/coaches">Review applications</Link></article>
         )}
 
       </section>
