@@ -191,6 +191,10 @@ describe("coach catalog", () => {
     expect(within(dialog).getByRole("heading", { name: /coaching style/i })).toBeInTheDocument();
     expect(within(dialog).getByText(/English · Urdu/i)).toBeInTheDocument();
     expect(within(dialog).getByRole("heading", { name: /weekly availability/i })).toBeInTheDocument();
+    const locationPreview = within(dialog).getByRole("region", { name: /ayesha khan's training area/i });
+    expect(within(locationPreview).getByText(/approximate training area/i)).toBeInTheDocument();
+    expect(within(locationPreview).getByText(/Gulberg, Lahore/i)).toBeInTheDocument();
+    expect(within(locationPreview).getByText(/exact meeting details are shared after booking/i)).toBeInTheDocument();
     expect(within(dialog).queryByText(/stay private|private by default/i)).not.toBeInTheDocument();
     expect(within(dialog).getByRole("link", { name: /sign in to reserve/i })).toHaveAttribute("href", "/account");
 

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import CoachLocationPreview from "@/app/coaches/coach-location-preview";
 import CoachMap from "@/app/coaches/coach-map";
 import { allSports, coaches, formatCoachPrice, type Coach } from "@/lib/coaches";
 
@@ -264,6 +265,7 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
                 <h3>Weekly availability</h3>
                 <div>{selectedCoach.availability.map((day) => <span key={day}>{day}</span>)}</div>
               </section>
+              <CoachLocationPreview coach={selectedCoach} />
               <section className="catalog-profile-faq">
                 <h3>Frequently asked questions</h3>
                 <div>
