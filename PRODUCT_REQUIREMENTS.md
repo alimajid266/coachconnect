@@ -18,54 +18,80 @@ This is a changeable baseline, not an irreversible contract. Scope changes are m
 - Cost to run locally: Rs 0
 - Payment processing: excluded
 
-## Roles
+## Accounts and capabilities
+
+CoachConnect uses **one account per person**, not separate athlete and coach accounts. "Athlete" and "coach" are capabilities that can exist together.
 
 ### Visitor
 
 - View the home page.
-- Browse approved coaches.
-- Search and filter coaches.
+- Browse the full list of approved, active coaches by default.
+- Sort, search, and filter that list.
 - View public coach profiles.
 - Register or sign in to reserve a session.
 
-### Athlete
+### Member / athlete capability
+
+Every registered member can act as an athlete, including an approved coach.
 
 - Maintain basic coaching preferences.
 - Receive explainable recommendations.
+- Browse every approved coach; recommendations never replace or hide the full list.
 - Use ordinary and natural-language search.
-- Reserve an available session.
+- Reserve an available session, except their own service.
 - View and cancel own bookings.
-- Review a coach once after a completed booking.
+- Review another coach once after a completed booking.
 
-### Coach
+### Coach capability
 
-- Create and edit a profile.
+Any registered member may apply to add the coach capability to the same account. Approval adds coach tools without removing athlete tools.
+
+- Create and edit a coach profile draft.
 - Submit the profile for administrator approval.
 - Create services in PKR.
 - State inclusions, exclusions, equipment, and what to bring.
 - Set weekly availability and time off.
-- View and cancel own bookings.
-- Mark a past session complete.
+- View and cancel bookings for their services.
+- Mark an eligible past session complete.
+- Continue browsing and booking other coaches as an athlete.
 
-### Administrator
+A suspended or rejected coach keeps normal athlete access unless the entire account is separately suspended for a safety reason.
+
+### Administrator capability
+
+Administrator access is granted through a protected process and cannot be self-selected.
 
 - Approve, reject, suspend, and restore coaches.
-- View booking records.
+- View booking records required for support.
 - Mark a demo booking complete with a reason.
 - Hide abusive reviews without deleting their history.
+- Never approve, moderate, or review their own coach profile, booking, or review.
+
+### Capability rules
+
+- Do not ask an existing member to create a second account to become a coach or athlete.
+- Email identity, private profile, and sign-in session remain shared.
+- Athlete preferences and coach business data remain separate.
+- Becoming a coach means adding coach tools, not changing or replacing the account.
+- A coach cannot book, rate, or review their own service.
+- Coach suspension removes public coach visibility and coach actions, not ordinary athlete access.
+- Full account suspension is a separate administrator action with a recorded reason.
 
 ## Required user journeys
 
 ### Discover and reserve
 
-1. Athlete describes what they need.
-2. Search displays visible interpreted filters.
-3. Athlete compares real approved coaches.
-4. Athlete opens a profile and service.
-5. Athlete selects an available time.
-6. Athlete reviews price, general location, inclusions, exclusions, and cancellation policy.
-7. Athlete confirms a reservation without entering card details.
-8. Reservation appears in athlete and coach dashboards.
+1. The page loads a browsable list of every approved, active coach; search is not required to see inventory.
+2. The athlete may sort by Recommended, Rating, Price low-to-high, Price high-to-low, or Earliest availability.
+3. The athlete may search, filter, or describe what they need in plain English.
+4. Search displays visible interpreted filters and updates the same coach list.
+5. Recommendations clearly explain their reasons but never hide the complete list.
+6. The athlete compares real approved coaches.
+7. The athlete opens a profile and service.
+8. The athlete selects an available time.
+9. The athlete reviews price, general location, inclusions, exclusions, and cancellation policy.
+10. The athlete confirms a reservation without entering card details.
+11. The reservation appears in athlete and coach dashboard areas.
 
 ### Coach joins marketplace
 
@@ -81,6 +107,26 @@ This is a changeable baseline, not an irreversible contract. Scope changes are m
 2. Coach or administrator marks booking complete.
 3. The booked athlete leaves one 1–5 star review.
 4. Public rating updates from visible verified reviews.
+
+## Discovery, sorting, and recommendation requirements
+
+### Full list first
+
+- The coach area shows all approved, active coaches before a search is entered.
+- "Find a Coach" is the single navigation action for discovery; do not add a duplicate "Search coaches" navigation button.
+- Recommendations may appear as a clearly labeled section or as the default Recommended sort, but the complete list remains reachable in one action.
+- Filters narrow the list transparently and can be removed individually or cleared together.
+- The result count and active sort are always visible.
+- When the list grows, use page-based loading or a clear Load more control; do not download every coach into the browser.
+
+### Sorting rules
+
+- Recommended: personalized when signed in and preference data exists; otherwise uses a documented public ranking.
+- Rating: use verified visible reviews only, with a minimum-review confidence rule so one five-star review does not automatically outrank a well-established coach.
+- Price: use the lowest active service price and display what that price represents.
+- Earliest availability: use the next genuinely bookable slot, not a manually typed date.
+- All sorts use coach ID as a final stable tie-breaker so results do not jump between pages.
+- Suspended, rejected, draft, and unavailable-for-publication coaches never appear.
 
 ## AI requirements
 
@@ -130,6 +176,85 @@ CoachConnect does not hold money in this MVP and cannot issue a financial refund
 - Dockerized final application.
 - Unit, database, and browser tests.
 - Brief plain-language testing steps delivered in chat after every phase.
+
+## Bottlenecks and required safeguards
+
+### Coach-list growth
+
+Risk: Loading every coach, service, review, and available slot will become slow and expensive.
+
+Safeguards:
+
+- Ask Supabase only for the current page of public summary fields.
+- Load full profile, reviews, and availability only when needed.
+- Add database indexes for publication state, sport, city, price, rating summary, and next availability.
+- Measure slow queries before adding caches.
+
+### Availability calculation
+
+Risk: Calculating future slots for every coach on every list request is expensive and can show stale times.
+
+Safeguards:
+
+- Store weekly rules and exceptions separately.
+- Keep a small next-available summary for list sorting.
+- Recheck the real slot inside the final booking transaction.
+
+### Booking concurrency
+
+Risk: Two athletes may select the same slot almost together.
+
+Safeguards:
+
+- Enforce a database uniqueness or overlap rule.
+- Make repeated confirmation safe.
+- Treat the browser's availability display as advisory until the database confirms.
+
+### Recommendation cold start and bias
+
+Risk: New users have no preferences, new coaches have no reviews, and popular coaches can permanently dominate.
+
+Safeguards:
+
+- Provide a neutral public ranking for signed-out and new users.
+- Explain recommendation reasons.
+- Do not hide the full list.
+- Give new approved coaches a fair discovery path without pretending they have ratings.
+- Monitor whether one city, sport, price band, or coach receives unreasonable exposure.
+
+### Multiple capabilities
+
+Risk: A single role field cannot safely represent someone who is both an athlete and coach.
+
+Safeguards:
+
+- Store capabilities separately from identity.
+- Keep coach approval and suspension state in the coach profile, not in the member's base account role.
+- Test every permission combination.
+- Block self-booking, self-review, and self-approval.
+
+### Supabase Free limits and email dependence
+
+Risk: The project may pause after inactivity, reach free limits, or fail to deliver account emails.
+
+Safeguards:
+
+- Show clear service-unavailable messages.
+- Keep health and real workflow checks separate.
+- Avoid unnecessary queries and large images.
+- Test email confirmation and recovery against the real project.
+- Do not upgrade or spend money without approval.
+
+### Administrator workload
+
+Risk: Coach approval and moderation can become a manual queue.
+
+Safeguards:
+
+- Require complete applications before submission.
+- Show missing fields clearly.
+- Keep recorded reasons and an audit history.
+- Add queue filters before adding automation.
 
 ## Out of scope now
 

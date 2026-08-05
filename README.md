@@ -22,7 +22,9 @@ All coaches, ratings, availability, and recommendation labels currently shown on
 - Hardened loopback-only Docker runtime
 - Prisma/SQLite retained only for the original Phase 1 sample repository while marketplace data moves to Supabase
 
-Supabase SQL migrations live in `supabase/migrations/`. The first migration creates private account profiles, automatically maps new Auth users to athlete/coach roles, blocks public admin self-assignment, and restricts profile access with RLS.
+Supabase SQL migrations live in `supabase/migrations/`. The first migration creates private account profiles, maps current Auth users to an initial athlete/coach onboarding role, blocks public admin self-assignment, and restricts profile access with RLS.
+
+The approved product model now uses one member identity with athlete access by default and optional coach/admin capabilities. The current single `role` column is transitional and must be migrated before dual athlete/coach behavior is considered complete.
 
 ## Supabase project setup
 

@@ -182,7 +182,6 @@ export default function HomePage() {
   const profileDialogRef = useRef<HTMLElement>(null);
   const profileCloseRef = useRef<HTMLButtonElement>(null);
   const profileTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const handleSectionNavigation = (event: MouseEvent<HTMLAnchorElement>, sectionId: string) => {
     event.preventDefault();
@@ -191,10 +190,6 @@ export default function HomePage() {
     setMobileMenuOpen(false);
   };
 
-  const handleSearchNavigation = (event: MouseEvent<HTMLAnchorElement>) => {
-    handleSectionNavigation(event, "top");
-    searchInputRef.current?.focus({ preventScroll: true });
-  };
 
   useEffect(() => {
     if (!selectedCoach) return;
@@ -305,7 +300,6 @@ export default function HomePage() {
             <a href="#how-it-works" onClick={(event) => handleSectionNavigation(event, "how-it-works")}>How it works</a>
             <a className="nav-phase" href="#become-a-coach" onClick={(event) => handleSectionNavigation(event, "become-a-coach")}>Coach applications</a>
             <a className="nav-phase" href="/account">Sign in</a>
-            <a className="button button-small nav-cta" href="#top" onClick={handleSearchNavigation}>Search coaches <span aria-hidden="true">↓</span></a>
           </div>
           <button
             className="menu-button"
@@ -332,7 +326,7 @@ export default function HomePage() {
               <form className="search-console" id="search" onSubmit={handleSearch}>
                 <div className="search-field search-main">
                   <label htmlFor="coach-search">What do you need?</label>
-                  <input ref={searchInputRef} id="coach-search" name="query" placeholder="Cricket, tennis or strength" value={queryInput} onChange={(event) => setQueryInput(event.target.value)} />
+                  <input id="coach-search" name="query" placeholder="Cricket, tennis or strength" value={queryInput} onChange={(event) => setQueryInput(event.target.value)} />
                 </div>
                 <div className="search-field">
                   <label htmlFor="search-city">City</label>

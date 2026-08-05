@@ -12,33 +12,40 @@
 
 ## 1. Final Product Scope
 
-CoachConnect is a marketplace where athletes in Pakistan can:
+CoachConnect uses one member account per person. Every member can act as an athlete, and the same member may add coach capability through an application and approval process.
 
-1. Create an account.
-2. Browse and search sports coaches.
-3. receive personalized coach recommendations.
-4. Read detailed coach profiles.
-5. View services, prices, and availability.
-6. Reserve a coaching session.
-7. Cancel according to a clear policy.
-8. Review a coach after a completed booking.
+Members can:
 
-Coaches can:
+1. Create one private account.
+2. Browse the complete list of approved, active coaches without searching first.
+3. Sort, search, and filter that list.
+4. Receive personalized coach recommendations without losing access to the full list.
+5. Read detailed coach profiles.
+6. View services, prices, and availability.
+7. Reserve another coach's session.
+8. Cancel according to a clear policy.
+9. Review another coach after a completed booking.
+10. Apply to become a coach without creating a second account.
 
-1. Create and edit a profile.
+Members with coach capability can also:
+
+1. Create and edit a coach profile.
 2. List coaching services.
 3. Explain what each service includes and excludes.
 4. Set weekly availability and time off.
-5. View and manage bookings.
+5. View and manage bookings for their services.
 6. Cancel a booking when necessary.
+7. Continue using all athlete features.
 
 An administrator can:
 
 1. Approve or reject coach profiles.
-2. Suspend coaches.
-3. View bookings.
-4. Mark demo sessions complete.
-5. Hide inappropriate reviews.
+2. Suspend coach capability without automatically blocking athlete use.
+3. Separately suspend an entire account for a recorded safety reason.
+4. View bookings required for support.
+5. Mark demo sessions complete.
+6. Hide inappropriate reviews.
+7. Never approve or moderate their own records.
 
 ### Three demonstration sports
 
@@ -62,9 +69,10 @@ The database can support more sports and cities later, but we will polish these 
 
 ### Core features
 
-- Athlete, coach, and administrator authentication
+- One member identity with athlete, coach, and administrator capabilities that may coexist
 - Coach approval process
-- Coach browsing
+- Full approved-coach list shown by default
+- Sorting by Recommended, Rating, Price, and Earliest availability
 - Ordinary search and filters
 - Coach recommendation system
 - Natural-language search
@@ -165,25 +173,37 @@ The MVP must remain within published free allowances. Supabase Free projects may
 ## 4. Simplified Architecture
 
 ```text
-Athlete / Coach / Administrator
+One member account
+  - athlete capability for every member
+  - optional approved coach capability
+  - optional protected administrator capability
               |
               v
      CoachConnect Next.js website
      - pages and forms
-     - server-side auth cookies
-     - search and recommendations
-     - booking rules
+     - full coach list, sorting, filters, and recommendations
+     - protected account cookies
+     - booking and permission rules
               |
               v
          Supabase Free
-     - Auth identities and sessions
-     - PostgreSQL + row-level security
-     - private account profiles
-     - approved coach profiles
-     - later availability and bookings
+     - one Auth identity per person
+     - private member profile
+     - separate capability and coach-approval records
+     - approved public coach profiles
+     - later availability, bookings, and reviews
 ```
 
 The application remains one focused Next.js product, with Supabase as the single external backend. This removes custom password/session maintenance while keeping schema and access rules versioned in Git.
+
+A single `role` value is not sufficient because one person can be both athlete and coach. The long-term data model therefore separates identity from capabilities:
+
+- `members`: one private row per signed-in person
+- `member_capabilities`: optional protected capabilities such as administrator
+- `coach_profiles`: coach application, approval, publication, and suspension state
+- athlete preferences: separate personal matching data
+
+Every member can book other coaches. Coach capability adds business tools without removing athlete use. Coach suspension and full account suspension are separate decisions.
 
 ### Recommended technical stack
 
@@ -214,7 +234,8 @@ Right:
 - Find a Coach
 - Become a Coach
 - Sign In
-- High-contrast `Get Started` button
+
+`Find a Coach` is the single discovery action. Do not add a second `Search coaches` navigation button.
 
 On mobile, these options move into one clear menu.
 
@@ -252,9 +273,19 @@ Three clean category cards:
 
 Do not add a crowded horizontal list of many sports.
 
-### Section 4: Recommended coaches
+### Section 4: All coaches and recommendations
 
-Show three or four coach cards containing only:
+Show all approved, active coaches through a paged or `Load more` list. Recommendations may be shown above the list or selected through the Recommended sort, but they must not replace or hide the full inventory.
+
+Provide these sorts:
+
+- Recommended
+- Rating
+- Price: low to high
+- Price: high to low
+- Earliest availability
+
+Each coach card contains only:
 
 - Photograph
 - Name
@@ -620,7 +651,39 @@ No card or payment information is requested.
 
 ---
 
-## 11. Seven-Day Phase Plan
+## 11. Bottleneck Review Before Implementation
+
+Every feature must be reviewed from product, frontend, backend, database, security, accessibility, operations, and QA viewpoints before implementation.
+
+Required questions:
+
+1. What is the simplest user path, and is any control duplicated?
+2. What happens with no data, one item, thousands of items, or stale data?
+3. Which action must be enforced in the database rather than only on the page?
+4. Which permission combinations exist for member, coach, suspended coach, and administrator?
+5. Can the action be repeated, raced, refreshed, or interrupted safely?
+6. What private data could leak through lists, errors, links, logs, or downloads?
+7. What happens if Supabase, email delivery, or the network is unavailable?
+8. Is the page usable by keyboard and on a 360-pixel screen?
+9. Which query, image, calculation, or outside service will become the first performance bottleneck?
+10. What test proves the normal case, boundary case, failure case, and unauthorized case?
+
+Known likely bottlenecks and planned responses:
+
+- **Large coach inventory:** query only a page of summary data, use stable sorting, index common filters, and load profile details on demand.
+- **Rating sort bias:** use verified reviews and confidence weighting rather than raw average alone.
+- **Earliest-availability sort:** keep a small next-slot summary for browsing, then recheck the real slot during booking.
+- **Recommendation cold start:** use a transparent public ranking and keep the complete list visible.
+- **Multiple account capabilities:** replace the current single role with separate identity, coach state, and administrator capability; test every combination.
+- **Double booking:** enforce the final conflict rule in PostgreSQL and make repeated confirmation safe.
+- **Administrator queue:** require complete applications, show missing fields, record reasons, and add filters before automation.
+- **Supabase Free limits:** page large lists, optimize images and queries, show clear service errors, and avoid paid upgrades without approval.
+- **Email dependency:** test confirmation and recovery against the real project and provide clear resend/cooldown states.
+- **Generated build files affecting checks:** exclude generated `.vercel` output from source linting.
+
+---
+
+## 12. Seven-Day Phase Plan
 
 The estimate assumes approximately 6–8 focused hours per working day. A 1–2 day contingency should be kept for unexpected problems and final polish.
 
@@ -827,7 +890,7 @@ Checkpoint: `phase-6-release-candidate`
 
 ---
 
-## 12. Phase Reversion and Safety
+## 13. Phase Reversion and Safety
 
 Yes, the project should be divided into phases.
 
@@ -861,7 +924,7 @@ The phase summary will always explain:
 
 ---
 
-## 13. Software Required
+## 14. Software Required
 
 ### Already installed on this machine
 
@@ -901,7 +964,7 @@ Docker installation will be handled with careful, copy-paste steps before Phase 
 
 ---
 
-## 14. Testing Approach for a Non-Engineer
+## 15. Testing Approach for a Non-Engineer
 
 Ali will not be asked to inspect code or read separate testing-instruction files.
 
@@ -915,7 +978,7 @@ Automated tests run behind the scenes. Ali only checks visible behavior and can 
 
 ---
 
-## 15. Five-Minute Demo Outline
+## 16. Five-Minute Demo Outline
 
 ### 0:00–0:30 — Introduction
 
@@ -961,7 +1024,7 @@ Explain the problem and that CoachConnect connects Pakistani athletes with revie
 
 ---
 
-## 16. Definition of Done
+## 17. Definition of Done
 
 CoachConnect is complete only when:
 

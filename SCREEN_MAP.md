@@ -7,7 +7,9 @@ This document explains where a person can go in the application. It is intention
 ```text
 Home
 ├── Find a Coach
-│   ├── Search and filters
+│   ├── All approved coaches (default view)
+│   ├── Sort: Recommended / Rating / Price / Earliest availability
+│   ├── Search and removable filters
 │   └── Coach Profile
 │       ├── About
 │       ├── Services
@@ -24,11 +26,12 @@ Home
 └── Terms
 ```
 
-## Athlete area
+## Member area
 
 ```text
-Athlete Dashboard
+Member Dashboard
 ├── Recommended Coaches
+├── All Coaches
 ├── My Preferences
 ├── Upcoming Bookings
 │   └── Booking Details
@@ -37,13 +40,15 @@ Athlete Dashboard
 │       └── Cancel Booking
 ├── Previous Bookings
 │   └── Leave Review (completed bookings only)
+├── Become a Coach / Coach application status
 └── Account
 ```
 
-## Coach area
+## Coach tools on the same account
 
 ```text
 Coach Dashboard
+├── Find and Book Another Coach
 ├── Profile
 │   ├── Edit Draft
 │   ├── Preview
@@ -91,8 +96,12 @@ Home
 ## Navigation rules
 
 - Visitors see no dashboard links until signed in.
-- Athletes never see coach or administrator controls.
-- Coaches never see administrator controls.
+- Every signed-in member can use athlete tools.
+- A member with approved coach capability can switch between athlete and coach areas without another account.
+- A member without coach capability sees an application action, not coach management controls.
+- Coaches never see administrator controls unless administrator capability was granted separately.
+- Coach suspension removes coach publication/actions but does not automatically remove athlete access.
+- A coach cannot book or review their own service.
 - The coach's account email and exact location are absent from public screens.
 - A user can always return to search without losing understandable context.
 - Mobile navigation uses one menu and one primary action, not multiple stacked toolbars.

@@ -211,19 +211,11 @@ describe("CoachConnect home page", () => {
     );
   });
 
-  it("returns to the hero and focuses search without placing the form under the header", () => {
-    const scrollIntoView = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
-      configurable: true,
-      value: scrollIntoView,
-    });
+  it("uses one Find a Coach navigation action without a duplicate Search coaches button", () => {
     render(<HomePage />);
 
-    const searchInput = screen.getByRole("textbox", { name: /what do you need/i });
-    fireEvent.click(screen.getByRole("link", { name: /search coaches/i }));
-
-    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
-    expect(searchInput).toHaveFocus();
+    expect(screen.getByRole("link", { name: /^find a coach$/i })).toHaveAttribute("href", "#coaches");
+    expect(screen.queryByRole("link", { name: /search coaches/i })).not.toBeInTheDocument();
   });
 
   it("moves focus into the profile and restores it after Escape", () => {

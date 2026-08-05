@@ -58,6 +58,10 @@ Estimates are revised from actual project state rather than blindly added to the
 | 2026-08-04 | Initial Pakistan/PKR, zero-cost scope | Accepted as baseline | Establishes MVP | Phase 0 onward |
 | 2026-08-04 | Scope may increase or decrease later | Accepted; use this change process | Tiny | All phases |
 | 2026-08-04 | Select hybrid visual direction | Calm structure with energetic search and primary actions | Small | Phase 1 onward |
+| 2026-08-05 | Remove duplicate `Search coaches` navigation action | Keep `Find a Coach` as the single discovery action | Tiny | Phase 1 |
+| 2026-08-05 | Show the complete approved coach inventory with sorting and recommendations | Adopt list-first discovery; recommendations rank or highlight but never hide the full list | Medium | Phases 1, 3, and 4 |
+| 2026-08-05 | Let one person act as both athlete and coach | Replace the single-role model with one member identity plus separate capabilities and coach approval state | Large | Phases 2 onward |
+| 2026-08-05 | Identify bottlenecks and edge cases before each build step | Add explicit performance, permission, concurrency, moderation, and free-service checks to requirements and phase gates | Medium | All phases |
 
 ## Current optional backlog
 
