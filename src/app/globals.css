@@ -670,7 +670,8 @@ a { color: inherit; text-decoration: none; }
 .catalog-profile-image { position: sticky; top: 0; min-height: 620px; height: 92vh; background: #eef1ef; }
 .catalog-profile-image img { object-fit: cover; }
 .catalog-profile-body { padding: 42px 38px 36px; }
-.catalog-profile-body > p:first-child { margin: 0; color: #666; font-size: .78rem; }
+.catalog-demo-label { display: inline-flex; margin-bottom: 8px; padding: 5px 9px; border-radius: 999px; color: #24443c; background: #e8f2ee; font-size: .72rem; font-weight: 800; }
+.catalog-profile-body > p:first-of-type { margin: 0; color: #666; font-size: .78rem; }
 .catalog-profile-body h2 { margin: 6px 0 3px; font-size: 2.2rem; line-height: 1; letter-spacing: -.05em; }
 .catalog-profile-body > strong { font-size: .92rem; }
 .catalog-profile-body > p { color: #666; }

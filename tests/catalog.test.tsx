@@ -17,19 +17,19 @@ function renderCatalog(user: object | null = null) {
 }
 
 describe("coach catalog", () => {
-  it("renders rich approved-profile fixtures when supplied by the data source", async () => {
+  it("renders rich demo profiles with clear labels", async () => {
     renderCatalog();
 
     expect(screen.getByRole("heading", { level: 1, name: /find a coach/i })).toBeInTheDocument();
     const resultCount = Number(screen.getByRole("status").textContent?.match(/\d+/)?.[0]);
     expect(resultCount).toBeGreaterThan(10);
     expect(screen.getAllByRole("article").length).toBeGreaterThan(10);
-    expect(document.body.textContent).not.toMatch(/sample|prototype|fictional/i);
+    expect(screen.getAllByText("Demo profile")).toHaveLength(coaches.length);
     expect(screen.getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bilal Raza" })).toBeInTheDocument();
   });
 
-  it("does not publish hardcoded fixture coaches when the approved source is empty", async () => {
+  it("keeps labeled demo coaches available when no approved coaches exist", async () => {
     vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve({
       ok: true,
       json: async () => String(input).includes("/api/coaches") ? { coaches: [] } : { user: null },
@@ -37,14 +37,15 @@ describe("coach catalog", () => {
 
     render(<CoachCatalog initialQuery="" initialCity="any" />);
 
-    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("0 coaches"));
-    expect(screen.queryByRole("heading", { name: "Ayesha Khan" })).not.toBeInTheDocument();
-    expect(screen.queryAllByRole("article")).toHaveLength(0);
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(`${coaches.length} coaches`));
+    expect(screen.getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
+    expect(screen.getAllByText("Demo profile")).toHaveLength(coaches.length);
   });
 
   it("adds approved database coaches to the public catalog", async () => {
     const approvedCoach = {
       id: "approved-coach-1",
+      isDemo: false,
       name: "Ali Coach",
       location: "Rawalpindi",
       sports: ["Tennis"],
@@ -88,6 +89,7 @@ describe("coach catalog", () => {
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).getByText("New coach")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText(/newly approved/i)).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("Demo profile")).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith("/api/coaches", {
       cache: "no-store",
       credentials: "same-origin",

@@ -28,6 +28,7 @@ export type Coach = {
   audiences: string[];
   levels: string[];
   lessonPlan: Array<{ title: string; description: string }>;
+  isDemo?: boolean;
   faqs: Array<{ question: string; answer: string }>;
 };
 
@@ -329,6 +330,7 @@ export const coaches: Coach[] = baseCoaches.map((coach) => {
   const isAyesha = coach.id === "ayesha-khan";
   return {
     ...coach,
+    badge: "Demo profile",
     offersOnline: coach.mode === "Online",
     offersInPerson: coach.mode === "In person",
     ...trainingAreaByCoach[coach.id],
@@ -354,6 +356,7 @@ export const coaches: Coach[] = baseCoaches.map((coach) => {
         description: "Apply the skill in a realistic exercise, then leave with focused feedback and a simple practice target.",
       },
     ],
+    isDemo: true,
     faqs: [
       {
         question: "Is this suitable for someone new to the sport?",

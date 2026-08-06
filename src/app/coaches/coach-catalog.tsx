@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import CoachLocationPreview from "@/app/coaches/coach-location-preview";
 import CoachMap from "@/app/coaches/coach-map";
 import SiteHeader from "@/components/site-header";
-import { allSports, formatCoachPrice, type Coach } from "@/lib/coaches";
+import { allSports, coaches as demoCoaches, formatCoachPrice, type Coach } from "@/lib/coaches";
 
 type Props = {
   initialQuery: string;
@@ -94,7 +94,11 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
     };
   }, [selectedCoach]);
 
-  const catalogCoaches = approvedCoaches;
+  const catalogCoaches = useMemo(() => {
+    const byId = new Map<string, Coach>(demoCoaches.map((coach) => [coach.id, coach]));
+    for (const coach of approvedCoaches) byId.set(coach.id, coach);
+    return Array.from(byId.values());
+  }, [approvedCoaches]);
 
   const availableCities = useMemo(() => Array.from(new Set(
     catalogCoaches.filter((coach) => coach.location !== "Online").map((coach) => coach.location),
@@ -149,7 +153,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
           <div>
             <p>Coach catalog</p>
             <h1>Find a coach</h1>
-            <span>Browse coaches across every sport, city and training format.</span>
+            <span>Browse approved coaches and interactive demo profiles across every sport, city and training format.</span>
           </div>
         </section>
 
@@ -272,7 +276,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
           ) : (
           <section className="catalog-empty">
             <h2>No coaches match these filters</h2>
-            <p>Clear the filters to see every approved coach again.</p>
+            <p>Clear the filters to see every coach profile again.</p>
             <button type="button" onClick={clearFilters}>Show all coaches</button>
           </section>
           )}
@@ -295,6 +299,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
               )}
             </div>
             <div className="catalog-profile-body">
+              {selectedCoach.isDemo && <span className="catalog-demo-label">Demo profile</span>}
               <p>{selectedCoach.area !== "Online" && selectedCoach.area !== selectedCoach.location ? `${selectedCoach.area}, ` : ""}{selectedCoach.location} · {selectedCoach.sports.join(" · ")} · {selectedCoach.mode}</p>
               <h2 id="catalog-profile-name">{selectedCoach.name}</h2>
               <strong>{selectedCoach.specialty}</strong>
