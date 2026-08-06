@@ -25,6 +25,7 @@ describe("coach catalog", () => {
     expect(resultCount).toBeGreaterThan(10);
     expect(screen.getAllByRole("article").length).toBeGreaterThan(10);
     expect(screen.getAllByText("Demo profile")).toHaveLength(coaches.length);
+    expect(document.querySelectorAll(".catalog-coach-placeholder")).toHaveLength(coaches.length);
     expect(screen.getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bilal Raza" })).toBeInTheDocument();
   });

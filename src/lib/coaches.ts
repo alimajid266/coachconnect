@@ -331,6 +331,7 @@ export const coaches: Coach[] = baseCoaches.map((coach) => {
   return {
     ...coach,
     badge: "Demo profile",
+    image: null,
     offersOnline: coach.mode === "Online",
     offersInPerson: coach.mode === "In person",
     ...trainingAreaByCoach[coach.id],
