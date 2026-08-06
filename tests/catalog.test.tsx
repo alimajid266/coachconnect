@@ -1,19 +1,20 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import CoachCatalog from "@/app/coaches/coach-catalog";
+import { coaches } from "@/lib/coaches";
 
 afterEach(() => vi.unstubAllGlobals());
 
 function renderCatalog(user: object | null = null) {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+  vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve({
     ok: true,
-    json: async () => ({ user }),
-  }));
-  return render(<CoachCatalog initialQuery="" initialCity="any" />);
+    json: async () => String(input).includes("/api/coaches") ? { coaches } : { user },
+  })));
+  return render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
 }
 
 describe("coach catalog", () => {
-  it("shows every approved coach without prototype language", async () => {
+  it("renders rich approved-profile fixtures when supplied by the data source", async () => {
     renderCatalog();
 
     expect(screen.getByRole("heading", { level: 1, name: /find a coach/i })).toBeInTheDocument();
@@ -23,6 +24,71 @@ describe("coach catalog", () => {
     expect(document.body.textContent).not.toMatch(/sample|prototype|fictional/i);
     expect(screen.getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bilal Raza" })).toBeInTheDocument();
+  });
+
+  it("does not publish hardcoded fixture coaches when the approved source is empty", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve({
+      ok: true,
+      json: async () => String(input).includes("/api/coaches") ? { coaches: [] } : { user: null },
+    })));
+
+    render(<CoachCatalog initialQuery="" initialCity="any" />);
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("0 coaches"));
+    expect(screen.queryByRole("heading", { name: "Ayesha Khan" })).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("article")).toHaveLength(0);
+  });
+
+  it("adds approved database coaches to the public catalog", async () => {
+    const approvedCoach = {
+      id: "approved-coach-1",
+      name: "Ali Coach",
+      location: "Rawalpindi",
+      sports: ["Tennis"],
+      specialty: "Patient tennis coaching",
+      rating: null,
+      reviewCount: 0,
+      price: 3500,
+      reason: "Patient tennis coaching",
+      badge: "New coach",
+      mode: "In person + Online",
+      offersOnline: true,
+      offersInPerson: true,
+      area: "Ayub Park",
+      coordinates: null,
+      availability: ["Saturday"],
+      image: null,
+      rank: 1000,
+      bio: "Structured coaching for adults who want dependable technique and confidence.",
+      experience: "5 years of coaching experience",
+      credentials: ["Certified tennis coach"],
+      coachingStyle: "",
+      languages: [],
+      lessonCount: 0,
+      audiences: ["Adults"],
+      levels: ["Beginner"],
+      lessonPlan: [{ title: "Typical session", description: "Warm-up, technique and guided play." }],
+      faqs: [],
+    };
+    const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve({
+      ok: true,
+      json: async () => String(input).includes("/api/coaches")
+        ? { coaches: [approvedCoach] }
+        : { user: null },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CoachCatalog initialQuery="" initialCity="any" />);
+
+    const heading = await screen.findByRole("heading", { name: "Ali Coach" });
+    const card = heading.closest("article");
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByText("New coach")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText(/newly approved/i)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith("/api/coaches", {
+      cache: "no-store",
+      credentials: "same-origin",
+    });
   });
 
   it("opens a map view without removing the coach list", () => {
@@ -196,10 +262,26 @@ describe("coach catalog", () => {
     expect(within(locationPreview).getByText(/Gulberg, Lahore/i)).toBeInTheDocument();
     expect(within(locationPreview).getByText(/exact meeting details are shared after booking/i)).toBeInTheDocument();
     expect(within(dialog).queryByText(/stay private|private by default/i)).not.toBeInTheDocument();
-    expect(await within(dialog).findByRole("link", { name: /sign in to reserve/i })).toHaveAttribute("href", "/account?next=%2Fcoaches");
+    expect(within(dialog).getByText(/booking requests are not open yet/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /close coach profile/i }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("closes the coach profile with Escape and restores focus to its trigger", async () => {
+    renderCatalog();
+    const trigger = screen.getByRole("button", { name: /view ayesha khan's profile/i });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: /close coach profile/i })).toHaveFocus());
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 
   it("keeps an authenticated member visibly signed in on the catalog", async () => {
@@ -208,7 +290,7 @@ describe("coach catalog", () => {
       json: async () => ({ user: { id: "1", displayName: "Ali", email: "ali@example.com", role: "ATHLETE" } }),
     });
     vi.stubGlobal("fetch", fetchMock);
-    render(<CoachCatalog initialQuery="" initialCity="any" />);
+    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
 
     expect(await screen.findByRole("link", { name: /my account/i })).toHaveAttribute("href", "/account");
     expect(screen.getByRole("link", { name: /become a coach/i })).toHaveAttribute("href", "/coach/apply");
@@ -220,7 +302,7 @@ describe("coach catalog", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
-    expect(screen.getByRole("link", { name: /continue from my account/i })).toHaveAttribute("href", "/account");
+    expect(screen.getByText(/booking requests are not open yet/i)).toBeInTheDocument();
   });
 
   it("shows sign in only after confirming there is no session", async () => {
@@ -231,12 +313,12 @@ describe("coach catalog", () => {
 
   it("does not claim a member is signed out when session status is unavailable", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("session unavailable")));
-    render(<CoachCatalog initialQuery="" initialCity="any" />);
+    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
 
     fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
 
-    expect(await screen.findByText(/account status unavailable/i)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /sign in to reserve/i })).not.toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /my account/i })).toHaveAttribute("href", "/account");
+    expect(screen.getByText(/booking requests are not open yet/i)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^sign in$/i })).not.toBeInTheDocument();
   });
 });

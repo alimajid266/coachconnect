@@ -28,7 +28,13 @@ export async function POST(request: NextRequest) {
       ));
     }
 
-    await supabase.auth.signOut();
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) {
+      return applyCookies(NextResponse.json(
+        { error: "Password updated, but automatic sign-out failed. Sign out manually before continuing." },
+        { status: 503 },
+      ));
+    }
     return applyCookies(NextResponse.json({ message: "Password updated. You can now sign in." }));
   } catch {
     return NextResponse.json({ error: "Unable to update the password." }, { status: 400 });

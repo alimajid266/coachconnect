@@ -23,11 +23,14 @@ export async function GET(request: NextRequest) {
       return applyCookies(NextResponse.json({ error: "Account profile is unavailable." }, { status: 503 }));
     }
 
-    const { data: coachApplication } = await supabase
+    const { data: coachApplication, error: coachApplicationError } = await supabase
       .from("coach_applications")
       .select("status")
       .eq("user_id", authData.user.id)
       .maybeSingle();
+    if (coachApplicationError) {
+      return applyCookies(NextResponse.json({ error: "Coach status is unavailable." }, { status: 503 }));
+    }
     const coachStatus = coachApplication?.status ?? (profile.role === "COACH" ? "APPROVED" : null);
 
     return applyCookies(NextResponse.json({

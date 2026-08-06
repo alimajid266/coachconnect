@@ -19,7 +19,8 @@ export default function CoachMap({ city, coaches, onViewProfile }: Props) {
   const [mapState, setMapState] = useState<"loading" | "ready" | "error">("loading");
   const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
   const mappableCoaches = useMemo(() => coaches.filter((coach) => coach.coordinates), [coaches]);
-  const onlineCount = coaches.length - mappableCoaches.length;
+  const onlineOnlyCount = coaches.filter((coach) => coach.offersOnline && !coach.offersInPerson).length;
+  const unmappedInPersonCount = coaches.filter((coach) => coach.offersInPerson && !coach.coordinates).length;
   const selectedVisibleCoach = selectedCoach && mappableCoaches.some((coach) => coach.id === selectedCoach.id)
     ? selectedCoach
     : null;
@@ -103,7 +104,8 @@ export default function CoachMap({ city, coaches, onViewProfile }: Props) {
           </strong>
           <span>Choose a marker to preview a coach.</span>
         </div>
-        {onlineCount > 0 && <span>{onlineCount} online</span>}
+        {onlineOnlyCount > 0 && <span>{onlineOnlyCount} online</span>}
+        {unmappedInPersonCount > 0 && <span>{unmappedInPersonCount} awaiting map area</span>}
       </div>
 
       <div className="catalog-map-frame">
@@ -129,7 +131,7 @@ export default function CoachMap({ city, coaches, onViewProfile }: Props) {
         <article className="catalog-map-preview">
           <p>{selectedVisibleCoach.area}, {selectedVisibleCoach.location}</p>
           <h2>{selectedVisibleCoach.name}</h2>
-          <span>{selectedVisibleCoach.sports.join(" · ")} · ★ {selectedVisibleCoach.rating}</span>
+          <span>{selectedVisibleCoach.sports.join(" · ")} · {selectedVisibleCoach.rating === null ? "New coach" : `★ ${selectedVisibleCoach.rating}`}</span>
           <strong>{formatCoachPrice(selectedVisibleCoach.price)} per session</strong>
           <button type="button" aria-label={`View ${selectedVisibleCoach.name}'s profile`} onClick={() => onViewProfile(selectedVisibleCoach)}>
             View profile

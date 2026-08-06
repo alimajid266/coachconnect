@@ -171,6 +171,22 @@ describe("coach application routes", () => {
     });
   });
 
+  it("rejects malformed nested availability and FAQ values before database writes", async () => {
+    const malformedFaq = await saveApplication(request({
+      ...validDraft,
+      faqs: [{ question: "Valid question", answer: { private: "not text" } }],
+    }));
+    expect(malformedFaq.status).toBe(400);
+    expect(mocks.upsert).not.toHaveBeenCalled();
+
+    const malformedAvailability = await saveApplication(request({
+      ...validDraft,
+      availability: ["x".repeat(121)],
+    }));
+    expect(malformedAvailability.status).toBe(400);
+    expect(mocks.upsert).not.toHaveBeenCalled();
+  });
+
   it("submits the authenticated member's saved application through the protected lifecycle", async () => {
     mocks.rpc.mockResolvedValue({
       data: { user_id: "member-1", status: "SUBMITTED", submitted_at: "2026-08-05T10:30:00Z" },

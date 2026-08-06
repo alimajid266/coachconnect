@@ -39,7 +39,7 @@ describe("CoachConnect home page", () => {
 
     expect(screen.getByRole("heading", { name: /how coachconnect works/i })).toBeInTheDocument();
     expect(screen.getByText(/browse approved coaches/i)).toBeInTheDocument();
-    expect(screen.getByText(/choose a time that works for you/i)).toBeInTheDocument();
+    expect(screen.getByText(/check pricing, training format and public meeting areas/i)).toBeInTheDocument();
   });
 
   it("keeps an existing session visible when a member returns home", async () => {

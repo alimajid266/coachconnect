@@ -65,7 +65,7 @@ export default function AdminCoachApplicationsPage() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "The review decision could not be saved.");
       setApplications((current) => current.map((item) => item.userId === application.userId ? { ...item, ...result.application } : item));
-      setMessage(`${application.applicantName}'s application is now ${String(result.application.status).toLowerCase().replace("_", " ")}.`);
+      setMessage(`${application.applicantName}'s application is now ${String(result.application.status).toLowerCase().replaceAll("_", " ")}.`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The review decision could not be saved.");
     } finally {
@@ -114,7 +114,8 @@ export default function AdminCoachApplicationsPage() {
                   <button className="button button-accent" disabled={busyId === application.userId} onClick={() => review(application, "APPROVED")}>Approve profile</button>
                 </div>
               </div>}
-              {application.status === "APPROVED" && <div className="admin-review-controls"><label>Suspension reason<textarea rows={3} value={notes[application.userId] ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [application.userId]: event.target.value }))} /></label><button className="button button-secondary" disabled={busyId === application.userId} onClick={() => review(application, "SUSPENDED")}>Suspend coach profile</button></div>}
+              {application.status === "APPROVED" && <div className="admin-review-controls"><label>Removal reason<textarea rows={3} value={notes[application.userId] ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [application.userId]: event.target.value }))} placeholder="Required before removing this profile" /></label><div><p>Removing a coach hides the profile from the public catalog without deleting the member account or review history.</p><button className="button button-secondary" disabled={busyId === application.userId} onClick={() => review(application, "SUSPENDED")}>Remove from catalog</button></div></div>}
+              {application.status === "SUSPENDED" && <div className="admin-review-controls"><div><p>This coach is removed from the public catalog. Restore only after resolving the recorded concern.</p><button className="button button-accent" disabled={busyId === application.userId} onClick={() => review(application, "APPROVED")}>Restore coach profile</button></div></div>}
             </article>
           );
         })}

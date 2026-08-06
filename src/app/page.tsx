@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import SiteHeader from "@/components/site-header";
-import { coaches, formatCoachPrice } from "@/lib/coaches";
 
 const featuredSports = [
   { number: "01", name: "Cricket", detail: "Batting, bowling and fielding" },
@@ -15,8 +14,6 @@ const featuredSports = [
 ];
 
 export default function HomePage() {
-  const featuredCoaches = coaches.slice(0, 3);
-
   return (
     <div className="revived-home">
       <a className="skip-link" href="#main-content">Skip to content</a>
@@ -43,6 +40,7 @@ export default function HomePage() {
                     <option value="Islamabad">Islamabad</option>
                     <option value="Karachi">Karachi</option>
                     <option value="Lahore">Lahore</option>
+                    <option value="Rawalpindi">Rawalpindi</option>
                   </select>
                 </div>
                 <button className="button button-accent" type="submit">Browse coaches <span aria-hidden="true">→</span></button>
@@ -64,7 +62,7 @@ export default function HomePage() {
         <section className="momentum-strip" aria-label="CoachConnect marketplace range">
           <div className="container momentum-grid">
             <div><span>Explore widely</span><strong>12 sports</strong></div>
-            <p>15 coaches available</p>
+            <p>Team-reviewed coach profiles</p>
             <div className="momentum-promise"><span>One coach, more possibilities</span><strong>Multi-sport profiles →</strong></div>
           </div>
         </section>
@@ -86,39 +84,13 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="section coaches-section" aria-labelledby="featured-heading">
-          <div className="container">
-            <div className="section-heading">
-              <div><p className="eyebrow">A quick look</p><h2 id="featured-heading">Featured coaches</h2></div>
-              <p>Preview a few profiles here, then use the dedicated catalog to compare everyone.</p>
-            </div>
-            <div className="coach-grid">
-              {featuredCoaches.map((coach) => (
-                <article className="coach-card" key={coach.id}>
-                  <div className="coach-image-wrap">
-                    <Image className="coach-image" src={coach.image} alt={`${coach.sports.join(" and ")} training`} fill sizes="(max-width: 780px) 100vw, 33vw" />
-                    <span className="match-badge">{coach.badge}</span>
-                  </div>
-                  <div className="coach-content">
-                    <div className="coach-meta"><span>{coach.location} · {coach.sports.join(" · ")}</span><span>★ {coach.rating}</span></div>
-                    <h3>{coach.name}</h3>
-                    <p className="specialty">{coach.specialty}</p>
-                    <p className="match-reason">{coach.reason}</p>
-                    <div className="coach-footer"><div><small>Starting from</small><strong>{formatCoachPrice(coach.price)}</strong></div><Link className="text-button" href={`/coaches?query=${encodeURIComponent(coach.name)}`}>See in catalog</Link></div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section className="section" id="how-it-works" aria-labelledby="how-heading">
           <div className="container">
             <div className="section-heading compact"><div><p className="eyebrow">Three clear steps</p><h2 id="how-heading">How CoachConnect works</h2></div></div>
             <div className="steps">
               <article><span>01</span><h3>Browse approved coaches</h3><p>Explore every active coach and all the sports they teach.</p></article>
               <article><span>02</span><h3>Choose the right fit</h3><p>Compare experience, style, credentials, price and availability.</p></article>
-              <article><span>03</span><h3>Book a session</h3><p>Choose a time that works for you and continue to reserve.</p></article>
+              <article><span>03</span><h3>Review session details</h3><p>Check pricing, training format and public meeting areas before deciding.</p></article>
             </div>
           </div>
         </section>
@@ -126,7 +98,7 @@ export default function HomePage() {
         <section className="section trust-section">
           <div className="container trust-panel">
             <div><p className="eyebrow light">Coach standards</p><h2>Know who you&apos;re training with.</h2></div>
-            <ul><li>Coach profiles are reviewed before publication.</li><li>Compare sports, experience and credentials.</li><li>Use lesson history and reviews to choose confidently.</li></ul>
+            <ul><li>Coach profiles are reviewed before publication.</li><li>Compare sports, experience and credentials.</li><li>Use qualifications and lesson plans to choose confidently.</li></ul>
           </div>
         </section>
 
@@ -135,7 +107,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="footer"><div className="container footer-row"><strong>CoachConnect Pakistan</strong><span>12 sports · 3 cities · Online and in-person</span><span>Find your next coach</span></div></footer>
+      <footer className="footer"><div className="container footer-row"><strong>CoachConnect Pakistan</strong><span>12 sports · 4 cities · Online and in-person</span><span>Find your next coach</span></div></footer>
     </div>
   );
 }

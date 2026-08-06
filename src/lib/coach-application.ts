@@ -47,13 +47,39 @@ function optionalInteger(value: unknown, label: string, minimum: number, maximum
   return result as number;
 }
 
+function availabilityList(value: unknown) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 30) throw new Error("Availability is invalid.");
+  const result = value.map((item) => {
+    if (typeof item !== "string") throw new Error("Availability is invalid.");
+    const text = item.trim();
+    if (!text || text.length > 120) throw new Error("Availability is invalid.");
+    return text;
+  });
+  return Array.from(new Set(result));
+}
+
+function faqList(value: unknown) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 12) throw new Error("FAQs are invalid.");
+  return value.map((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error("FAQs are invalid.");
+    const { question, answer } = item as UnknownRecord;
+    if (typeof question !== "string" || typeof answer !== "string") throw new Error("FAQs are invalid.");
+    const normalizedQuestion = question.trim();
+    const normalizedAnswer = answer.trim();
+    if (!normalizedQuestion || normalizedQuestion.length > 200 || !normalizedAnswer || normalizedAnswer.length > 1000) {
+      throw new Error("FAQs are invalid.");
+    }
+    return { question: normalizedQuestion, answer: normalizedAnswer };
+  });
+}
+
 export function normalizeCoachApplicationDraft(body: UnknownRecord) {
   const offersOnline = body.offersOnline === true;
   const offersInPerson = body.offersInPerson === true;
-  const availability = body.availability ?? [];
-  const faqs = body.faqs ?? [];
-  if (!Array.isArray(availability) || availability.length > 30) throw new Error("Availability is invalid.");
-  if (!Array.isArray(faqs) || faqs.length > 12) throw new Error("FAQs are invalid.");
+  const availability = availabilityList(body.availability);
+  const faqs = faqList(body.faqs);
 
   return {
     headline: optionalText(body.headline, "Headline", 120),

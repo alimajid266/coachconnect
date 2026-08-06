@@ -19,6 +19,27 @@ function serviceClient(): SupabaseClient {
   });
 }
 
+async function createAuthenticatedMember(displayName: string, requestedRole = "ATHLETE") {
+  const email = `test-${crypto.randomUUID()}@example.com`;
+  const password = `Cc-${crypto.randomUUID()}-9x`;
+  const admin = serviceClient();
+  const created = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { display_name: displayName, role: requestedRole },
+  });
+  expect(created.error).toBeNull();
+  const userId = created.data.user!.id;
+  createdUserIds.push(userId);
+
+  const client = publicClient();
+  const signedIn = await client.auth.signInWithPassword({ email, password });
+  expect(signedIn.error).toBeNull();
+  expect(signedIn.data.session).not.toBeNull();
+  return { client, userId, password };
+}
+
 runIntegration("Supabase account and coach capability policies", () => {
   afterAll(async () => {
     const admin = serviceClient();
@@ -26,15 +47,9 @@ runIntegration("Supabase account and coach capability policies", () => {
   });
 
   it("creates safe account roles and isolates profiles with RLS", async () => {
-    const athlete = publicClient();
-    const athleteSignup = await athlete.auth.signUp({
-      email: `athlete-${crypto.randomUUID()}@coachconnect.local`,
-      password: `Cc-${crypto.randomUUID()}-9x`,
-      options: { data: { display_name: "RLS Athlete", role: "ADMIN" } },
-    });
-    expect(athleteSignup.error).toBeNull();
-    expect(athleteSignup.data.session).not.toBeNull();
-    createdUserIds.push(athleteSignup.data.user!.id);
+    const athleteAccount = await createAuthenticatedMember("RLS Athlete", "ADMIN");
+    const athlete = athleteAccount.client;
+    const athleteId = athleteAccount.userId;
 
     const ownProfile = await athlete
       .from("profiles")
@@ -49,17 +64,11 @@ runIntegration("Supabase account and coach capability policies", () => {
     const escalation = await athlete
       .from("profiles")
       .update({ role: "ADMIN" })
-      .eq("id", athleteSignup.data.user!.id);
+      .eq("id", athleteId);
     expect(escalation.error).not.toBeNull();
 
-    const coach = publicClient();
-    const coachSignup = await coach.auth.signUp({
-      email: `coach-${crypto.randomUUID()}@coachconnect.local`,
-      password: `Cc-${crypto.randomUUID()}-9x`,
-      options: { data: { display_name: "RLS Coach", role: "COACH" } },
-    });
-    expect(coachSignup.error).toBeNull();
-    createdUserIds.push(coachSignup.data.user!.id);
+    const coachAccount = await createAuthenticatedMember("RLS Coach", "COACH");
+    const coach = coachAccount.client;
 
     const coachProfile = await coach.from("profiles").select("role").single();
     expect(coachProfile.data?.role).toBe("ATHLETE");
@@ -67,32 +76,19 @@ runIntegration("Supabase account and coach capability policies", () => {
     const crossAccountRead = await coach
       .from("profiles")
       .select("id")
-      .eq("id", athleteSignup.data.user!.id);
+      .eq("id", athleteId);
     expect(crossAccountRead.error).toBeNull();
     expect(crossAccountRead.data).toEqual([]);
   });
 
   it("enforces the coach application and administrator review lifecycle", async () => {
-    const password = `Cc-${crypto.randomUUID()}-9x`;
-    const applicant = publicClient();
-    const applicantSignup = await applicant.auth.signUp({
-      email: `applicant-${crypto.randomUUID()}@coachconnect.local`,
-      password,
-      options: { data: { display_name: "Coach Applicant", role: "COACH" } },
-    });
-    expect(applicantSignup.error).toBeNull();
-    const applicantId = applicantSignup.data.user!.id;
-    createdUserIds.push(applicantId);
+    const applicantAccount = await createAuthenticatedMember("Coach Applicant", "COACH");
+    const applicant = applicantAccount.client;
+    const applicantId = applicantAccount.userId;
 
-    const reviewer = publicClient();
-    const reviewerSignup = await reviewer.auth.signUp({
-      email: `reviewer-${crypto.randomUUID()}@coachconnect.local`,
-      password,
-      options: { data: { display_name: "Review Admin", role: "ADMIN" } },
-    });
-    expect(reviewerSignup.error).toBeNull();
-    const reviewerId = reviewerSignup.data.user!.id;
-    createdUserIds.push(reviewerId);
+    const reviewerAccount = await createAuthenticatedMember("Review Admin", "ADMIN");
+    const reviewer = reviewerAccount.client;
+    const reviewerId = reviewerAccount.userId;
 
     const promote = await serviceClient().from("profiles").update({ role: "ADMIN" }).eq("id", reviewerId);
     expect(promote.error).toBeNull();
@@ -151,6 +147,12 @@ runIntegration("Supabase account and coach capability policies", () => {
       .update({ headline: "Updated tennis coaching for confident match play" })
       .eq("user_id", applicantId);
     expect(approvedEdit.error).toBeNull();
+    const pendingRevision = await reviewer
+      .from("coach_applications")
+      .select("status")
+      .eq("user_id", applicantId)
+      .single();
+    expect(pendingRevision.data?.status).toBe("SUBMITTED");
 
     const reviewerDraft = await reviewer.from("coach_applications").insert({ user_id: reviewerId });
     expect(reviewerDraft.error).toBeNull();
@@ -163,14 +165,9 @@ runIntegration("Supabase account and coach capability policies", () => {
   });
 
   it("permanently deletes only the authenticated member and cascades private profile data", async () => {
-    const member = publicClient();
-    const signup = await member.auth.signUp({
-      email: `delete-${crypto.randomUUID()}@coachconnect.local`,
-      password: `Cc-${crypto.randomUUID()}-9x`,
-      options: { data: { display_name: "Delete Me" } },
-    });
-    expect(signup.error).toBeNull();
-    const memberId = signup.data.user!.id;
+    const memberAccount = await createAuthenticatedMember("Delete Me");
+    const member = memberAccount.client;
+    const memberId = memberAccount.userId;
 
     const application = await member.from("coach_applications").insert({ user_id: memberId });
     expect(application.error).toBeNull();
@@ -192,24 +189,13 @@ runIntegration("Supabase account and coach capability policies", () => {
   });
 
   it("lets an administrator delete their account after reviewing an application", async () => {
-    const applicant = publicClient();
-    const applicantSignup = await applicant.auth.signUp({
-      email: `reviewed-${crypto.randomUUID()}@coachconnect.local`,
-      password: `Cc-${crypto.randomUUID()}-9x`,
-      options: { data: { display_name: "Reviewed Applicant" } },
-    });
-    expect(applicantSignup.error).toBeNull();
-    const applicantId = applicantSignup.data.user!.id;
-    createdUserIds.push(applicantId);
+    const applicantAccount = await createAuthenticatedMember("Reviewed Applicant");
+    const applicant = applicantAccount.client;
+    const applicantId = applicantAccount.userId;
 
-    const reviewer = publicClient();
-    const reviewerSignup = await reviewer.auth.signUp({
-      email: `deleting-reviewer-${crypto.randomUUID()}@coachconnect.local`,
-      password: `Cc-${crypto.randomUUID()}-9x`,
-      options: { data: { display_name: "Deleting Reviewer" } },
-    });
-    expect(reviewerSignup.error).toBeNull();
-    const reviewerId = reviewerSignup.data.user!.id;
+    const reviewerAccount = await createAuthenticatedMember("Deleting Reviewer");
+    const reviewer = reviewerAccount.client;
+    const reviewerId = reviewerAccount.userId;
 
     const admin = serviceClient();
     const promote = await admin.from("profiles").update({ role: "ADMIN" }).eq("id", reviewerId);

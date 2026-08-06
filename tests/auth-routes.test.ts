@@ -198,6 +198,26 @@ describe("Supabase authentication routes", () => {
     expect(await response.json()).toEqual({ error: "Account status is unavailable." });
   });
 
+  it("reports coach-application lookup failures instead of silently removing capability", async () => {
+    mocks.getUser.mockResolvedValueOnce({
+      data: { user: { id: "user-2", email: "coach@example.com" } },
+      error: null,
+    });
+    mocks.profileSingle.mockResolvedValueOnce({
+      data: { display_name: "Coach Account", role: "ATHLETE" },
+      error: null,
+    });
+    mocks.applicationMaybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: { message: "database unavailable" },
+    });
+
+    const response = await getSession(request("/api/auth/session"));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "Coach status is unavailable." });
+  });
+
   it("treats the expected absence of a session as signed out", async () => {
     mocks.getUser.mockResolvedValueOnce({
       data: { user: null },

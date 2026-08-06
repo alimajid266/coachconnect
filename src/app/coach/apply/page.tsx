@@ -170,9 +170,12 @@ export default function CoachApplicationPage() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "The draft could not be saved.");
+      const wasApproved = application?.status === "APPROVED";
       setApplication(result.application);
       setDraft(asDraft(result.application));
-      setMessage(application?.status === "APPROVED" ? "Coach profile updates saved." : "Draft saved.");
+      setMessage(wasApproved && result.application?.status === "SUBMITTED"
+        ? "Profile updates submitted for CoachConnect team review."
+        : result.application?.status === "APPROVED" ? "Coach profile updates saved." : "Draft saved.");
       return true;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The draft could not be saved.");
@@ -235,7 +238,9 @@ export default function CoachApplicationPage() {
 
       {application?.status === "REJECTED" && application.reviewNote && <p className="application-review-note"><strong>Requested changes:</strong> {application.reviewNote}</p>}
       {application?.status === "SUSPENDED" && application.reviewNote && <p className="application-review-note"><strong>Suspension reason:</strong> {application.reviewNote} <a href="mailto:support@coachconnect.pk?subject=Coach%20profile%20reactivation">Contact support about reactivation</a>.</p>}
-      {locked && <p className="application-locked">This application cannot be edited while it is {statusLabels[application.status].toLowerCase()}.</p>}
+      {locked && <p className="application-locked">{application.status === "SUSPENDED"
+        ? "This application cannot be edited while it is suspended."
+        : "Editing is paused while the team reviews this profile."}</p>}
       {error && <p className="form-status error" role="alert">{error}</p>}
       {message && <p className="form-status success" role="status">{message}</p>}
 

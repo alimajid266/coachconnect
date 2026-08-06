@@ -1,0 +1,2 @@
+-- Intentionally empty.
+-- Public coach listings must come from reviewed coach applications, not fictional seed records.

@@ -79,4 +79,20 @@ describe("password recovery routes", () => {
     expect(mocks.signOut).toHaveBeenCalledOnce();
     expect(mocks.applyCookies).toHaveBeenCalledOnce();
   });
+
+  it("reports when the password changed but automatic sign-out fails", async () => {
+    mocks.updateUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    mocks.signOut.mockResolvedValue({ error: { message: "auth service unavailable" } });
+    const password = "New-Private-Passphrase-42";
+
+    const response = await updatePassword(request("/api/auth/update-password", {
+      password,
+      passwordConfirmation: password,
+    }));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: "Password updated, but automatic sign-out failed. Sign out manually before continuing.",
+    });
+  });
 });

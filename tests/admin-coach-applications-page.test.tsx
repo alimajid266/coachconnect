@@ -43,4 +43,30 @@ describe("coach application review page", () => {
     expect(screen.getByRole("link", { name: "My account" })).toHaveAttribute("href", "/account");
     expect(screen.queryByRole("link", { name: /dashboard/i })).not.toBeInTheDocument();
   });
+
+  it("lets administrators restore a coach removed from the catalog", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        applications: [{
+          userId: "member-2",
+          applicantName: "Removed Coach",
+          status: "SUSPENDED",
+          headline: "Experienced swimming coach",
+          sports: ["Swimming"],
+          offersOnline: false,
+          offersInPerson: true,
+          city: "Islamabad",
+          publicArea: "F-8",
+        }],
+      }),
+    }));
+
+    render(<AdminCoachApplicationsPage />);
+
+    expect(await screen.findByRole("button", { name: /restore coach profile/i })).toBeInTheDocument();
+    expect(screen.getByText(/removed from the public catalog/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /delete member account/i })).not.toBeInTheDocument();
+  });
 });

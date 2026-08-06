@@ -3,19 +3,21 @@ export type Sport = "Badminton" | "Basketball" | "Boxing" | "Cricket" | "Footbal
 export type Coach = {
   id: string;
   name: string;
-  location: "Islamabad" | "Karachi" | "Lahore";
+  location: string;
   sports: Sport[];
   specialty: string;
-  rating: number;
+  rating: number | null;
   reviewCount: number;
   price: number;
   reason: string;
   badge: string;
-  mode: "In person" | "Online";
+  mode: "In person" | "Online" | "In person + Online";
+  offersOnline: boolean;
+  offersInPerson: boolean;
   area: string;
   coordinates: [longitude: number, latitude: number] | null;
   availability: string[];
-  image: string;
+  image: string | null;
   rank: number;
   bio: string;
   experience: string;
@@ -29,7 +31,7 @@ export type Coach = {
   faqs: Array<{ question: string; answer: string }>;
 };
 
-type BaseCoach = Omit<Coach, "area" | "coordinates" | "bio" | "experience" | "credentials" | "coachingStyle" | "languages" | "lessonCount" | "audiences" | "levels" | "lessonPlan" | "faqs">;
+type BaseCoach = Omit<Coach, "offersOnline" | "offersInPerson" | "area" | "coordinates" | "bio" | "experience" | "credentials" | "coachingStyle" | "languages" | "lessonCount" | "audiences" | "levels" | "lessonPlan" | "faqs">;
 
 const baseCoaches: BaseCoach[] = [
   {
@@ -327,6 +329,8 @@ export const coaches: Coach[] = baseCoaches.map((coach) => {
   const isAyesha = coach.id === "ayesha-khan";
   return {
     ...coach,
+    offersOnline: coach.mode === "Online",
+    offersInPerson: coach.mode === "In person",
     ...trainingAreaByCoach[coach.id],
     bio: `${coach.name} helps athletes build useful, repeatable skills without making sessions feel intimidating. ${coach.reason}`,
     experience: `${isAyesha ? 8 : 4 + (coach.rank % 8)} years of coaching experience`,

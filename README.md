@@ -5,14 +5,12 @@ CoachConnect is a sports-coach marketplace MVP for adults in Pakistan. The proto
 ## Current status
 
 - Simple public home page and dedicated `/coaches` catalog are implemented.
-- The catalog shows all approved sample coaches and supports search, city, sport, format, and sorting controls.
+- The catalog reads approved coach profiles from Supabase and supports search, city, sport, format, and sorting controls.
 - The optional Mapbox view keeps visible coach cards synchronized with approximate public training areas; online-only coaches are not pinned.
-- Supabase account foundation and Phase 2B coach applications are implemented. Members can save and submit applications; administrators can review, approve, reject, or suspend them.
-- Public coach discovery remains fixture-backed until the approved-profile catalog migration is completed.
+- Supabase account foundation and Phase 2B coach applications are implemented. Members can save and submit applications; administrators can review, approve, request changes, remove listings, or restore them.
+- Bundled coach fixtures are retained only for isolated UI tests and are not published by the production catalog.
 - Public deployment: `https://coachconnect-sigma.vercel.app`.
 - Monetary cost: Rs 0.
-
-All coaches, ratings, availability, and recommendation labels currently shown in the catalog are fictional sample data.
 
 ## Architecture
 
@@ -44,9 +42,25 @@ npx supabase link --project-ref YOUR_PROJECT_REF
 npx supabase db push
 ```
 
+7. In **Authentication → URL Configuration**, set the production Site URL and add both recovery callbacks:
+   - `https://coachconnect-sigma.vercel.app/auth/callback`
+   - `http://localhost:3000/auth/callback`
+
+Password recovery cannot safely return to production unless the exact Vercel callback is allowlisted.
+
 The Free plan may pause an inactive project after one week. No paid upgrade is authorized.
 
 > Security note: the Supabase CLI's default local stack publishes development ports on all network interfaces. It was stopped after verification and should not be started on an untrusted network without explicit loopback/firewall isolation.
+
+## Administrator access and powers
+
+Registration never grants administrator access. Bootstrap a dedicated administrator account deliberately:
+
+1. Register a separate CoachConnect account and copy its UUID from **Supabase Dashboard → Authentication → Users**.
+2. Open **Table Editor → public → profiles**, find the same UUID, change `role` to `ADMIN`, and save.
+3. Sign in with that account and open `/admin/coaches`. Do not use the applicant's own account; self-review is blocked in the database.
+
+Administrators can view non-draft applications, mark submissions under review, approve them, request changes with a reason, remove approved coach listings from the catalog, and restore removed listings. Removal uses the audited `SUSPENDED` state and preserves the underlying member account. Administrators cannot hard-delete another member's identity; members control permanent self-service account deletion from **My Account**.
 
 ## Local development
 
@@ -68,7 +82,11 @@ npm test
 npm run test:phase0
 npm run build
 npm audit --audit-level=high
+curl -fsS http://127.0.0.1:3000/api/health
+curl -fsS http://127.0.0.1:3000/api/ready
 ```
+
+`/api/health` is the process liveness check. `/api/ready` additionally verifies that Supabase can serve the required public catalog function.
 
 The real Supabase policy test in `tests/supabase-auth.integration.test.ts` runs only when `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and a test-only `SUPABASE_SERVICE_ROLE_KEY` are explicitly supplied. The service-role key must never be exposed to the browser or committed.
 

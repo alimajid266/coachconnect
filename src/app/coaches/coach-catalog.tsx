@@ -1,53 +1,135 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CoachLocationPreview from "@/app/coaches/coach-location-preview";
 import CoachMap from "@/app/coaches/coach-map";
-import SiteHeader, { type SessionUser } from "@/components/site-header";
-import { allSports, coaches, formatCoachPrice, type Coach } from "@/lib/coaches";
+import SiteHeader from "@/components/site-header";
+import { allSports, formatCoachPrice, type Coach } from "@/lib/coaches";
 
 type Props = {
   initialQuery: string;
   initialCity: string;
+  initialCoaches?: Coach[];
 };
 
 type SortOption = "recommended" | "rating" | "price-low" | "price-high";
 
-export default function CoachCatalog({ initialQuery, initialCity }: Props) {
+export default function CoachCatalog({ initialQuery, initialCity, initialCoaches = [] }: Props) {
   const [query, setQuery] = useState(initialQuery);
   const [city, setCity] = useState(initialCity);
   const [sport, setSport] = useState("any");
   const [mode, setMode] = useState("any");
   const [sort, setSort] = useState<SortOption>("recommended");
   const [showMap, setShowMap] = useState(false);
-  const [user, setUser] = useState<SessionUser | null>();
-  const [sessionStatus, setSessionStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
+  const [approvedCoaches, setApprovedCoaches] = useState<Coach[]>(initialCoaches);
+  const [catalogStatus, setCatalogStatus] = useState<"loading" | "ready" | "unavailable">("loading");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  function openCoach(coach: Coach) {
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSelectedCoach(coach);
+  }
+
+  function closeCoach() {
+    setSelectedCoach(null);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/coaches", { cache: "no-store", credentials: "same-origin" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("catalog unavailable");
+        const body = await response.json() as { coaches?: unknown };
+        if (!Array.isArray(body.coaches)) throw new Error("invalid catalog response");
+        if (!cancelled) {
+          setApprovedCoaches(body.coaches as Coach[]);
+          setCatalogStatus("ready");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCatalogStatus("unavailable");
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedCoach) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setSelectedCoach(null);
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+        "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])",
+      ));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocusRef.current?.focus();
+    };
+  }, [selectedCoach]);
+
+  const catalogCoaches = approvedCoaches;
+
+  const availableCities = useMemo(() => Array.from(new Set(
+    catalogCoaches.filter((coach) => coach.location !== "Online").map((coach) => coach.location),
+  )).sort(), [catalogCoaches]);
+
+  const activeCity = catalogStatus === "ready" && city !== "any" && !availableCities.includes(city)
+    ? "any"
+    : city;
 
   const visibleCoaches = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     const queryTerms = normalizedQuery
       .split(/\s+/)
       .filter((term) => term && !["a", "coach", "coaches", "coaching", "for", "the"].includes(term));
-    const matches = coaches.filter((coach) => {
+    const matches = catalogCoaches.filter((coach) => {
       const searchable = [coach.name, ...coach.sports, coach.specialty, coach.location, coach.mode]
         .join(" ")
         .toLowerCase();
       return (queryTerms.length === 0 || queryTerms.every((term) => searchable.includes(term)))
-        && (city === "any" || coach.location === city)
+        && (activeCity === "any" || coach.location === activeCity)
         && (sport === "any" || coach.sports.includes(sport as (typeof coach.sports)[number]))
-        && (mode === "any" || coach.mode === mode);
+        && (mode === "any"
+          || (mode === "Online" && coach.offersOnline)
+          || (mode === "In person" && coach.offersInPerson));
     });
 
     return [...matches].sort((first, second) => {
-      if (sort === "rating") return second.rating - first.rating || second.reviewCount - first.reviewCount;
-      if (sort === "price-low") return first.price - second.price;
-      if (sort === "price-high") return second.price - first.price;
-      return first.rank - second.rank;
+      let comparison = 0;
+      if (sort === "rating") comparison = (second.rating ?? -1) - (first.rating ?? -1) || second.reviewCount - first.reviewCount;
+      else if (sort === "price-low") comparison = first.price - second.price;
+      else if (sort === "price-high") comparison = second.price - first.price;
+      else comparison = first.rank - second.rank;
+      return comparison || String(first.id).localeCompare(String(second.id));
     });
-  }, [city, mode, query, sort, sport]);
+  }, [activeCity, catalogCoaches, mode, query, sort, sport]);
 
   const clearFilters = () => {
     setQuery("");
@@ -60,10 +142,7 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
   return (
     <div className="catalog-page">
       <a className="skip-link" href="#catalog-results">Skip to coach results</a>
-      <SiteHeader onSessionResolved={(resolvedUser, status) => {
-        setUser(resolvedUser);
-        setSessionStatus(status);
-      }} />
+      <SiteHeader />
 
       <main className="catalog-main" id="catalog-results">
         <section className="catalog-intro">
@@ -86,11 +165,9 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
           </label>
           <label>
             <span>City</span>
-            <select aria-label="City" value={city} onChange={(event) => setCity(event.target.value)}>
+            <select aria-label="City" value={activeCity} onChange={(event) => setCity(event.target.value)}>
               <option value="any">Any city</option>
-              <option value="Islamabad">Islamabad</option>
-              <option value="Karachi">Karachi</option>
-              <option value="Lahore">Lahore</option>
+              {availableCities.map((entry) => <option value={entry} key={entry}>{entry}</option>)}
             </select>
           </label>
           <label>
@@ -121,7 +198,9 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
         </section>
 
         <div className="catalog-results-heading">
-          <p role="status">{visibleCoaches.length} {visibleCoaches.length === 1 ? "coach" : "coaches"}</p>
+          <p role="status">{catalogStatus === "loading" && catalogCoaches.length === 0
+            ? "Loading coaches"
+            : `${visibleCoaches.length} ${visibleCoaches.length === 1 ? "coach" : "coaches"}`}</p>
           <div>
             <span>Available coaches</span>
             <button type="button" onClick={() => setShowMap((current) => !current)}>
@@ -130,43 +209,65 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
           </div>
         </div>
 
+        {catalogStatus === "unavailable" && (
+          <p className="catalog-data-warning" role="alert">The approved coach catalog is temporarily unavailable. Please refresh and try again.</p>
+        )}
+
         <div className={`catalog-content${showMap ? " catalog-content-with-map" : ""}`}>
-          {showMap && <CoachMap city={city} coaches={visibleCoaches} onViewProfile={setSelectedCoach} />}
+          {showMap && <CoachMap city={city} coaches={visibleCoaches} onViewProfile={openCoach} />}
           {visibleCoaches.length > 0 ? (
           <section className="catalog-grid" aria-label="Coach results">
             {visibleCoaches.map((coach) => (
               <article className="catalog-card" key={coach.id}>
                 <div className="catalog-card-image">
-                  <Image
-                    src={coach.image}
-                    alt={`${coach.name}, ${coach.sports.join(" and ")} coach`}
-                    fill
-                    sizes="(max-width: 680px) 100vw, (max-width: 1050px) 50vw, 33vw"
-                  />
+                  {coach.image ? (
+                    <Image
+                      src={coach.image}
+                      alt={`${coach.name}, ${coach.sports.join(" and ")} coach`}
+                      fill
+                      sizes="(max-width: 680px) 100vw, (max-width: 1050px) 50vw, 33vw"
+                    />
+                  ) : (
+                    <div className="catalog-coach-placeholder" aria-hidden="true">
+                      {coach.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
+                    </div>
+                  )}
                   <span>{coach.badge}</span>
                 </div>
                 <div className="catalog-card-body">
                   <div className="catalog-card-title">
                     <h2>{coach.name}</h2>
-                    <span aria-label={`${coach.rating} out of 5 stars`}>★ {coach.rating}</span>
+                    {coach.rating === null
+                      ? <span>New</span>
+                      : <span aria-label={`${coach.rating} out of 5 stars`}>★ {coach.rating}</span>}
                   </div>
-                  <p>{coach.coordinates ? `${coach.area}, ` : ""}{coach.location} · {coach.sports.join(" · ")} · {coach.mode}</p>
+                  <p>{coach.area !== "Online" && coach.area !== coach.location ? `${coach.area}, ` : ""}{coach.location} · {coach.sports.join(" · ")} · {coach.mode}</p>
                   <strong>{coach.specialty}</strong>
                   <div className="catalog-card-footer">
                     <span><b>{formatCoachPrice(coach.price)}</b> per session</span>
-                    <span>{coach.reviewCount} reviews · {coach.lessonCount} lessons</span>
+                    <span>{coach.rating === null ? "Newly approved" : `${coach.reviewCount} reviews · ${coach.lessonCount} lessons`}</span>
                   </div>
                   <button
                     className="catalog-profile-button"
                     type="button"
                     aria-label={`View ${coach.name}'s profile`}
-                    onClick={() => setSelectedCoach(coach)}
+                    onClick={() => openCoach(coach)}
                   >
                     View profile
                   </button>
                 </div>
               </article>
             ))}
+          </section>
+          ) : catalogStatus === "loading" ? (
+          <section className="catalog-empty">
+            <h2>Loading approved coaches</h2>
+            <p>Please wait while the latest coach profiles are loaded.</p>
+          </section>
+          ) : catalogStatus === "unavailable" ? (
+          <section className="catalog-empty">
+            <h2>Coach catalog temporarily unavailable</h2>
+            <p>Refresh the page to try loading approved coach profiles again.</p>
           </section>
           ) : (
           <section className="catalog-empty">
@@ -180,23 +281,31 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
 
       {selectedCoach && (
         <div className="catalog-profile-backdrop" onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setSelectedCoach(null);
+          if (event.target === event.currentTarget) closeCoach();
         }}>
-          <section className="catalog-profile" role="dialog" aria-modal="true" aria-labelledby="catalog-profile-name">
-            <button className="catalog-profile-close" type="button" aria-label="Close coach profile" onClick={() => setSelectedCoach(null)}>×</button>
+          <section ref={dialogRef} className="catalog-profile" role="dialog" aria-modal="true" aria-labelledby="catalog-profile-name">
+            <button ref={closeButtonRef} className="catalog-profile-close" type="button" aria-label="Close coach profile" onClick={closeCoach}>×</button>
             <div className="catalog-profile-image">
-              <Image src={selectedCoach.image} alt="" fill sizes="(max-width: 680px) 100vw, 520px" />
+              {selectedCoach.image ? (
+                <Image src={selectedCoach.image} alt="" fill sizes="(max-width: 680px) 100vw, 520px" />
+              ) : (
+                <div className="catalog-coach-placeholder" aria-hidden="true">
+                  {selectedCoach.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
+                </div>
+              )}
             </div>
             <div className="catalog-profile-body">
-              <p>{selectedCoach.coordinates ? `${selectedCoach.area}, ` : ""}{selectedCoach.location} · {selectedCoach.sports.join(" · ")} · {selectedCoach.mode}</p>
+              <p>{selectedCoach.area !== "Online" && selectedCoach.area !== selectedCoach.location ? `${selectedCoach.area}, ` : ""}{selectedCoach.location} · {selectedCoach.sports.join(" · ")} · {selectedCoach.mode}</p>
               <h2 id="catalog-profile-name">{selectedCoach.name}</h2>
               <strong>{selectedCoach.specialty}</strong>
               <div className="catalog-profile-sports" aria-label="Sports coached">
                 {selectedCoach.sports.map((entry) => <span key={entry}>{entry}</span>)}
               </div>
               <div className="catalog-profile-summary">
-                <span><b>★ {selectedCoach.rating}</b>{selectedCoach.reviewCount} reviews</span>
-                <span aria-label={`${selectedCoach.lessonCount} lessons taught`}><b>{selectedCoach.lessonCount}</b>lessons taught</span>
+                {selectedCoach.rating === null
+                  ? <span><b>New</b>No reviews yet</span>
+                  : <span><b>★ {selectedCoach.rating}</b>{selectedCoach.reviewCount} reviews</span>}
+                {selectedCoach.lessonCount > 0 && <span aria-label={`${selectedCoach.lessonCount} lessons taught`}><b>{selectedCoach.lessonCount}</b>lessons taught</span>}
                 <span><b>{formatCoachPrice(selectedCoach.price)}</b>60-minute session</span>
               </div>
               <section className="catalog-profile-about">
@@ -219,11 +328,11 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
                   <strong>{selectedCoach.experience}</strong>
                   <ul>{selectedCoach.credentials.map((credential) => <li key={credential}>{credential}</li>)}</ul>
                 </section>
-                <section>
+                {(selectedCoach.coachingStyle || selectedCoach.languages.length > 0) && <section>
                   <h3>Coaching style</h3>
-                  <p>{selectedCoach.coachingStyle}</p>
-                  <span><b>Languages</b>{selectedCoach.languages.join(" · ")}</span>
-                </section>
+                  {selectedCoach.coachingStyle && <p>{selectedCoach.coachingStyle}</p>}
+                  {selectedCoach.languages.length > 0 && <span><b>Languages</b>{selectedCoach.languages.join(" · ")}</span>}
+                </section>}
               </div>
               <section className="catalog-profile-plan">
                 <h3>Lesson plan</h3>
@@ -236,12 +345,12 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
                   ))}
                 </ol>
               </section>
-              <section className="catalog-profile-availability">
+              {selectedCoach.availability.length > 0 && <section className="catalog-profile-availability">
                 <h3>Weekly availability</h3>
                 <div>{selectedCoach.availability.map((day) => <span key={day}>{day}</span>)}</div>
-              </section>
+              </section>}
               <CoachLocationPreview coach={selectedCoach} />
-              <section className="catalog-profile-faq">
+              {selectedCoach.faqs.length > 0 && <section className="catalog-profile-faq">
                 <h3>Frequently asked questions</h3>
                 <div>
                   {selectedCoach.faqs.map((faq) => (
@@ -251,16 +360,8 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
                     </details>
                   ))}
                 </div>
-              </section>
-              {sessionStatus === "loading" ? (
-                <span className="catalog-profile-reserve">Checking account…</span>
-              ) : sessionStatus === "unavailable" ? (
-                <span className="catalog-profile-reserve">Account status unavailable. Try again from My account.</span>
-              ) : (
-                <Link className="catalog-profile-reserve" href={user ? "/account" : "/account?next=%2Fcoaches"}>
-                  {user ? "Continue from My Account" : "Sign in to reserve"}
-                </Link>
-              )}
+              </section>}
+              <span className="catalog-profile-reserve">Booking requests are not open yet.</span>
             </div>
           </section>
         </div>
