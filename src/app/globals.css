@@ -39,9 +39,17 @@ a { color: inherit; text-decoration: none; }
   border-bottom: 1px solid rgba(255, 255, 255, .1);
   backdrop-filter: blur(18px);
 }
-.nav { height: 76px; display: flex; align-items: center; justify-content: space-between; }
-.brand { font-size: 1.4rem; font-weight: 950; letter-spacing: -.055em; text-transform: uppercase; }
-.brand span { color: var(--lime); }
+.nav, .global-nav { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.brand, .site-logo { position: relative; z-index: 1; flex: none; color: inherit; font-size: 1.4rem; font-weight: 950; letter-spacing: -.055em; line-height: 1; text-transform: uppercase; }
+.brand span, .site-logo span { color: var(--lime); }
+.global-nav-links { display: flex; align-items: center; justify-content: flex-end; gap: 10px 22px; font-size: .88rem; font-weight: 800; }
+.global-nav-links > a { white-space: nowrap; }
+.global-nav-links > a:not(.nav-account):not(.nav-coach-action):hover { color: var(--lime); }
+.nav-coach-action { padding: 10px 15px; border: 1px solid rgba(255,255,255,.24); border-radius: 999px; color: var(--ink); background: var(--lime); }
+.nav-coach-action:hover { transform: translateY(-1px); background: #fff; }
+.nav-account { color: #fff; }
+.nav-account:hover { color: var(--lime); }
+.nav-session-state { color: #c3d2cd; font-size: .78rem; }
 .desktop-nav { display: flex; align-items: center; gap: 25px; font-size: .88rem; font-weight: 800; }
 .desktop-nav > a:not(.button):hover { color: var(--lime); }
 .nav-phase { color: #d5e2de; font-weight: 800; white-space: nowrap; }
@@ -353,11 +361,42 @@ a { color: inherit; text-decoration: none; }
 .auth-success h3 { margin: 0; font-size: 1.7rem; }
 .auth-success p { color: var(--muted); }
 
+.account-state { min-height: 100vh; display: grid; place-content: center; justify-items: start; gap: 14px; width: min(680px, calc(100% - 40px)); margin: auto; background: var(--paper); }
+.account-state .site-logo { margin-bottom: 24px; color: var(--ink); }
+.account-state h1 { margin: 0; font-size: clamp(3rem, 8vw, 6rem); line-height: .9; letter-spacing: -.065em; }
+.account-state > p:not(.eyebrow) { max-width: 600px; color: var(--muted); }
+.member-account-page { min-height: 100vh; background: var(--sand); }
+.member-account-main { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 64px 0 90px; }
+.member-account-intro { max-width: 740px; margin-bottom: 36px; }
+.member-account-intro h1 { margin: 10px 0 12px; font-size: clamp(3.6rem, 8vw, 6.8rem); line-height: .86; letter-spacing: -.07em; }
+.member-account-intro > p:last-child { color: var(--muted); font-size: 1.05rem; }
+.member-account-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.member-account-grid article { display: flex; flex-direction: column; align-items: flex-start; min-height: 265px; padding: 28px; border: 1px solid #dce2de; border-radius: 22px; background: #fff; box-shadow: 0 8px 28px rgba(7,27,23,.06); }
+.member-account-grid article > span { color: #61706a; font-size: .7rem; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+.member-account-grid h2 { margin: auto 0 7px; font-size: 2rem; line-height: 1; letter-spacing: -.045em; }
+.member-account-grid p { margin: 0 0 18px; color: var(--muted); }
+.account-summary-card { color: #fff; background: var(--ink) !important; }
+.account-summary-card > span, .account-summary-card p { color: #b9cbc5 !important; }
+.account-summary-card h2 { color: var(--lime); font-size: clamp(2.3rem, 4vw, 3.8rem); }
+.account-secondary-button { border: 1px solid #b9c7c1; color: var(--ink); background: #eef2ef; }
+.account-danger-zone { display: flex; align-items: center; justify-content: space-between; gap: 28px; margin-top: 28px; padding: 27px 30px; border: 1px solid #e3b8b1; border-radius: 20px; background: #fff8f6; }
+.account-danger-zone h2 { margin: 7px 0; font-size: 1.8rem; letter-spacing: -.04em; }
+.account-danger-zone > div > p:last-child { max-width: 620px; margin: 0; color: #75564f; }
+.account-delete-button { flex: none; min-height: 44px; border: 1px solid #a83d2d; border-radius: 999px; padding: 10px 17px; color: #fff; background: #a83d2d; font-weight: 850; }
+.account-delete-button:disabled { cursor: not-allowed; opacity: .45; }
+.account-delete-confirmation { width: min(490px, 100%); padding: 20px; border: 1px solid #e1b3ab; border-radius: 15px; background: #fff; }
+.account-delete-confirmation h3 { margin: 0 0 4px; }
+.account-delete-confirmation label { display: grid; gap: 6px; margin-top: 14px; color: #593c36; font-size: .78rem; font-weight: 800; }
+.account-delete-confirmation input { width: 100%; min-height: 44px; margin-top: 6px; border: 1px solid #c99c94; border-radius: 9px; padding: 8px 11px; }
+.account-delete-confirmation > div { display: flex; justify-content: flex-end; gap: 9px; margin-top: 15px; }
+.account-delete-confirmation > div > button:first-child { border: 0; padding: 10px 14px; color: var(--ink); background: transparent; font-weight: 800; }
+
 @media (max-width: 860px) {
   .account-page { grid-template-columns: 1fr; }
   .account-art { min-height: 500px; }
   .account-panel { min-height: auto; padding-top: 90px; padding-bottom: 70px; }
   .back-link { top: auto; transform: translateY(-48px); }
+  .member-account-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 560px) {
@@ -366,6 +405,16 @@ a { color: inherit; text-decoration: none; }
   .account-safety { display: none; }
   .account-panel { padding-inline: 20px; }
   .auth-email-actions { grid-template-columns: 1fr; }
+  .global-nav { min-height: 68px; }
+  .global-nav-links { gap: 9px; font-size: .78rem; }
+  .global-nav-links > a:first-child { display: none; }
+  .nav-coach-action { padding: 8px 11px; }
+  .site-logo { font-size: 1.12rem; }
+  .member-account-main { width: min(100% - 28px, 1120px); padding-top: 42px; }
+  .member-account-intro h1 { font-size: 3.6rem; }
+  .account-danger-zone { align-items: stretch; flex-direction: column; padding: 22px; }
+  .account-delete-confirmation { width: 100%; }
+  .account-delete-confirmation > div { flex-direction: column-reverse; }
 }
 
 .dashboard-state { min-height: 100vh; display: grid; place-content: center; justify-items: start; gap: 14px; padding: 30px; background: var(--sand); }

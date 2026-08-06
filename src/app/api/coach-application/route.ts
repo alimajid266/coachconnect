@@ -7,7 +7,10 @@ export async function GET(request: NextRequest) {
   try {
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
     const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError || !authData.user) {
+    if (authError) {
+      return applyCookies(NextResponse.json({ error: "Account status is unavailable." }, { status: 503 }));
+    }
+    if (!authData.user) {
       return applyCookies(NextResponse.json({ error: "Sign in to manage a coach application." }, { status: 401 }));
     }
 
@@ -32,7 +35,10 @@ export async function POST(request: NextRequest) {
   try {
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
     const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError || !authData.user) {
+    if (authError) {
+      return applyCookies(NextResponse.json({ error: "Account status is unavailable." }, { status: 503 }));
+    }
+    if (!authData.user) {
       return applyCookies(NextResponse.json({ error: "Sign in to submit a coach application." }, { status: 401 }));
     }
 
@@ -58,7 +64,10 @@ export async function PUT(request: NextRequest) {
     const draft = normalizeCoachApplicationDraft(body);
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
     const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError || !authData.user) {
+    if (authError) {
+      return applyCookies(NextResponse.json({ error: "Account status is unavailable." }, { status: 503 }));
+    }
+    if (!authData.user) {
       return applyCookies(NextResponse.json({ error: "Sign in to save a coach application." }, { status: 401 }));
     }
 

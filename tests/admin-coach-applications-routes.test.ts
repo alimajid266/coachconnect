@@ -73,6 +73,18 @@ describe("administrator coach application routes", () => {
     });
   });
 
+  it("requires a reason before suspending a coach profile", async () => {
+    const response = await reviewApplication(reviewRequest({
+      userId: "member-1",
+      decision: "SUSPENDED",
+      note: "",
+    }));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Explain why this coach profile is being suspended." });
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
   it("reviews another member through the protected database function", async () => {
     mocks.rpc.mockResolvedValue({
       data: { user_id: "member-1", status: "APPROVED" },

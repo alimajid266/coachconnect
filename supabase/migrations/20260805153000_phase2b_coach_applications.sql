@@ -23,7 +23,7 @@ create table public.coach_applications (
     check (jsonb_typeof(faqs) = 'array'),
   submitted_at timestamptz,
   reviewed_at timestamptz,
-  reviewed_by uuid references public.profiles(id),
+  reviewed_by uuid references public.profiles(id) on delete set null,
   review_note text,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
@@ -218,6 +218,10 @@ begin
 
   if decision not in ('UNDER_REVIEW', 'APPROVED', 'REJECTED', 'SUSPENDED') then
     raise exception 'Unsupported review decision';
+  end if;
+
+  if decision in ('REJECTED', 'SUSPENDED') and nullif(trim(note), '') is null then
+    raise exception 'A review reason is required';
   end if;
 
   update public.coach_applications

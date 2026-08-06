@@ -103,6 +103,18 @@ describe("coach application routes", () => {
     });
   });
 
+  it("reports authentication outages without telling a member to sign in", async () => {
+    mocks.getUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: { message: "auth gateway unavailable" },
+    });
+
+    const response = await getApplication(getRequest());
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "Account status is unavailable." });
+  });
+
   it("returns the authenticated member's current application", async () => {
     mocks.applicationMaybeSingle.mockResolvedValue({
       data: {

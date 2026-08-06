@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import SiteLogo from "@/components/site-logo";
 import type { CoachApplicationStatus } from "@/lib/coach-application";
 
 type Application = {
@@ -75,8 +76,8 @@ export default function AdminCoachApplicationsPage() {
   return (
     <main className="admin-review-page">
       <header className="application-header">
-        <Link className="brand" href="/">Coach<span>Connect</span></Link>
-        <Link href="/dashboard">Back to dashboard</Link>
+        <SiteLogo />
+        <Link href="/account">My account</Link>
       </header>
 
       <section className="admin-review-intro">

@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import HomePage from "@/app/page";
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("CoachConnect home page", () => {
   it("uses the stronger athletic homepage layout without becoming the catalog", () => {
@@ -38,5 +40,26 @@ describe("CoachConnect home page", () => {
     expect(screen.getByRole("heading", { name: /how coachconnect works/i })).toBeInTheDocument();
     expect(screen.getByText(/browse approved coaches/i)).toBeInTheDocument();
     expect(screen.getByText(/choose a time that works for you/i)).toBeInTheDocument();
+  });
+
+  it("keeps an existing session visible when a member returns home", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        user: {
+          id: "member-1",
+          displayName: "Ali Member",
+          email: "ali@example.com",
+          role: "ATHLETE",
+          capabilities: { administrator: false, coachStatus: null },
+        },
+      }),
+    }));
+
+    render(<HomePage />);
+
+    expect(await screen.findByRole("link", { name: "My account" })).toHaveAttribute("href", "/account");
+    expect(screen.getByRole("link", { name: "Become a coach" })).toHaveAttribute("href", "/coach/apply");
+    expect(screen.queryByRole("link", { name: /^sign in$/i })).not.toBeInTheDocument();
   });
 });

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import SiteLogo from "@/components/site-logo";
 import { coachApplicationOptions, type CoachApplicationStatus } from "@/lib/coach-application";
 
 type Faq = { question: string; answer: string };
@@ -144,7 +145,7 @@ export default function CoachApplicationPage() {
       if (!response.ok) throw new Error(result.error || "The draft could not be saved.");
       setApplication(result.application);
       setDraft(asDraft(result.application));
-      setMessage(application?.status === "APPROVED" ? "Public coach profile updated." : "Draft saved.");
+      setMessage(application?.status === "APPROVED" ? "Coach profile updates saved." : "Draft saved.");
       return true;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The draft could not be saved.");
@@ -183,14 +184,14 @@ export default function CoachApplicationPage() {
   }
 
   if (needsSignIn) {
-    return <main className="application-state"><Link className="brand" href="/">Coach<span>Connect</span></Link><p className="eyebrow">Member access</p><h1>Sign in to become a coach.</h1><p>Your coach application stays connected to your existing member account.</p><Link className="button button-accent" href="/account">Go to sign in</Link></main>;
+    return <main className="application-state"><SiteLogo /><p className="eyebrow">Member access</p><h1>Sign in to become a coach.</h1><p>Your coach application stays connected to your existing member account.</p><Link className="button button-accent" href="/account?next=%2Fcoach%2Fapply">Go to sign in</Link></main>;
   }
 
   return (
     <main className="application-page">
       <header className="application-header">
-        <Link className="brand" href="/">Coach<span>Connect</span></Link>
-        <Link href="/dashboard">Back to dashboard</Link>
+        <SiteLogo />
+        <Link href="/account">My account</Link>
       </header>
 
       <section className="application-intro">
@@ -199,6 +200,7 @@ export default function CoachApplicationPage() {
       </section>
 
       {application?.status === "REJECTED" && application.reviewNote && <p className="application-review-note"><strong>Requested changes:</strong> {application.reviewNote}</p>}
+      {application?.status === "SUSPENDED" && application.reviewNote && <p className="application-review-note"><strong>Suspension reason:</strong> {application.reviewNote} <a href="mailto:support@coachconnect.pk?subject=Coach%20profile%20reactivation">Contact support about reactivation</a>.</p>}
       {locked && <p className="application-locked">This application cannot be edited while it is {statusLabels[application.status].toLowerCase()}.</p>}
       {error && <p className="form-status error" role="alert">{error}</p>}
       {message && <p className="form-status success" role="status">{message}</p>}

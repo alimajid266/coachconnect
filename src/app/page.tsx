@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import SiteHeader from "@/components/site-header";
 import { coaches, formatCoachPrice } from "@/lib/coaches";
 
 const featuredSports = [
@@ -19,26 +20,7 @@ export default function HomePage() {
   return (
     <div className="revived-home">
       <a className="skip-link" href="#main-content">Skip to content</a>
-      <header className="site-header">
-        <nav className="container nav" aria-label="Main navigation">
-          <Link className="brand" href="/" aria-label="CoachConnect home">Coach<span>Connect</span></Link>
-          <div className="desktop-nav">
-            <Link href="/coaches">Find a Coach</Link>
-            <a href="#sports">Sports</a>
-            <a href="#how-it-works">How it works</a>
-            <Link className="nav-phase" href="/account">Sign in</Link>
-          </div>
-          <details className="home-mobile-menu">
-            <summary>Menu</summary>
-            <nav aria-label="Mobile navigation">
-              <Link href="/coaches">Find a Coach</Link>
-              <a href="#sports">Sports</a>
-              <a href="#how-it-works">How it works</a>
-              <Link href="/account">Sign in</Link>
-            </nav>
-          </details>
-        </nav>
-      </header>
+      <SiteHeader />
 
       <main id="main-content">
         <section className="hero" id="top">

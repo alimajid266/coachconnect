@@ -72,6 +72,9 @@ export async function PATCH(request: NextRequest) {
     if (decision === "REJECTED" && !note) {
       return context.applyCookies(NextResponse.json({ error: "Explain what the applicant needs to change." }, { status: 400 }));
     }
+    if (decision === "SUSPENDED" && !note) {
+      return context.applyCookies(NextResponse.json({ error: "Explain why this coach profile is being suspended." }, { status: 400 }));
+    }
 
     const { data, error } = await context.supabase.rpc("review_coach_application", {
       target_user_id: userId,

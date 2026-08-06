@@ -5,7 +5,10 @@ export async function GET(request: NextRequest) {
   try {
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
     const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError || !authData.user) {
+    if (authError) {
+      return applyCookies(NextResponse.json({ error: "Account status is unavailable." }, { status: 503 }));
+    }
+    if (!authData.user) {
       return applyCookies(NextResponse.json({ user: null }));
     }
 
@@ -39,6 +42,6 @@ export async function GET(request: NextRequest) {
       },
     }));
   } catch {
-    return NextResponse.json({ user: null });
+    return NextResponse.json({ error: "Account status is unavailable." }, { status: 503 });
   }
 }

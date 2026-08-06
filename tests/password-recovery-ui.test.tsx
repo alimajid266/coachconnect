@@ -10,19 +10,24 @@ afterEach(() => {
 describe("password recovery UI", () => {
   it("requests a reset email from the sign-in form", async () => {
     const confirmationMessage = "Check your inbox for password reset instructions.";
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: confirmationMessage }),
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      void init;
+      return {
+        ok: true,
+        json: async () => String(input) === "/api/auth/session"
+          ? ({ user: null })
+          : ({ message: confirmationMessage }),
+      };
     });
     vi.stubGlobal("fetch", fetchMock);
     render(<AccountPage />);
-    fireEvent.change(screen.getByLabelText(/^email/i), {
+    fireEvent.change(await screen.findByLabelText(/^email/i), {
       target: { value: "athlete@example.com" },
     });
     fireEvent.click(screen.getByRole("button", { name: /forgot password/i }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/auth/forgot-password");
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ email: "athlete@example.com" });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock.mock.calls[1][0]).toBe("/api/auth/forgot-password");
+    expect(JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string)).toEqual({ email: "athlete@example.com" });
     expect(await screen.findByRole("status")).toHaveTextContent(confirmationMessage);
     expect(screen.queryByText(/if an account exists/i)).not.toBeInTheDocument();
   });

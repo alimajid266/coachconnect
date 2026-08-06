@@ -2,17 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import CoachLocationPreview from "@/app/coaches/coach-location-preview";
 import CoachMap from "@/app/coaches/coach-map";
+import SiteHeader, { type SessionUser } from "@/components/site-header";
 import { allSports, coaches, formatCoachPrice, type Coach } from "@/lib/coaches";
-
-type SessionUser = {
-  id: string;
-  displayName: string;
-  email: string;
-  role: "ATHLETE" | "COACH" | "ADMIN";
-};
 
 type Props = {
   initialQuery: string;
@@ -29,20 +23,8 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
   const [sort, setSort] = useState<SortOption>("recommended");
   const [showMap, setShowMap] = useState(false);
   const [user, setUser] = useState<SessionUser | null>();
+  const [sessionStatus, setSessionStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    fetch("/api/auth/session", { credentials: "same-origin" })
-      .then((response) => response.json())
-      .then((result: { user: SessionUser | null }) => {
-        if (active) setUser(result.user);
-      })
-      .catch(() => {
-        if (active) setUser(null);
-      });
-    return () => { active = false; };
-  }, []);
 
   const visibleCoaches = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -78,17 +60,10 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
   return (
     <div className="catalog-page">
       <a className="skip-link" href="#catalog-results">Skip to coach results</a>
-      <header className="catalog-header">
-        <Link className="catalog-brand" href="/">CoachConnect</Link>
-        <nav aria-label="Catalog navigation">
-          <Link href="/">Home</Link>
-          {user === undefined
-            ? <span className="catalog-session-state">Checking account…</span>
-            : user
-              ? <Link className="catalog-account-link" href="/dashboard">Dashboard</Link>
-              : <Link className="catalog-account-link" href="/account">Sign in</Link>}
-        </nav>
-      </header>
+      <SiteHeader onSessionResolved={(resolvedUser, status) => {
+        setUser(resolvedUser);
+        setSessionStatus(status);
+      }} />
 
       <main className="catalog-main" id="catalog-results">
         <section className="catalog-intro">
@@ -277,9 +252,15 @@ export default function CoachCatalog({ initialQuery, initialCity }: Props) {
                   ))}
                 </div>
               </section>
-              <Link className="catalog-profile-reserve" href={user ? "/dashboard" : "/account"}>
-                {user ? "Continue to reserve" : "Sign in to reserve"}
-              </Link>
+              {sessionStatus === "loading" ? (
+                <span className="catalog-profile-reserve">Checking account…</span>
+              ) : sessionStatus === "unavailable" ? (
+                <span className="catalog-profile-reserve">Account status unavailable. Try again from My account.</span>
+              ) : (
+                <Link className="catalog-profile-reserve" href={user ? "/account" : "/account?next=%2Fcoaches"}>
+                  {user ? "Continue from My Account" : "Sign in to reserve"}
+                </Link>
+              )}
             </div>
           </section>
         </div>

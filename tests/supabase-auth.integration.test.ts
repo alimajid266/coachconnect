@@ -161,4 +161,92 @@ runIntegration("Supabase account and coach capability policies", () => {
     });
     expect(selfReview.error?.message).toContain("Self-review");
   });
+
+  it("permanently deletes only the authenticated member and cascades private profile data", async () => {
+    const member = publicClient();
+    const signup = await member.auth.signUp({
+      email: `delete-${crypto.randomUUID()}@coachconnect.local`,
+      password: `Cc-${crypto.randomUUID()}-9x`,
+      options: { data: { display_name: "Delete Me" } },
+    });
+    expect(signup.error).toBeNull();
+    const memberId = signup.data.user!.id;
+
+    const application = await member.from("coach_applications").insert({ user_id: memberId });
+    expect(application.error).toBeNull();
+
+    const anonymousDeletion = await publicClient().rpc("delete_my_account");
+    expect(anonymousDeletion.error).not.toBeNull();
+
+    const deletion = await member.rpc("delete_my_account");
+    expect(deletion.error).toBeNull();
+    expect(deletion.data).toBe(true);
+
+    const admin = serviceClient();
+    const deletedIdentity = await admin.auth.admin.getUserById(memberId);
+    expect(deletedIdentity.error).not.toBeNull();
+    const deletedProfile = await admin.from("profiles").select("id").eq("id", memberId);
+    expect(deletedProfile.data).toEqual([]);
+    const deletedApplication = await admin.from("coach_applications").select("user_id").eq("user_id", memberId);
+    expect(deletedApplication.data).toEqual([]);
+  });
+
+  it("lets an administrator delete their account after reviewing an application", async () => {
+    const applicant = publicClient();
+    const applicantSignup = await applicant.auth.signUp({
+      email: `reviewed-${crypto.randomUUID()}@coachconnect.local`,
+      password: `Cc-${crypto.randomUUID()}-9x`,
+      options: { data: { display_name: "Reviewed Applicant" } },
+    });
+    expect(applicantSignup.error).toBeNull();
+    const applicantId = applicantSignup.data.user!.id;
+    createdUserIds.push(applicantId);
+
+    const reviewer = publicClient();
+    const reviewerSignup = await reviewer.auth.signUp({
+      email: `deleting-reviewer-${crypto.randomUUID()}@coachconnect.local`,
+      password: `Cc-${crypto.randomUUID()}-9x`,
+      options: { data: { display_name: "Deleting Reviewer" } },
+    });
+    expect(reviewerSignup.error).toBeNull();
+    const reviewerId = reviewerSignup.data.user!.id;
+
+    const admin = serviceClient();
+    const promote = await admin.from("profiles").update({ role: "ADMIN" }).eq("id", reviewerId);
+    expect(promote.error).toBeNull();
+
+    const draft = await applicant.from("coach_applications").insert({
+      user_id: applicantId,
+      headline: "Patient cricket coaching for confident match play",
+      bio: "I help developing players build dependable technique, movement and match confidence through structured sessions that adapt to individual goals.",
+      sports: ["Cricket"],
+      experience_years: 7,
+      qualifications: "Certified community cricket coach",
+      audiences: ["Adults"],
+      levels: ["Beginner"],
+      lesson_plan: "Each session combines a safe warm-up, focused drills, guided practice, clear feedback and a practical development plan.",
+      session_price_pkr: 4000,
+      offers_online: true,
+      offers_in_person: false,
+    });
+    expect(draft.error).toBeNull();
+    expect((await applicant.rpc("submit_coach_application")).error).toBeNull();
+    expect((await reviewer.rpc("review_coach_application", {
+      target_user_id: applicantId,
+      decision: "APPROVED",
+      note: "Application reviewed before account deletion.",
+    })).error).toBeNull();
+
+    const deletion = await reviewer.rpc("delete_my_account");
+    expect(deletion.error).toBeNull();
+    expect(deletion.data).toBe(true);
+
+    const reviewedApplication = await admin
+      .from("coach_applications")
+      .select("reviewed_by,status")
+      .eq("user_id", applicantId)
+      .single();
+    expect(reviewedApplication.error).toBeNull();
+    expect(reviewedApplication.data).toEqual({ reviewed_by: null, status: "APPROVED" });
+  });
 });

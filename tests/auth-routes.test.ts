@@ -176,4 +176,25 @@ describe("Supabase authentication routes", () => {
     expect(rejected.status).toBe(403);
     expect(mocks.signUp).not.toHaveBeenCalled();
   });
+
+  it("does not claim logout succeeded when the account service throws", async () => {
+    mocks.signOut.mockRejectedValueOnce(new Error("service unavailable"));
+
+    const response = await logout(request("/api/auth/logout", {}));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "Unable to sign out." });
+  });
+
+  it("reports session-service failures instead of claiming the member is signed out", async () => {
+    mocks.getUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: { message: "auth gateway unavailable" },
+    });
+
+    const response = await getSession(request("/api/auth/session"));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "Account status is unavailable." });
+  });
 });

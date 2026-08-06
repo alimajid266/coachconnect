@@ -12,6 +12,6 @@ export async function POST(request: NextRequest) {
     if (error) return applyCookies(NextResponse.json({ error: "Unable to sign out." }, { status: 503 }));
     return applyCookies(NextResponse.json({ signedOut: true }));
   } catch {
-    return NextResponse.json({ signedOut: true });
+    return NextResponse.json({ error: "Unable to sign out." }, { status: 503 });
   }
 }

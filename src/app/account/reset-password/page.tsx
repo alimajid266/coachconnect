@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import SiteLogo from "@/components/site-logo";
 
 type UpdateResult = { message?: string; error?: string };
 
@@ -46,7 +47,7 @@ export default function ResetPasswordPage() {
   return (
     <main className="account-page">
       <section className="account-art" aria-label="CoachConnect password recovery introduction">
-        <Link className="brand account-brand" href="/" aria-label="CoachConnect home">Coach<span>Connect</span></Link>
+        <SiteLogo className="account-brand" />
         <div>
           <p className="eyebrow light">Secure recovery</p>
           <h1>Choose a new<br /><span>password.</span></h1>

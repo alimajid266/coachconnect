@@ -176,7 +176,7 @@ describe("coach catalog", () => {
     expect(within(details as HTMLElement).getByText(/sessions are adapted to the athlete's current ability/i)).toBeInTheDocument();
   });
 
-  it("opens clear profile details from a catalog card", () => {
+  it("opens clear profile details from a catalog card", async () => {
     renderCatalog();
 
     fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
@@ -196,7 +196,7 @@ describe("coach catalog", () => {
     expect(within(locationPreview).getByText(/Gulberg, Lahore/i)).toBeInTheDocument();
     expect(within(locationPreview).getByText(/exact meeting details are shared after booking/i)).toBeInTheDocument();
     expect(within(dialog).queryByText(/stay private|private by default/i)).not.toBeInTheDocument();
-    expect(within(dialog).getByRole("link", { name: /sign in to reserve/i })).toHaveAttribute("href", "/account");
+    expect(await within(dialog).findByRole("link", { name: /sign in to reserve/i })).toHaveAttribute("href", "/account?next=%2Fcoaches");
 
     fireEvent.click(screen.getByRole("button", { name: /close coach profile/i }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -210,14 +210,33 @@ describe("coach catalog", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<CoachCatalog initialQuery="" initialCity="any" />);
 
-    expect(await screen.findByRole("link", { name: /dashboard/i })).toHaveAttribute("href", "/dashboard");
+    expect(await screen.findByRole("link", { name: /my account/i })).toHaveAttribute("href", "/account");
+    expect(screen.getByRole("link", { name: /become a coach/i })).toHaveAttribute("href", "/coach/apply");
+    expect(screen.queryByRole("link", { name: /dashboard/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^sign in$/i })).not.toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith("/api/auth/session", { credentials: "same-origin" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/session", {
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
+    expect(screen.getByRole("link", { name: /continue from my account/i })).toHaveAttribute("href", "/account");
   });
 
   it("shows sign in only after confirming there is no session", async () => {
     renderCatalog(null);
     expect(await screen.findByRole("link", { name: /^sign in$/i })).toHaveAttribute("href", "/account");
     await waitFor(() => expect(screen.queryByText(/checking account/i)).not.toBeInTheDocument());
+  });
+
+  it("does not claim a member is signed out when session status is unavailable", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("session unavailable")));
+    render(<CoachCatalog initialQuery="" initialCity="any" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
+
+    expect(await screen.findByText(/account status unavailable/i)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /sign in to reserve/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^sign in$/i })).not.toBeInTheDocument();
   });
 });

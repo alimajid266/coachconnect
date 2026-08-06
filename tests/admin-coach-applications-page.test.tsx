@@ -39,5 +39,8 @@ describe("coach application review page", () => {
     expect(screen.getByText(/gulberg, lahore/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /approve profile/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /request changes/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "CoachConnect home" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "My account" })).toHaveAttribute("href", "/account");
+    expect(screen.queryByRole("link", { name: /dashboard/i })).not.toBeInTheDocument();
   });
 });

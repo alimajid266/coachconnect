@@ -2,24 +2,46 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import SiteHeader, { type SessionUser } from "@/components/site-header";
+import SiteLogo from "@/components/site-logo";
 
 type Mode = "login" | "register";
+type PageState = "loading" | "unavailable" | "anonymous" | "authenticated" | "deleted";
 
 type AuthResult = {
-  user?: { id: string; displayName: string; email: string; role: "ATHLETE" | "COACH" | "ADMIN" };
+  user?: SessionUser;
   authenticated?: boolean;
   pendingEmailConfirmation?: boolean;
   message?: string;
   error?: string;
 };
 
+const coachStatusCopy = {
+  DRAFT: ["Draft saved", "Continue application"],
+  SUBMITTED: ["Submitted for review", "View application"],
+  UNDER_REVIEW: ["Under review", "View application"],
+  APPROVED: ["Approved coach", "Manage coach profile"],
+  REJECTED: ["Changes requested", "Update application"],
+  SUSPENDED: ["Coach profile suspended", "View profile status"],
+} as const;
+
+function requestedDestination() {
+  if (typeof window === "undefined") return "/account";
+  const candidate = new URLSearchParams(window.location.search).get("next");
+  if (!candidate || !candidate.startsWith("/") || candidate.startsWith("//")) return "/account";
+  if (candidate.includes("\\") || /[\u0000-\u001f\u007f]/.test(candidate)) return "/account";
+  const resolved = new URL(candidate, window.location.origin);
+  return resolved.origin === window.location.origin ? `${resolved.pathname}${resolved.search}${resolved.hash}` : "/account";
+}
+
 export default function AccountPage() {
+  const [pageState, setPageState] = useState<PageState>("loading");
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [mode, setMode] = useState<Mode>("login");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
-
   const [message, setMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [complete, setComplete] = useState(false);
@@ -27,7 +49,29 @@ export default function AccountPage() {
   const [busy, setBusy] = useState(false);
   const [emailActionBusy, setEmailActionBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
   const resendCoolingDown = resendCooldown > 0;
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/session", { credentials: "same-origin", cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Session unavailable");
+        return response.json() as Promise<{ user: SessionUser | null }>;
+      })
+      .then((result) => {
+        if (!active) return;
+        setUser(result.user);
+        setPageState(result.user ? "authenticated" : "anonymous");
+      })
+      .catch(() => {
+        if (!active) return;
+        setPageState("unavailable");
+      });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!resendCoolingDown) return;
@@ -84,9 +128,7 @@ export default function AccountPage() {
     setBusy(true);
     try {
       const endpoint = mode === "register" ? "/api/auth/register" : "/api/auth/login";
-      const payload = mode === "register"
-        ? { displayName, email, password }
-        : { email, password };
+      const payload = mode === "register" ? { displayName, email, password } : { email, password };
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -110,12 +152,25 @@ export default function AccountPage() {
 
       setPassword("");
       setPasswordConfirmation("");
+
+      if (mode === "login" && requestedDestination() === "/account") {
+        const sessionResponse = await fetch("/api/auth/session", {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        if (!sessionResponse.ok) throw new Error("Session unavailable");
+        const sessionResult = (await sessionResponse.json()) as { user: SessionUser | null };
+        if (!sessionResult.user) throw new Error("Session unavailable");
+        setUser(sessionResult.user);
+        setPageState("authenticated");
+        setComplete(false);
+        return;
+      }
+
       setComplete(true);
-      setMessage(
-        mode === "register"
-          ? `Welcome, ${result.user?.displayName ?? displayName}. Your account is ready.`
-          : `Welcome back${result.user?.displayName ? `, ${result.user.displayName}` : ""}.`,
-      );
+      setMessage(mode === "register"
+        ? `Welcome, ${result.user?.displayName ?? displayName}. Your account is ready.`
+        : "You are signed in.");
     } catch {
       setMessage("The account service could not be reached. Please try again.");
     } finally {
@@ -123,10 +178,176 @@ export default function AccountPage() {
     }
   }
 
+  async function logOut() {
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("Logout failed");
+      setUser(null);
+      setStatusMessage("You have been logged out.");
+      setPageState("anonymous");
+      setComplete(false);
+    } catch {
+      setMessage("Unable to log out. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteAccount() {
+    if (deleteConfirmation !== "DELETE" || deletePassword.length < 8) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/account", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+      const result = (await response.json()) as { deleted?: boolean; error?: string };
+      if (!response.ok || !result.deleted) {
+        setMessage(result.error ?? "Unable to delete your account.");
+        return;
+      }
+      setUser(null);
+      setDeleteConfirmation("");
+      setDeletePassword("");
+      setPageState("deleted");
+    } catch {
+      setMessage("Unable to delete your account. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (pageState === "loading") {
+    return (
+      <main className="account-state">
+        <SiteLogo />
+        <p className="eyebrow">Secure account</p>
+        <h1>Checking your account…</h1>
+      </main>
+    );
+  }
+
+  if (pageState === "unavailable") {
+    return (
+      <main className="account-state">
+        <SiteLogo />
+        <p className="eyebrow">Account status unavailable</p>
+        <h1>Unable to confirm your session</h1>
+        <p>We could not safely determine whether you are signed in. Your session has not been changed.</p>
+        <Link className="button button-primary" href="/account">Retry account check</Link>
+      </main>
+    );
+  }
+
+  if (pageState === "deleted") {
+    return (
+      <main className="account-state">
+        <SiteLogo />
+        <p className="eyebrow">Account removed</p>
+        <h1>Account deleted</h1>
+        <p>Your CoachConnect account and private profile data have been permanently removed.</p>
+        <Link className="button button-primary" href="/">Return home</Link>
+      </main>
+    );
+  }
+
+  if (pageState === "authenticated" && user) {
+    const coachStatus = user.capabilities?.coachStatus ?? (user.role === "COACH" ? "APPROVED" : null);
+    const coachAction = coachStatus ? coachStatusCopy[coachStatus] : null;
+    const isAdministrator = user.capabilities?.administrator ?? user.role === "ADMIN";
+
+    return (
+      <div className="member-account-page">
+        <SiteHeader initialSession={{ user }} />
+        <main className="member-account-main">
+          <section className="member-account-intro">
+            <p className="eyebrow">Member account</p>
+            <h1>My account</h1>
+            <p>Manage your CoachConnect access and coaching activity.</p>
+          </section>
+
+          <section className="member-account-grid" aria-label="Account details and actions">
+            <article className="account-summary-card">
+              <span>Signed in as</span>
+              <h2>{user.displayName}</h2>
+              <p>{user.email}</p>
+            </article>
+            <article>
+              <span>Coaching</span>
+              <h2>{coachAction?.[0] ?? "Become a coach"}</h2>
+              <p>{coachStatus === "APPROVED"
+                ? "Keep your public coaching information accurate."
+                : "Use this member account to apply for coach approval."}</p>
+              <Link className="button button-primary" href="/coach/apply">
+                {coachAction?.[1] ?? "Become a coach"}
+              </Link>
+            </article>
+            {isAdministrator && (
+              <article>
+                <span>Administration</span>
+                <h2>Coach applications</h2>
+                <p>Review submitted coach profiles and approval decisions.</p>
+                <Link className="button button-primary" href="/admin/coaches">Review applications</Link>
+              </article>
+            )}
+            <article>
+              <span>Session</span>
+              <h2>Account access</h2>
+              <p>Log out on this device when you have finished.</p>
+              <button className="button account-secondary-button" type="button" onClick={logOut} disabled={busy}>Log out</button>
+            </article>
+          </section>
+
+          <section className="account-danger-zone" aria-labelledby="danger-heading">
+            <div>
+              <p className="eyebrow">Permanent action</p>
+              <h2 id="danger-heading">Delete account</h2>
+              <p>This permanently removes your member profile and coach application. It cannot be undone.</p>
+            </div>
+            {!deleteOpen ? (
+              <button className="account-delete-button" type="button" onClick={() => setDeleteOpen(true)}>Delete account</button>
+            ) : (
+              <div className="account-delete-confirmation">
+                <h3>Delete your account?</h3>
+                <p>Enter your current password and type <strong>DELETE</strong> to confirm permanent deletion.</p>
+                <label htmlFor="delete-account-password">Current password</label>
+                <input
+                  id="delete-account-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={deletePassword}
+                  onChange={(event) => setDeletePassword(event.target.value)}
+                />
+                <label htmlFor="delete-account-confirmation">Type DELETE to confirm</label>
+                <input
+                  id="delete-account-confirmation"
+                  autoComplete="off"
+                  value={deleteConfirmation}
+                  onChange={(event) => setDeleteConfirmation(event.target.value)}
+                />
+                {message && <p className="auth-error" role="alert">{message}</p>}
+                <div>
+                  <button type="button" onClick={() => { setDeleteOpen(false); setDeleteConfirmation(""); setDeletePassword(""); setMessage(""); }}>Cancel</button>
+                  <button className="account-delete-button" type="button" disabled={busy || deleteConfirmation !== "DELETE" || deletePassword.length < 8} onClick={deleteAccount}>
+                    {busy ? "Deleting…" : "Permanently delete account"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <main className="account-page">
       <section className="account-art" aria-label="Athlete training with a coach">
-        <Link className="brand account-brand" href="/" aria-label="CoachConnect home">Coach<span>Connect</span></Link>
+        <SiteLogo className="account-brand" />
         <div>
           <p className="eyebrow light">For athletes and coaches</p>
           <h1 aria-label="Your next move starts here.">Your next move<br /><span aria-hidden="true">starts here.</span></h1>
@@ -151,20 +372,11 @@ export default function AccountPage() {
               <h3>{emailConfirmationPending ? "Check your email" : "Account ready"}</h3>
               <p>{message}</p>
               {emailConfirmationPending ? (
-                <button
-                  className="auth-resend"
-                  type="button"
-                  disabled={emailActionBusy || resendCooldown > 0 || !email.trim()}
-                  onClick={() => requestEmailAction("/api/auth/resend-confirmation", "Unable to resend the confirmation email.")}
-                >
-                  {emailActionBusy
-                    ? "Sending…"
-                    : resendCooldown > 0
-                      ? `Resend available in ${resendCooldown}s`
-                      : "Resend confirmation email"}
+                <button className="auth-resend" type="button" disabled={emailActionBusy || resendCooldown > 0 || !email.trim()} onClick={() => requestEmailAction("/api/auth/resend-confirmation", "Unable to resend the confirmation email.")}>
+                  {emailActionBusy ? "Sending…" : resendCooldown > 0 ? `Resend available in ${resendCooldown}s` : "Resend confirmation email"}
                 </button>
               ) : (
-                <Link className="button button-accent" href="/dashboard">Open my dashboard</Link>
+                <Link className="button button-accent" href={requestedDestination()}>Open my account</Link>
               )}
               {statusMessage && <p className="auth-resend-status">{statusMessage}</p>}
             </div>
@@ -177,45 +389,27 @@ export default function AccountPage() {
                   <p className="auth-account-note">One account lets you find coaching and apply to coach. You can do both at any time.</p>
                 </>
               )}
-
               <label htmlFor="account-email">Email</label>
               <input id="account-email" type="email" autoComplete="email" maxLength={254} required value={email} onChange={(event) => setEmail(event.target.value)} />
-
               <label htmlFor="account-password">Password</label>
               <input id="account-password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={12} required value={password} onChange={(event) => setPassword(event.target.value)} />
-
               {mode === "register" && (
                 <>
                   <label htmlFor="account-password-confirmation">Re-enter your password</label>
                   <input id="account-password-confirmation" type="password" autoComplete="new-password" minLength={12} required value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} />
                 </>
               )}
-
               <small>Use at least 12 characters. Authentication is securely managed by Supabase; CoachConnect never stores your password.</small>
-
               {mode === "login" && (
                 <div className="auth-email-actions">
-                  <button
-                    className="auth-resend"
-                    type="button"
-                    disabled={emailActionBusy || !email.trim()}
-                    onClick={() => requestEmailAction("/api/auth/forgot-password", "Unable to request a password reset.")}
-                  >
+                  <button className="auth-resend" type="button" disabled={emailActionBusy || !email.trim()} onClick={() => requestEmailAction("/api/auth/forgot-password", "Unable to request a password reset.")}>
                     {emailActionBusy ? "Sending…" : "Forgot password?"}
                   </button>
-                  <button
-                    className="auth-resend"
-                    type="button"
-                    disabled={emailActionBusy || resendCooldown > 0 || !email.trim()}
-                    onClick={() => requestEmailAction("/api/auth/resend-confirmation", "Unable to resend the confirmation email.")}
-                  >
-                    {resendCooldown > 0
-                      ? `Resend available in ${resendCooldown}s`
-                      : "Resend confirmation email"}
+                  <button className="auth-resend" type="button" disabled={emailActionBusy || resendCooldown > 0 || !email.trim()} onClick={() => requestEmailAction("/api/auth/resend-confirmation", "Unable to resend the confirmation email.")}>
+                    {resendCooldown > 0 ? `Resend available in ${resendCooldown}s` : "Resend confirmation email"}
                   </button>
                 </div>
               )}
-
               {statusMessage && <p className="auth-resend-status" role="status">{statusMessage}</p>}
               {message && <p className="auth-error" role="alert">{message}</p>}
               <button className="button button-accent auth-submit" type="submit" disabled={busy}>
