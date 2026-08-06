@@ -27,3 +27,9 @@ export function rejectCrossOriginRequest(request: NextRequest): NextResponse | n
 export function requestIsHttps(request: NextRequest): boolean {
   return request.headers.get("x-forwarded-proto") === "https" || request.nextUrl.protocol === "https:";
 }
+
+export function isMissingAuthSessionError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { name?: unknown; code?: unknown };
+  return candidate.name === "AuthSessionMissingError" || candidate.code === "session_not_found";
+}

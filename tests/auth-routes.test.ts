@@ -197,4 +197,16 @@ describe("Supabase authentication routes", () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: "Account status is unavailable." });
   });
+
+  it("treats the expected absence of a session as signed out", async () => {
+    mocks.getUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: { name: "AuthSessionMissingError", message: "Auth session missing!" },
+    });
+
+    const response = await getSession(request("/api/auth/session"));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ user: null });
+  });
 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { rejectCrossOriginRequest } from "@/lib/auth-http";
+import { isMissingAuthSessionError, rejectCrossOriginRequest } from "@/lib/auth-http";
 import { normalizeCoachApplicationDraft, serializeCoachApplication } from "@/lib/coach-application";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
     const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError) {
+    if (authError && !isMissingAuthSessionError(authError)) {
       return applyCookies(NextResponse.json({ error: "Account status is unavailable." }, { status: 503 }));
     }
     if (!authData.user) {
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   try {
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
     const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError) {
+    if (authError && !isMissingAuthSessionError(authError)) {
       return applyCookies(NextResponse.json({ error: "Account status is unavailable." }, { status: 503 }));
     }
     if (!authData.user) {
@@ -64,7 +64,7 @@ export async function PUT(request: NextRequest) {
     const draft = normalizeCoachApplicationDraft(body);
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
     const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError) {
+    if (authError && !isMissingAuthSessionError(authError)) {
       return applyCookies(NextResponse.json({ error: "Account status is unavailable." }, { status: 503 }));
     }
     if (!authData.user) {

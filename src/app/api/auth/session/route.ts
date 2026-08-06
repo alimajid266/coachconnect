@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isMissingAuthSessionError } from "@/lib/auth-http";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
 export async function GET(request: NextRequest) {
   try {
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
     const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError) {
+    if (authError && !isMissingAuthSessionError(authError)) {
       return applyCookies(NextResponse.json({ error: "Account status is unavailable." }, { status: 503 }));
     }
     if (!authData.user) {

@@ -115,6 +115,18 @@ describe("coach application routes", () => {
     expect(await response.json()).toEqual({ error: "Account status is unavailable." });
   });
 
+  it("asks an anonymous visitor to sign in when no session exists", async () => {
+    mocks.getUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: { name: "AuthSessionMissingError", message: "Auth session missing!" },
+    });
+
+    const response = await getApplication(getRequest());
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "Sign in to manage a coach application." });
+  });
+
   it("returns the authenticated member's current application", async () => {
     mocks.applicationMaybeSingle.mockResolvedValue({
       data: {
