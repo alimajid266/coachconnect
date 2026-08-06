@@ -10,6 +10,21 @@ type Props = {
 };
 
 type MapboxModule = typeof import("mapbox-gl").default;
+type Coordinates = [number, number];
+
+const publicAreaCoordinatesCache = new Map<string, Coordinates | null>();
+
+function publicAreaKey(coach: Coach) {
+  return `${coach.area.trim().toLowerCase()}|${coach.location.trim().toLowerCase()}`;
+}
+
+function validCoordinates(value: unknown): value is Coordinates {
+  return Array.isArray(value)
+    && value.length >= 2
+    && value.slice(0, 2).every((coordinate) => typeof coordinate === "number" && Number.isFinite(coordinate))
+    && value[0] >= -180 && value[0] <= 180
+    && value[1] >= -90 && value[1] <= 90;
+}
 
 export default function CoachMap({ city, coaches, onViewProfile }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -18,12 +33,58 @@ export default function CoachMap({ city, coaches, onViewProfile }: Props) {
   const markersRef = useRef<import("mapbox-gl").Marker[]>([]);
   const [mapState, setMapState] = useState<"loading" | "ready" | "error">("loading");
   const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
-  const mappableCoaches = useMemo(() => coaches.filter((coach) => coach.coordinates), [coaches]);
+  const [resolvedCoordinates, setResolvedCoordinates] = useState<Record<string, Coordinates>>({});
+  const mappableCoaches = useMemo(() => coaches.flatMap((coach) => {
+    const coordinates = coach.coordinates ?? resolvedCoordinates[publicAreaKey(coach)];
+    return coordinates ? [{ ...coach, coordinates }] : [];
+  }), [coaches, resolvedCoordinates]);
+  const approximateMappedCount = mappableCoaches.filter((coach) => !coaches.find((source) => source.id === coach.id)?.coordinates).length;
   const onlineOnlyCount = coaches.filter((coach) => coach.offersOnline && !coach.offersInPerson).length;
-  const unmappedInPersonCount = coaches.filter((coach) => coach.offersInPerson && !coach.coordinates).length;
+  const unmappedInPersonCount = coaches.filter((coach) => coach.offersInPerson && !mappableCoaches.some((mapped) => mapped.id === coach.id)).length;
   const selectedVisibleCoach = selectedCoach && mappableCoaches.some((coach) => coach.id === selectedCoach.id)
     ? selectedCoach
     : null;
+
+  useEffect(() => {
+    const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+    const coachesWithoutCoordinates = coaches.filter((coach) => coach.offersInPerson && !coach.coordinates);
+    if (!token || coachesWithoutCoordinates.length === 0) return;
+
+    let cancelled = false;
+    void Promise.all(coachesWithoutCoordinates.map(async (coach) => {
+      const key = publicAreaKey(coach);
+      if (publicAreaCoordinatesCache.has(key)) {
+        return [key, publicAreaCoordinatesCache.get(key)] as const;
+      }
+
+      const query = encodeURIComponent(`${coach.area}, ${coach.location}, Pakistan`);
+      const url = `https://api.mapbox.com/search/geocode/v6/forward?q=${query}&country=pk&types=neighborhood,locality,place,district&limit=1&access_token=${encodeURIComponent(token)}`;
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Public-area geocoding failed");
+        const payload = await response.json() as { features?: Array<{ geometry?: { coordinates?: unknown } }> };
+        const coordinates = payload.features?.[0]?.geometry?.coordinates;
+        const result = validCoordinates(coordinates) ? coordinates : null;
+        publicAreaCoordinatesCache.set(key, result);
+        return [key, result] as const;
+      } catch {
+        publicAreaCoordinatesCache.set(key, null);
+        return [key, null] as const;
+      }
+    })).then((entries) => {
+      if (cancelled) return;
+      const available = entries.filter((entry): entry is readonly [string, Coordinates] => entry[1] !== null);
+      if (available.length === 0) return;
+      setResolvedCoordinates((current) => ({
+        ...current,
+        ...Object.fromEntries(available),
+      }));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [coaches]);
 
   useEffect(() => {
     const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
@@ -105,6 +166,9 @@ export default function CoachMap({ city, coaches, onViewProfile }: Props) {
           <span>Choose a marker to preview a coach.</span>
         </div>
         {onlineOnlyCount > 0 && <span>{onlineOnlyCount} online</span>}
+        {approximateMappedCount > 0 && (
+          <span>{approximateMappedCount} approximate training {approximateMappedCount === 1 ? "area" : "areas"}</span>
+        )}
         {unmappedInPersonCount > 0 && <span>{unmappedInPersonCount} awaiting map area</span>}
       </div>
 

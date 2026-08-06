@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import CoachCatalog from "@/app/coaches/coach-catalog";
 import { coaches } from "@/lib/coaches";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 function renderCatalog(user: object | null = null) {
   vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve({
@@ -100,6 +103,42 @@ describe("coach catalog", () => {
     expect(screen.getByText(/11 training areas/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /hide map/i })).toBeInTheDocument();
+  });
+
+  it("resolves an approximate marker from an approved coach's public area", async () => {
+    const approvedCoach = {
+      ...coaches[0],
+      id: "approved-area-coach",
+      name: "Ali Coach",
+      location: "Islamabad",
+      area: "I-8",
+      coordinates: null,
+      offersOnline: false,
+      offersInPerson: true,
+    };
+    vi.stubEnv("NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN", "public-map-token");
+    const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("api.mapbox.com/search/geocode")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ features: [{ geometry: { coordinates: [73.07296, 33.6688574] } }] }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => url.includes("/api/coaches") ? { coaches: [approvedCoach] } : { user: null },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={[approvedCoach]} />);
+    fireEvent.click(screen.getByRole("button", { name: /show map/i }));
+
+    const map = screen.getByRole("region", { name: /coach locations/i });
+    expect(await within(map).findByRole("button", { name: /show ali coach in i-8 on map/i })).toBeInTheDocument();
+    expect(within(map).getByText(/1 approximate training area/i)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/api\.mapbox\.com\/search\/geocode\/v6\/forward/));
   });
 
   it("keeps map results synchronized with catalog filters", () => {
