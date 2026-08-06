@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import CoachApplicationPage from "@/app/coach/apply/page";
 
@@ -26,6 +26,54 @@ describe("coach application page", () => {
     expect(screen.getByRole("link", { name: "CoachConnect home" })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: "My account" })).toHaveAttribute("href", "/account");
     expect(screen.queryByRole("link", { name: /dashboard/i })).not.toBeInTheDocument();
+  });
+
+  it("explains which filled fields are too short before submitting", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ application: null }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CoachApplicationPage />);
+    await screen.findByRole("heading", { name: /build your coach profile/i });
+
+    fireEvent.change(screen.getByLabelText(/professional headline/i), { target: { value: "Coach" } });
+    fireEvent.change(screen.getByLabelText(/coaching biography/i), { target: { value: "I coach." } });
+    fireEvent.click(screen.getByLabelText("Tennis"));
+    fireEvent.change(screen.getByLabelText(/years of coaching experience/i), { target: { value: "3" } });
+    fireEvent.change(screen.getByLabelText("Qualifications"), { target: { value: "Coach" } });
+    fireEvent.click(screen.getByLabelText("Adults"));
+    fireEvent.click(screen.getByLabelText("Beginner"));
+    fireEvent.change(screen.getByLabelText("Lesson plan"), { target: { value: "Warm up." } });
+    fireEvent.change(screen.getByLabelText(/session price/i), { target: { value: "3000" } });
+    fireEvent.click(screen.getByLabelText("Online"));
+    fireEvent.change(screen.getByLabelText("Question 1"), { target: { value: "What should I bring?" } });
+    fireEvent.change(screen.getByLabelText("Answer 1"), { target: { value: "Comfortable sportswear." } });
+
+    fireEvent.click(screen.getByRole("button", { name: /submit for review/i }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/professional headline.*at least 10 characters/i);
+    expect(alert).toHaveTextContent(/coaching biography.*at least 80 characters/i);
+    expect(alert).toHaveTextContent(/qualifications.*at least 10 characters/i);
+    expect(alert).toHaveTextContent(/lesson plan.*at least 40 characters/i);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses intentional layouts for compact numbers and FAQ pairs", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ application: null }),
+    }));
+
+    render(<CoachApplicationPage />);
+    await screen.findByRole("heading", { name: /build your coach profile/i });
+
+    expect(screen.getByLabelText(/years of coaching experience/i)).toHaveClass("application-number-input");
+    expect(screen.getByLabelText("Question 1").closest("div")).toHaveClass("application-faq-fields");
   });
 
   it("shows a suspension reason and a recovery path", async () => {

@@ -79,6 +79,33 @@ function asDraft(application: Application | null): Draft {
   };
 }
 
+function submissionIssues(draft: Draft) {
+  const issues: string[] = [];
+  if (draft.headline.trim().length < 10) issues.push("Professional headline: use at least 10 characters.");
+  if (draft.bio.trim().length < 80) issues.push("Coaching biography: use at least 80 characters.");
+  if (draft.sports.length === 0) issues.push("Sports: choose at least one sport.");
+
+  const experience = Number(draft.experienceYears);
+  if (draft.experienceYears === "" || !Number.isInteger(experience) || experience < 0 || experience > 80) {
+    issues.push("Years of coaching experience: enter a whole number from 0 to 80.");
+  }
+
+  if (draft.qualifications.trim().length < 10) issues.push("Qualifications: use at least 10 characters.");
+  if (draft.audiences.length === 0) issues.push("People you coach: choose at least one group.");
+  if (draft.levels.length === 0) issues.push("Experience levels: choose at least one level.");
+  if (draft.lessonPlan.trim().length < 40) issues.push("Lesson plan: use at least 40 characters.");
+
+  const price = Number(draft.sessionPricePkr);
+  if (draft.sessionPricePkr === "" || !Number.isInteger(price) || price < 500 || price > 1_000_000) {
+    issues.push("Session price: enter a whole PKR amount from 500 to 1,000,000.");
+  }
+
+  if (!draft.offersOnline && !draft.offersInPerson) issues.push("Training formats: choose online or in person.");
+  if (draft.offersInPerson && !draft.city.trim()) issues.push("City: choose where you coach in person.");
+  if (draft.offersInPerson && !draft.publicArea.trim()) issues.push("Public training area: enter an approximate area or public venue.");
+  return issues;
+}
+
 export default function CoachApplicationPage() {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [application, setApplication] = useState<Application | null>(null);
@@ -161,6 +188,13 @@ export default function CoachApplicationPage() {
   }
 
   async function submitForReview() {
+    const issues = submissionIssues(draft);
+    if (issues.length > 0) {
+      setMessage("");
+      setError(`Please fix these fields before submitting: ${issues.join(" ")}`);
+      return;
+    }
+
     const saved = await saveDraft();
     if (!saved) return;
     setBusy(true);
@@ -208,8 +242,8 @@ export default function CoachApplicationPage() {
       <form className="application-form" onSubmit={handleSubmit}>
         <fieldset disabled={locked || busy}>
           <legend>Professional introduction</legend>
-          <label>Professional headline<input aria-label="Professional headline" maxLength={120} value={draft.headline} onChange={(event) => update("headline", event.target.value)} placeholder="Patient tennis coaching for confident match play" /></label>
-          <label>Coaching biography<textarea aria-label="Coaching biography" maxLength={2000} rows={6} value={draft.bio} onChange={(event) => update("bio", event.target.value)} placeholder="Describe your coaching approach, experience and the progress members can expect." /></label>
+          <label>Professional headline<input aria-label="Professional headline" minLength={10} maxLength={120} value={draft.headline} onChange={(event) => update("headline", event.target.value)} placeholder="Patient tennis coaching for confident match play" /><span className="application-field-hint">At least 10 characters</span></label>
+          <label>Coaching biography<textarea aria-label="Coaching biography" minLength={80} maxLength={2000} rows={6} value={draft.bio} onChange={(event) => update("bio", event.target.value)} placeholder="Describe your coaching approach, experience and the progress members can expect." /><span className="application-field-hint">At least 80 characters</span></label>
         </fieldset>
 
         <fieldset disabled={locked || busy}>
@@ -217,9 +251,9 @@ export default function CoachApplicationPage() {
           <div className="application-options" role="group" aria-label="Sports you coach">
             {coachApplicationOptions.sports.map((sport) => <label key={sport}><input type="checkbox" checked={draft.sports.includes(sport)} onChange={() => toggleList("sports", sport)} />{sport}</label>)}
           </div>
-          <div className="application-grid two">
-            <label>Years of coaching experience<input type="number" min="0" max="80" value={draft.experienceYears} onChange={(event) => update("experienceYears", event.target.value)} /></label>
-            <label>Qualifications<textarea rows={3} maxLength={1200} value={draft.qualifications} onChange={(event) => update("qualifications", event.target.value)} placeholder="Certifications, playing background, safeguarding training or relevant education" /></label>
+          <div className="application-grid application-experience-grid">
+            <label className="application-number-field">Years of coaching experience<input className="application-number-input" inputMode="numeric" type="number" min="0" max="80" value={draft.experienceYears} onChange={(event) => update("experienceYears", event.target.value)} /><span className="application-field-hint">Whole number from 0 to 80</span></label>
+            <label>Qualifications<textarea aria-label="Qualifications" rows={3} minLength={10} maxLength={1200} value={draft.qualifications} onChange={(event) => update("qualifications", event.target.value)} placeholder="Certifications, playing background, safeguarding training or relevant education" /><span className="application-field-hint">At least 10 characters</span></label>
           </div>
         </fieldset>
 
@@ -229,7 +263,7 @@ export default function CoachApplicationPage() {
             <div className="application-options" role="group" aria-label="People you coach"><strong>People you coach</strong>{coachApplicationOptions.audiences.map((audience) => <label key={audience}><input type="checkbox" checked={draft.audiences.includes(audience)} onChange={() => toggleList("audiences", audience)} />{audience}</label>)}</div>
             <div className="application-options" role="group" aria-label="Experience levels"><strong>Experience levels</strong>{coachApplicationOptions.levels.map((level) => <label key={level}><input type="checkbox" checked={draft.levels.includes(level)} onChange={() => toggleList("levels", level)} />{level}</label>)}</div>
           </div>
-          <label>Lesson plan<textarea rows={5} maxLength={3000} value={draft.lessonPlan} onChange={(event) => update("lessonPlan", event.target.value)} placeholder="Explain how a typical session begins, develops and finishes." /></label>
+          <label>Lesson plan<textarea aria-label="Lesson plan" rows={5} minLength={40} maxLength={3000} value={draft.lessonPlan} onChange={(event) => update("lessonPlan", event.target.value)} placeholder="Explain how a typical session begins, develops and finishes." /><span className="application-field-hint">At least 40 characters</span></label>
         </fieldset>
 
         <fieldset disabled={locked || busy}>
@@ -244,7 +278,7 @@ export default function CoachApplicationPage() {
 
         <fieldset disabled={locked || busy}>
           <legend>Frequently asked questions</legend>
-          {draft.faqs.map((faq, index) => <div className="application-grid two" key={index}><label>Question {index + 1}<input value={faq.question} maxLength={160} onChange={(event) => updateFaq(index, "question", event.target.value)} /></label><label>Answer {index + 1}<textarea rows={3} value={faq.answer} maxLength={800} onChange={(event) => updateFaq(index, "answer", event.target.value)} /></label></div>)}
+          {draft.faqs.map((faq, index) => <div className="application-faq-fields" key={index}><label>Question {index + 1}<input value={faq.question} maxLength={160} onChange={(event) => updateFaq(index, "question", event.target.value)} placeholder="For example, what should I bring?" /></label><label>Answer {index + 1}<textarea rows={3} value={faq.answer} maxLength={800} onChange={(event) => updateFaq(index, "answer", event.target.value)} placeholder="Give members a clear, helpful answer." /></label></div>)}
           {draft.faqs.length < 5 && <button className="button button-secondary" type="button" onClick={() => update("faqs", [...draft.faqs, { question: "", answer: "" }])}>Add another question</button>}
         </fieldset>
 
