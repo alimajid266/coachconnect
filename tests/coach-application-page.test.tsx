@@ -76,6 +76,40 @@ describe("coach application page", () => {
     expect(screen.getByLabelText("Question 1").closest("div")).toHaveClass("application-faq-fields");
   });
 
+  it("describes a successful submission as CoachConnect team review", async () => {
+    const application = {
+      userId: "member-1",
+      status: "DRAFT",
+      headline: "Patient tennis coach",
+      bio: "I help adult beginners build reliable technique, confidence, and safe training habits through structured sessions.",
+      sports: ["Tennis"],
+      experienceYears: 3,
+      qualifications: "Certified tennis coach",
+      audiences: ["Adults"],
+      levels: ["Beginner"],
+      lessonPlan: "We warm up, practise one focused skill, apply it in match play, and finish with feedback.",
+      sessionPricePkr: 3000,
+      offersOnline: true,
+      offersInPerson: false,
+      city: "",
+      publicArea: "",
+      availability: [],
+      faqs: [],
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ application }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ application }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ application: { ...application, status: "SUBMITTED" } }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CoachApplicationPage />);
+    await screen.findByRole("heading", { name: /build your coach profile/i });
+    fireEvent.click(screen.getByRole("button", { name: /submit for review/i }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Application submitted for CoachConnect team review.");
+    expect(screen.queryByText(/administrator review/i)).not.toBeInTheDocument();
+  });
+
   it("shows a suspension reason and a recovery path", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,

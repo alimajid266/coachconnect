@@ -205,7 +205,7 @@ export default function CoachApplicationPage() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "The application could not be submitted.");
       setApplication(result.application);
-      setMessage("Application submitted for administrator review.");
+      setMessage("Application submitted for CoachConnect team review.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The application could not be submitted.");
     } finally {
