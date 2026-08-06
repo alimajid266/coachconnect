@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import HomePage from "@/app/page";
 
@@ -9,11 +9,20 @@ describe("CoachConnect home page", () => {
     render(<HomePage />);
 
     expect(screen.getByRole("heading", { level: 1, name: /train smarter.*play bolder/i })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /athlete training with a coach/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /athlete training in a gym/i })).toBeInTheDocument();
     expect(screen.getAllByText(/12 sports/i).length).toBeGreaterThan(0);
     expect(screen.queryByRole("region", { name: /coach results/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /view .*profile/i })).not.toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/sample|prototype|fictional|private by default|sample marketplace data/i);
+  });
+
+  it("uses Ali's supplied sports photography without presenting athletes as coaches", () => {
+    render(<HomePage />);
+
+    expect(screen.getByRole("img", { name: /athlete training in a gym/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /cricket stadium/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /tennis serve practice/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /football training on the pitch/i })).toBeInTheDocument();
   });
 
   it("uses the dedicated coach catalog for every discovery link", () => {
@@ -58,8 +67,10 @@ describe("CoachConnect home page", () => {
 
     render(<HomePage />);
 
-    expect(await screen.findByRole("link", { name: "My account" })).toHaveAttribute("href", "/account");
-    expect(screen.getByRole("link", { name: "Become a coach" })).toHaveAttribute("href", "/coach/apply");
+    const accountMenu = await screen.findByRole("button", { name: /open account menu for ali member/i });
+    fireEvent.click(accountMenu);
+    expect(screen.getByRole("menuitem", { name: "My account" })).toHaveAttribute("href", "/account");
+    expect(screen.getByRole("menuitem", { name: "Become a coach" })).toHaveAttribute("href", "/coach/apply");
     expect(screen.queryByRole("link", { name: /^sign in$/i })).not.toBeInTheDocument();
   });
 });

@@ -18,6 +18,9 @@ describe("coach application page", () => {
     expect(screen.getByLabelText(/professional headline/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/coaching biography/i)).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /sports you coach/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/add another sport/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/profile tags/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/profile image/i)).toHaveAttribute("accept", "image/jpeg,image/png,image/webp");
     expect(screen.getByRole("group", { name: /people you coach/i })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /training formats/i })).toBeInTheDocument();
     expect(screen.getByText(/never enter a home address/i)).toBeInTheDocument();
@@ -26,6 +29,25 @@ describe("coach application page", () => {
     expect(screen.getByRole("link", { name: "CoachConnect home" })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: "My account" })).toHaveAttribute("href", "/account");
     expect(screen.queryByRole("link", { name: /dashboard/i })).not.toBeInTheDocument();
+  });
+
+  it("adds a custom sport and moderated tags to the saved draft", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ application: null }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ application: null }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CoachApplicationPage />);
+    await screen.findByRole("heading", { name: /build your coach profile/i });
+    fireEvent.change(screen.getByLabelText(/add another sport/i), { target: { value: "Squash" } });
+    fireEvent.click(screen.getByRole("button", { name: /^add sport$/i }));
+    fireEvent.change(screen.getByLabelText(/profile tags/i), { target: { value: "Match preparation" } });
+    fireEvent.click(screen.getByRole("button", { name: /^add tag$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
+
+    const savedBody = JSON.parse(String(fetchMock.mock.calls[1][1]?.body));
+    expect(savedBody.sports).toContain("Squash");
+    expect(savedBody.tags).toContain("Match preparation");
   });
 
   it("explains which filled fields are too short before submitting", async () => {

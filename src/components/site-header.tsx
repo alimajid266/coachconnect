@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SiteLogo from "@/components/site-logo";
 
 export type SessionUser = {
@@ -31,6 +31,10 @@ export default function SiteHeader({ initialSession, onSessionResolved }: SiteHe
       ? { status: "ready", user: initialSession.user }
       : { status: "loading", user: null },
   );
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [menuError, setMenuError] = useState("");
+  const accountMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (initialSession) return;
@@ -55,10 +59,44 @@ export default function SiteHeader({ initialSession, onSessionResolved }: SiteHe
     return () => { active = false; };
   }, [initialSession, onSessionResolved]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) setMenuOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menuOpen]);
+
+  async function logOut() {
+    setLoggingOut(true);
+    setMenuError("");
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+      if (!response.ok) throw new Error("Logout failed");
+      setSession({ status: "ready", user: null });
+      setMenuOpen(false);
+      onSessionResolved?.(null, "ready");
+    } catch {
+      setMenuError("Unable to log out. Try again.");
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+
   const coachStatus = session.user?.capabilities?.coachStatus
     ?? (session.user?.role === "COACH" ? "APPROVED" : null);
   const coachHref = session.user ? "/coach/apply" : "/account?next=%2Fcoach%2Fapply";
   const coachLabel = coachStatus === "APPROVED" ? "Coach profile" : "Become a coach";
+  const initials = session.user?.displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "AC";
+  const isAdministrator = session.user?.capabilities?.administrator ?? session.user?.role === "ADMIN";
 
   return (
     <header className="site-header">
@@ -70,12 +108,41 @@ export default function SiteHeader({ initialSession, onSessionResolved }: SiteHe
             <span className="nav-session-state" aria-live="polite">Checking account…</span>
           ) : session.status === "unavailable" ? (
             <Link className="nav-account" href="/account">My account</Link>
+          ) : session.user ? (
+            <div className="nav-account-menu" ref={accountMenuRef}>
+              <button
+                className="nav-account-trigger"
+                type="button"
+                aria-label={`Open account menu for ${session.user.displayName}`}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                onClick={() => { setMenuOpen((open) => !open); setMenuError(""); }}
+              >
+                <span aria-hidden="true">{initials}</span>
+              </button>
+              <div
+                className="nav-account-popover"
+                role="menu"
+                aria-hidden={!menuOpen}
+                data-state={menuOpen ? "open" : "closed"}
+                inert={!menuOpen}
+              >
+                <div className="nav-account-identity">
+                  <strong>{session.user.displayName}</strong>
+                  <span>{session.user.email}</span>
+                </div>
+                <Link role="menuitem" href="/account" onClick={() => setMenuOpen(false)}>My account</Link>
+                <span role="menuitem" aria-disabled="true" className="nav-account-disabled">Bookings coming soon</span>
+                <Link role="menuitem" href={coachHref} onClick={() => setMenuOpen(false)}>{coachLabel}</Link>
+                {isAdministrator && <Link role="menuitem" href="/admin/coaches" onClick={() => setMenuOpen(false)}>Coach administration</Link>}
+                <button role="menuitem" type="button" onClick={logOut} disabled={loggingOut}>{loggingOut ? "Logging out…" : "Log out"}</button>
+                {menuError && <span className="nav-account-error" role="alert">{menuError}</span>}
+              </div>
+            </div>
           ) : (
             <>
               <Link className="nav-coach-action" href={coachHref}>{coachLabel}</Link>
-              <Link className="nav-account" href="/account">
-                {session.user ? "My account" : "Sign in"}
-              </Link>
+              <Link className="nav-account" href="/account">Sign in</Link>
             </>
           )}
         </div>

@@ -1,12 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatCoachPrice, type Coach } from "@/lib/coaches";
 
 type Props = {
   city: string;
   coaches: Coach[];
-  onViewProfile: (coach: Coach) => void;
+  profileHref: (coach: Coach) => string;
 };
 
 type MapboxModule = typeof import("mapbox-gl").default;
@@ -26,7 +27,7 @@ function validCoordinates(value: unknown): value is Coordinates {
     && value[1] >= -90 && value[1] <= 90;
 }
 
-export default function CoachMap({ city, coaches, onViewProfile }: Props) {
+export default function CoachMap({ city, coaches, profileHref }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<import("mapbox-gl").Map | null>(null);
   const mapboxRef = useRef<MapboxModule | null>(null);
@@ -195,11 +196,11 @@ export default function CoachMap({ city, coaches, onViewProfile }: Props) {
         <article className="catalog-map-preview">
           <p>{selectedVisibleCoach.area}, {selectedVisibleCoach.location}</p>
           <h2>{selectedVisibleCoach.name}</h2>
-          <span>{selectedVisibleCoach.sports.join(" · ")} · {selectedVisibleCoach.rating === null ? "New coach" : `★ ${selectedVisibleCoach.rating}`}</span>
+          <span>{selectedVisibleCoach.sports.join(" · ")} · {selectedVisibleCoach.isDemo ? "Demo profile" : selectedVisibleCoach.rating === null ? "New coach" : `★ ${selectedVisibleCoach.rating}`}</span>
           <strong>{formatCoachPrice(selectedVisibleCoach.price)} per session</strong>
-          <button type="button" aria-label={`View ${selectedVisibleCoach.name}'s profile`} onClick={() => onViewProfile(selectedVisibleCoach)}>
+          <Link aria-label={`View ${selectedVisibleCoach.name}'s profile`} href={profileHref(selectedVisibleCoach)}>
             View profile
-          </button>
+          </Link>
         </article>
       )}
     </section>

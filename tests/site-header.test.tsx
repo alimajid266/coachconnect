@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import SiteHeader from "@/components/site-header";
 
@@ -24,8 +24,17 @@ describe("site header", () => {
     render(<SiteHeader />);
 
     expect(screen.getByRole("link", { name: "CoachConnect home" })).toHaveAttribute("href", "/");
-    expect(await screen.findByRole("link", { name: "My account" })).toHaveAttribute("href", "/account");
-    expect(screen.getByRole("link", { name: "Become a coach" })).toHaveAttribute("href", "/coach/apply");
+    const menuButton = await screen.findByRole("button", { name: /open account menu for ali member/i });
+    expect(menuButton).toHaveTextContent("AM");
+    expect(menuButton).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(menuButton);
+    expect(menuButton).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "My account" })).toHaveAttribute("href", "/account");
+    expect(screen.getByRole("menuitem", { name: "Bookings coming soon" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.queryByRole("link", { name: /bookings/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Become a coach" })).toHaveAttribute("href", "/coach/apply");
+    expect(screen.getByRole("menuitem", { name: "Log out" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /dashboard/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^sign in$/i })).not.toBeInTheDocument();
   });
@@ -74,7 +83,8 @@ describe("site header", () => {
 
     render(<SiteHeader />);
 
-    expect(await screen.findByRole("link", { name: "Coach profile" })).toHaveAttribute("href", "/coach/apply");
-    expect(screen.queryByRole("link", { name: "Become a coach" })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /open account menu for coach one/i }));
+    expect(screen.getByRole("menuitem", { name: "Coach profile" })).toHaveAttribute("href", "/coach/apply");
+    expect(screen.queryByRole("menuitem", { name: "Become a coach" })).not.toBeInTheDocument();
   });
 });

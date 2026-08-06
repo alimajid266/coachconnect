@@ -9,14 +9,14 @@ export const coachApplicationStatuses = [
 
 export type CoachApplicationStatus = typeof coachApplicationStatuses[number];
 
-const sports = [
+const suggestedSports = [
   "Badminton", "Basketball", "Boxing", "Cricket", "Football", "Ice Hockey",
   "Running", "Strength", "Swimming", "Table Tennis", "Tennis", "Yoga",
 ] as const;
 const audiences = ["Children", "Teenagers", "Adults", "Seniors"] as const;
 const levels = ["Beginner", "Intermediate", "Advanced"] as const;
 
-export const coachApplicationOptions = { sports, audiences, levels };
+export const coachApplicationOptions = { sports: suggestedSports, audiences, levels };
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -36,6 +36,44 @@ function stringList(value: unknown, label: string, allowed: readonly string[], m
     throw new Error(`Choose valid ${label}.`);
   }
   return result as string[];
+}
+
+function flexibleTermList(value: unknown, label: string, maxItems: number, maxLength: number) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > maxItems) throw new Error(`Choose valid ${label}.`);
+
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of value) {
+    if (typeof item !== "string") throw new Error(`Choose valid ${label}.`);
+    const normalized = item.trim().replace(/\s+/g, " ");
+    if (normalized.length < 2 || normalized.length > maxLength) throw new Error(`Choose valid ${label}.`);
+    const key = normalized.toLocaleLowerCase("en");
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(normalized);
+    }
+  }
+  return result;
+}
+
+function tagsList(value: unknown) {
+  const tags = flexibleTermList(value, "tags", 12, 40);
+  const reserved = /\b(coachconnect\s+verified|verified\s+by\s+coachconnect|official\s+coachconnect)\b/i;
+  if (tags.some((tag) => reserved.test(tag))) {
+    throw new Error("That tag contains a reserved trust claim.");
+  }
+  return tags;
+}
+
+function profileImagePath(value: unknown) {
+  const path = optionalText(value, "Profile image", 240);
+  if (path === null) return null;
+  const uuid = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
+  if (!new RegExp(`^${uuid}/${uuid}\\.(?:jpg|jpeg|png|webp)$`, "i").test(path)) {
+    throw new Error("Profile image path is invalid.");
+  }
+  return path;
 }
 
 function optionalInteger(value: unknown, label: string, minimum: number, maximum: number) {
@@ -84,7 +122,9 @@ export function normalizeCoachApplicationDraft(body: UnknownRecord) {
   return {
     headline: optionalText(body.headline, "Headline", 120),
     bio: optionalText(body.bio, "Biography", 2000),
-    sports: stringList(body.sports, "sports", sports, 8),
+    sports: flexibleTermList(body.sports, "sports", 8, 60),
+    tags: tagsList(body.tags),
+    profile_image_path: profileImagePath(body.profileImagePath),
     experience_years: optionalInteger(body.experienceYears, "Experience", 0, 80),
     qualifications: optionalText(body.qualifications, "Qualifications", 1200),
     audiences: stringList(body.audiences, "audiences", audiences, audiences.length),
@@ -108,6 +148,8 @@ export function serializeCoachApplication(row: UnknownRecord | null) {
     headline: row.headline,
     bio: row.bio,
     sports: row.sports,
+    tags: row.tags,
+    profileImagePath: row.profile_image_path,
     experienceYears: row.experience_years,
     qualifications: row.qualifications,
     audiences: row.audiences,
@@ -118,6 +160,8 @@ export function serializeCoachApplication(row: UnknownRecord | null) {
     offersInPerson: row.offers_in_person,
     city: row.city,
     publicArea: row.public_area,
+    publicLongitude: row.public_longitude,
+    publicLatitude: row.public_latitude,
     availability: row.availability,
     faqs: row.faqs,
     submittedAt: row.submitted_at,

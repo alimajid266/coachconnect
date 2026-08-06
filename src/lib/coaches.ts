@@ -1,10 +1,11 @@
-export type Sport = "Badminton" | "Basketball" | "Boxing" | "Cricket" | "Football" | "Ice Hockey" | "Running" | "Strength" | "Swimming" | "Table Tennis" | "Tennis" | "Yoga";
+export type Sport = string;
 
 export type Coach = {
   id: string;
   name: string;
   location: string;
   sports: Sport[];
+  tags: string[];
   specialty: string;
   rating: number | null;
   reviewCount: number;
@@ -32,7 +33,7 @@ export type Coach = {
   faqs: Array<{ question: string; answer: string }>;
 };
 
-type BaseCoach = Omit<Coach, "offersOnline" | "offersInPerson" | "area" | "coordinates" | "bio" | "experience" | "credentials" | "coachingStyle" | "languages" | "lessonCount" | "audiences" | "levels" | "lessonPlan" | "faqs">;
+type BaseCoach = Omit<Coach, "tags" | "offersOnline" | "offersInPerson" | "area" | "coordinates" | "bio" | "experience" | "credentials" | "coachingStyle" | "languages" | "lessonCount" | "audiences" | "levels" | "lessonPlan" | "faqs">;
 
 const baseCoaches: BaseCoach[] = [
   {
@@ -277,21 +278,6 @@ const baseCoaches: BaseCoach[] = [
   },
 ];
 
-const credentialsBySport: Record<Sport, string[]> = {
-  Badminton: ["National badminton coaching workshop", "First-aid trained"],
-  Basketball: ["Basketball skills development certificate", "Youth coaching workshop"],
-  Boxing: ["Amateur boxing coaching certificate", "First-aid trained"],
-  Cricket: ["PCB Level 1", "Safe sport fundamentals"],
-  Football: ["AFC grassroots coaching certificate", "First-aid trained"],
-  "Ice Hockey": ["Ice hockey coaching foundation certificate", "Team development workshop"],
-  Running: ["Endurance coaching foundation", "Running gait assessment workshop"],
-  Strength: ["Certified strength coach", "Movement screening certificate"],
-  Swimming: ["Learn-to-swim instructor certificate", "Pool safety and rescue training"],
-  "Table Tennis": ["Table tennis coaching foundation", "Match analysis workshop"],
-  Tennis: ["ITF coaching foundation", "Player development workshop"],
-  Yoga: ["200-hour yoga teacher training", "Mobility and recovery workshop"],
-};
-
 const styleBySport: Record<Sport, string> = {
   Badminton: "Clear demonstrations, repeatable footwork patterns and rally-based progress.",
   Basketball: "Skill repetitions followed by realistic decisions and short competitive games.",
@@ -330,17 +316,20 @@ export const coaches: Coach[] = baseCoaches.map((coach) => {
   const isAyesha = coach.id === "ayesha-khan";
   return {
     ...coach,
+    tags: ["Beginner friendly", coach.mode === "Online" ? "Remote coaching" : "In-person sessions"],
     badge: "Demo profile",
     image: null,
+    rating: null,
+    reviewCount: 0,
+    lessonCount: 0,
+    credentials: [],
     offersOnline: coach.mode === "Online",
     offersInPerson: coach.mode === "In person",
     ...trainingAreaByCoach[coach.id],
     bio: `${coach.name} helps athletes build useful, repeatable skills without making sessions feel intimidating. ${coach.reason}`,
-    experience: `${isAyesha ? 8 : 4 + (coach.rank % 8)} years of coaching experience`,
-    credentials: credentialsBySport[primarySport],
+    experience: "Illustrative coaching background",
     coachingStyle: styleBySport[primarySport],
     languages: isAyesha ? ["English", "Urdu"] : coach.location === "Lahore" ? ["English", "Urdu", "Punjabi"] : ["English", "Urdu"],
-    lessonCount: 82 + (coach.rank * 14),
     audiences: ["Children", "Teenagers", "Adults", "Seniors"],
     levels: ["Beginner", "Intermediate", "Advanced"],
     lessonPlan: [

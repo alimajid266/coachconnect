@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import SiteLogo from "@/components/site-logo";
@@ -11,6 +12,8 @@ type Draft = {
   headline: string;
   bio: string;
   sports: string[];
+  tags: string[];
+  profileImagePath: string;
   experienceYears: string;
   qualifications: string;
   audiences: string[];
@@ -35,6 +38,8 @@ const emptyDraft: Draft = {
   headline: "",
   bio: "",
   sports: [],
+  tags: [],
+  profileImagePath: "",
   experienceYears: "",
   qualifications: "",
   audiences: [],
@@ -64,6 +69,8 @@ function asDraft(application: Application | null): Draft {
     headline: application.headline ?? "",
     bio: application.bio ?? "",
     sports: application.sports ?? [],
+    tags: application.tags ?? [],
+    profileImagePath: application.profileImagePath ?? "",
     experienceYears: application.experienceYears == null ? "" : String(application.experienceYears),
     qualifications: application.qualifications ?? "",
     audiences: application.audiences ?? [],
@@ -114,6 +121,9 @@ export default function CoachApplicationPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [customSport, setCustomSport] = useState("");
+  const [customTag, setCustomTag] = useState("");
+  const [imagePreview, setImagePreview] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -149,6 +159,46 @@ export default function CoachApplicationPage() {
   function toggleList(key: "sports" | "audiences" | "levels", value: string) {
     const values = draft[key];
     update(key, values.includes(value) ? values.filter((item) => item !== value) : [...values, value]);
+  }
+
+  function addCustomSport() {
+    const value = customSport.trim().replace(/\s+/g, " ");
+    if (!value || draft.sports.length >= 8) return;
+    if (!draft.sports.some((sport) => sport.toLocaleLowerCase("en") === value.toLocaleLowerCase("en"))) {
+      update("sports", [...draft.sports, value]);
+    }
+    setCustomSport("");
+  }
+
+  function addCustomTag() {
+    const value = customTag.trim().replace(/\s+/g, " ");
+    if (!value || draft.tags.length >= 12) return;
+    if (!draft.tags.some((tag) => tag.toLocaleLowerCase("en") === value.toLocaleLowerCase("en"))) {
+      update("tags", [...draft.tags, value]);
+    }
+    setCustomTag("");
+  }
+
+  async function uploadProfileImage(file: File) {
+    setBusy(true);
+    setMessage("");
+    setError("");
+    try {
+      const response = await fetch("/api/coach-application/image", {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "The profile image could not be uploaded.");
+      update("profileImagePath", result.path);
+      if (typeof URL.createObjectURL === "function") setImagePreview(URL.createObjectURL(file));
+      setMessage("Profile image uploaded. Save the draft to keep it with your profile.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The profile image could not be uploaded.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   function updateFaq(index: number, key: keyof Faq, value: string) {
@@ -252,10 +302,29 @@ export default function CoachApplicationPage() {
         </fieldset>
 
         <fieldset disabled={locked || busy}>
+          <legend>Profile image</legend>
+          <div className="application-image-upload">
+            {imagePreview && <Image className="application-image-preview" src={imagePreview} width={160} height={160} unoptimized alt="New coach profile preview" />}
+            <label>Profile image<input aria-label="Profile image" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProfileImage(file); }} /><span className="application-field-hint">JPEG, PNG or WebP, up to 5 MB. The CoachConnect team reviews profile images before publication.</span></label>
+            {draft.profileImagePath && !imagePreview && <p className="application-field-hint">A profile image is saved with this application.</p>}
+          </div>
+        </fieldset>
+
+        <fieldset disabled={locked || busy}>
           <legend>Sports and experience</legend>
           <div className="application-options" role="group" aria-label="Sports you coach">
             {coachApplicationOptions.sports.map((sport) => <label key={sport}><input type="checkbox" checked={draft.sports.includes(sport)} onChange={() => toggleList("sports", sport)} />{sport}</label>)}
           </div>
+          <div className="application-term-editor">
+            <label>Add another sport<input aria-label="Add another sport" maxLength={60} value={customSport} onChange={(event) => setCustomSport(event.target.value)} placeholder="For example, squash or archery" /></label>
+            <button className="button button-secondary" type="button" onClick={addCustomSport} disabled={!customSport.trim() || draft.sports.length >= 8}>Add sport</button>
+          </div>
+          {draft.sports.filter((sport) => !coachApplicationOptions.sports.includes(sport as never)).length > 0 && <div className="application-tags" aria-label="Custom sports">{draft.sports.filter((sport) => !coachApplicationOptions.sports.includes(sport as never)).map((sport) => <button type="button" key={sport} onClick={() => update("sports", draft.sports.filter((item) => item !== sport))}>{sport} ×</button>)}</div>}
+          <div className="application-term-editor">
+            <label>Profile tags<input aria-label="Profile tags" maxLength={40} value={customTag} onChange={(event) => setCustomTag(event.target.value)} placeholder="For example, beginners or match preparation" /><span className="application-field-hint">Add up to 12 specialties, goals or coaching-style tags. Tags are reviewed before publication.</span></label>
+            <button className="button button-secondary" type="button" onClick={addCustomTag} disabled={!customTag.trim() || draft.tags.length >= 12}>Add tag</button>
+          </div>
+          {draft.tags.length > 0 && <div className="application-tags" aria-label="Profile tags selected">{draft.tags.map((tag) => <button type="button" key={tag} aria-label={`Remove ${tag} tag`} onClick={() => update("tags", draft.tags.filter((item) => item !== tag))}>{tag} ×</button>)}</div>}
           <div className="application-grid application-experience-grid">
             <label className="application-number-field">Years of coaching experience<input className="application-number-input" inputMode="numeric" type="number" min="0" max="80" value={draft.experienceYears} onChange={(event) => update("experienceYears", event.target.value)} /><span className="application-field-hint">Whole number from 0 to 80</span></label>
             <label>Qualifications<textarea aria-label="Qualifications" rows={3} minLength={10} maxLength={1200} value={draft.qualifications} onChange={(event) => update("qualifications", event.target.value)} placeholder="Certifications, playing background, safeguarding training or relevant education" /><span className="application-field-hint">At least 10 characters</span></label>

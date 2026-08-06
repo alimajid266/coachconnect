@@ -3,9 +3,9 @@ import Link from "next/link";
 import SiteHeader from "@/components/site-header";
 
 const featuredSports = [
-  { number: "01", name: "Cricket", detail: "Batting, bowling and fielding" },
-  { number: "02", name: "Football", detail: "Control, passing and movement" },
-  { number: "03", name: "Tennis", detail: "Technique and match confidence" },
+  { number: "01", name: "Cricket", detail: "Batting, bowling and fielding", image: "/images/coach-zainab.jpg", imageAlt: "Cricket stadium" },
+  { number: "02", name: "Football", detail: "Control, passing and movement", image: "/images/coach-danish.jpg", imageAlt: "Football training on the pitch" },
+  { number: "03", name: "Tennis", detail: "Technique and match confidence", image: "/images/coach-omar.jpg", imageAlt: "Tennis serve practice" },
   { number: "04", name: "Strength", detail: "Power, mobility and conditioning" },
   { number: "05", name: "Swimming", detail: "Confidence, strokes and endurance" },
   { number: "06", name: "Badminton", detail: "Footwork, serves and rallies" },
@@ -50,8 +50,9 @@ export default function HomePage() {
             <div className="hero-stage">
               <div className="hero-orbit" aria-hidden="true" />
               <div className="hero-photo">
-                <Image src="/images/hero-training.jpg" alt="Athlete training with a coach" fill priority sizes="(max-width: 980px) 90vw, 42vw" />
+                <Image src="/images/hero-training.jpg" alt="Athlete training in a gym" fill priority sizes="(max-width: 980px) 90vw, 42vw" />
               </div>
+              <div className="hero-sport-inset" aria-hidden="true"><Image src="/images/coach-ayesha.jpg" alt="" fill sizes="180px" /></div>
               <div className="hero-chip hero-chip-top"><span aria-hidden="true">01</span><strong>One-to-one coaching</strong><small>Built around you</small></div>
               <div className="hero-chip hero-chip-bottom"><span className="pulse-dot" /><strong>More ways to train</strong><small>Multiple sports per coach</small></div>
               <div className="hero-wordmark" aria-hidden="true">MOVE</div>
@@ -75,7 +76,8 @@ export default function HomePage() {
             </div>
             <div className="sport-grid" aria-label="Featured sport categories">
               {featuredSports.map((sport) => (
-                <Link className="sport-card" href={`/coaches?query=${encodeURIComponent(sport.name)}`} key={sport.name}>
+                <Link className={`sport-card${sport.image ? " sport-card-photo" : ""}`} href={`/coaches?query=${encodeURIComponent(sport.name)}`} key={sport.name}>
+                  {sport.image && <Image src={sport.image} alt={sport.imageAlt ?? ""} fill sizes="(max-width: 640px) 100vw, (max-width: 980px) 50vw, 25vw" />}
                   <span>{sport.number}</span><strong>{sport.name}</strong><small>{sport.detail}</small>
                 </Link>
               ))}

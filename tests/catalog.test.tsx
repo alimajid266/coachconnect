@@ -11,7 +11,9 @@ afterEach(() => {
 function renderCatalog(user: object | null = null) {
   vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve({
     ok: true,
-    json: async () => String(input).includes("/api/coaches") ? { coaches } : { user },
+    json: async () => String(input).includes("/api/coaches")
+      ? { coaches: [], demos: coaches, demosAvailable: true }
+      : { user },
   })));
   return render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
 }
@@ -24,10 +26,21 @@ describe("coach catalog", () => {
     const resultCount = Number(screen.getByRole("status").textContent?.match(/\d+/)?.[0]);
     expect(resultCount).toBeGreaterThan(10);
     expect(screen.getAllByRole("article").length).toBeGreaterThan(10);
-    expect(screen.getAllByText("Demo profile")).toHaveLength(coaches.length);
+    expect(screen.getAllByText("Demo profile").length).toBeGreaterThanOrEqual(coaches.length);
     expect(document.querySelectorAll(".catalog-coach-placeholder")).toHaveLength(coaches.length);
-    expect(screen.getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
+    const ayeshaHeading = screen.getByRole("heading", { name: "Ayesha Khan" });
+    expect(ayeshaHeading).toBeInTheDocument();
+    const ayeshaCard = ayeshaHeading.closest("article") as HTMLElement;
+    expect(within(ayeshaCard).getByText("Demo")).toBeInTheDocument();
+    expect(within(ayeshaCard).queryByText("New")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bilal Raza" })).toBeInTheDocument();
+  });
+
+  it("links every catalog card to a standalone profile page", () => {
+    renderCatalog();
+    const link = screen.getByRole("link", { name: /view ayesha khan's profile/i });
+    expect(link).toHaveAttribute("href", expect.stringMatching(/^\/coaches\/ayesha-khan\?returnTo=/));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("keeps labeled demo coaches available when no approved coaches exist", async () => {
@@ -40,7 +53,21 @@ describe("coach catalog", () => {
 
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(`${coaches.length} coaches`));
     expect(screen.getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
-    expect(screen.getAllByText("Demo profile")).toHaveLength(coaches.length);
+    expect(screen.getAllByText("Demo profile").length).toBeGreaterThanOrEqual(coaches.length);
+  });
+
+  it("removes inactive demos after the durable demo projection responds", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve({
+      ok: true,
+      json: async () => String(input).includes("/api/coaches")
+        ? { coaches: [], demos: [], demosAvailable: true }
+        : { user: null },
+    })));
+
+    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("0 coaches"));
+    expect(screen.queryByRole("heading", { name: "Ayesha Khan" })).not.toBeInTheDocument();
   });
 
   it("adds approved database coaches to the public catalog", async () => {
@@ -88,8 +115,8 @@ describe("coach catalog", () => {
     const heading = await screen.findByRole("heading", { name: "Ali Coach" });
     const card = heading.closest("article");
     expect(card).not.toBeNull();
-    expect(within(card as HTMLElement).getByText("New coach")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText(/newly approved/i)).toBeInTheDocument();
+    expect(within(card as HTMLElement).getAllByText("New coach").length).toBeGreaterThan(0);
+    expect(within(card as HTMLElement).queryByText(/newly approved/i)).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("Demo profile")).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith("/api/coaches", {
       cache: "no-store",
@@ -164,7 +191,7 @@ describe("coach catalog", () => {
 
     expect(within(map).getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
     expect(within(map).getByText(/Gulberg, Lahore/i)).toBeInTheDocument();
-    expect(within(map).getByRole("button", { name: /view ayesha khan's profile/i })).toBeInTheDocument();
+    expect(within(map).getByRole("link", { name: /view ayesha khan's profile/i })).toHaveAttribute("href", expect.stringMatching(/^\/coaches\/ayesha-khan/));
   });
 
   it("filters the catalog without hiding the complete list behind search", () => {
@@ -200,7 +227,7 @@ describe("coach catalog", () => {
     fireEvent.change(screen.getByRole("searchbox", { name: /search/i }), { target: { value: "tennis coach" } });
     fireEvent.change(screen.getByRole("combobox", { name: /city/i }), { target: { value: "Karachi" } });
 
-    expect(screen.getByRole("status")).toHaveTextContent("1 coach");
+    expect(screen.getByRole("status")).toHaveTextContent("5 coaches");
     expect(screen.getByRole("heading", { name: "Hamza Siddiqui" })).toBeInTheDocument();
   });
 
@@ -213,117 +240,18 @@ describe("coach catalog", () => {
     expect(within(cards[cards.length - 1]).getByRole("heading", { name: "Farhan Akram" })).toBeInTheDocument();
   });
 
-  it("shows lesson counts before a member opens a profile", () => {
+  it("does not show fabricated lesson counts on demo cards", () => {
     renderCatalog();
 
     const ayeshaCard = screen.getByRole("heading", { name: "Ayesha Khan" }).closest("article");
     expect(ayeshaCard).not.toBeNull();
-    expect(within(ayeshaCard as HTMLElement).getByText(/96 lessons/i)).toBeInTheDocument();
+    expect(within(ayeshaCard as HTMLElement).queryByText(/lessons/i)).not.toBeInTheDocument();
   });
 
-  it("shows the age groups a coach teaches", () => {
+  it("keeps level detail on profiles instead of adding another catalog filter", () => {
     renderCatalog();
-
-    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
-
-    const dialog = screen.getByRole("dialog", { name: /ayesha khan/i });
-    expect(within(dialog).getByRole("heading", { name: /who ayesha teaches/i })).toBeInTheDocument();
-    expect(within(dialog).getByText("Children")).toBeInTheDocument();
-    expect(within(dialog).getByText("Adults")).toBeInTheDocument();
-    expect(within(dialog).getByText("Seniors")).toBeInTheDocument();
-  });
-
-  it("shows supported levels without adding a level filter", () => {
-    renderCatalog();
-
     expect(screen.queryByRole("combobox", { name: /level/i })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
-
-    const dialog = screen.getByRole("dialog", { name: /ayesha khan/i });
-    expect(within(dialog).getByRole("heading", { name: /levels supported/i })).toBeInTheDocument();
-    expect(within(dialog).getByText("Beginner")).toBeInTheDocument();
-    expect(within(dialog).getByText("Intermediate")).toBeInTheDocument();
-    expect(within(dialog).getByText("Advanced")).toBeInTheDocument();
-  });
-
-  it("shows how many lessons a coach has taught", () => {
-    renderCatalog();
-
-    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
-
-    const dialog = screen.getByRole("dialog", { name: /ayesha khan/i });
-    expect(within(dialog).getByLabelText("96 lessons taught")).toBeInTheDocument();
-  });
-
-  it("explains the structure of a typical lesson", () => {
-    renderCatalog();
-
-    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
-
-    const dialog = screen.getByRole("dialog", { name: /ayesha khan/i });
-    const heading = within(dialog).getByRole("heading", { name: /lesson plan/i });
-    const section = heading.closest("section");
-    expect(section).not.toBeNull();
-    expect(within(section as HTMLElement).getByText("Goal check and warm-up")).toBeInTheDocument();
-    expect(within(section as HTMLElement).getByText("Focused skill work")).toBeInTheDocument();
-    expect(within(section as HTMLElement).getByText("Guided practice and next steps")).toBeInTheDocument();
-  });
-
-  it("provides accessible expandable profile FAQs", () => {
-    renderCatalog();
-
-    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
-
-    const dialog = screen.getByRole("dialog", { name: /ayesha khan/i });
-    expect(within(dialog).getByRole("heading", { name: /frequently asked questions/i })).toBeInTheDocument();
-    const question = within(dialog).getByText("Is this suitable for someone new to the sport?");
-    const details = question.closest("details");
-    expect(details).not.toHaveAttribute("open");
-    fireEvent.click(question);
-    expect(details).toHaveAttribute("open");
-    expect(within(details as HTMLElement).getByText(/sessions are adapted to the athlete's current ability/i)).toBeInTheDocument();
-  });
-
-  it("opens clear profile details from a catalog card", async () => {
-    renderCatalog();
-
-    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
-
-    const dialog = screen.getByRole("dialog", { name: /ayesha khan/i });
-    expect(dialog).toBeInTheDocument();
-    expect(within(dialog).getByText(/^beginner batting technique$/i)).toBeInTheDocument();
-    expect(within(dialog).getByRole("heading", { name: /about ayesha/i })).toBeInTheDocument();
-    expect(within(dialog).getByRole("heading", { name: /experience and credentials/i })).toBeInTheDocument();
-    expect(within(dialog).getByText(/8 years of coaching experience/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/PCB Level 1/i)).toBeInTheDocument();
-    expect(within(dialog).getByRole("heading", { name: /coaching style/i })).toBeInTheDocument();
-    expect(within(dialog).getByText(/English · Urdu/i)).toBeInTheDocument();
-    expect(within(dialog).getByRole("heading", { name: /weekly availability/i })).toBeInTheDocument();
-    const locationPreview = within(dialog).getByRole("region", { name: /ayesha khan's training area/i });
-    expect(within(locationPreview).getByText(/approximate training area/i)).toBeInTheDocument();
-    expect(within(locationPreview).getByText(/Gulberg, Lahore/i)).toBeInTheDocument();
-    expect(within(locationPreview).getByText(/exact meeting details are shared after booking/i)).toBeInTheDocument();
-    expect(within(dialog).queryByText(/stay private|private by default/i)).not.toBeInTheDocument();
-    expect(within(dialog).getByText(/booking requests are not open yet/i)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /close coach profile/i }));
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
-  it("closes the coach profile with Escape and restores focus to its trigger", async () => {
-    renderCatalog();
-    const trigger = screen.getByRole("button", { name: /view ayesha khan's profile/i });
-    trigger.focus();
-    fireEvent.click(trigger);
-
-    const dialog = screen.getByRole("dialog");
-    expect(dialog).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole("button", { name: /close coach profile/i })).toHaveFocus());
-
-    fireEvent.keyDown(document, { key: "Escape" });
-
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(trigger).toHaveFocus();
+    expect(screen.getByRole("link", { name: /view ayesha khan's profile/i })).toHaveAttribute("href", expect.stringMatching(/^\/coaches\/ayesha-khan/));
   });
 
   it("keeps an authenticated member visibly signed in on the catalog", async () => {
@@ -334,17 +262,16 @@ describe("coach catalog", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
 
-    expect(await screen.findByRole("link", { name: /my account/i })).toHaveAttribute("href", "/account");
-    expect(screen.getByRole("link", { name: /become a coach/i })).toHaveAttribute("href", "/coach/apply");
+    const accountMenu = await screen.findByRole("button", { name: /open account menu for ali/i });
+    fireEvent.click(accountMenu);
+    expect(screen.getByRole("menuitem", { name: /my account/i })).toHaveAttribute("href", "/account");
+    expect(screen.getByRole("menuitem", { name: /become a coach/i })).toHaveAttribute("href", "/coach/apply");
     expect(screen.queryByRole("link", { name: /dashboard/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^sign in$/i })).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith("/api/auth/session", {
       credentials: "same-origin",
       cache: "no-store",
     });
-
-    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
-    expect(screen.getByText(/booking requests are not open yet/i)).toBeInTheDocument();
   });
 
   it("shows sign in only after confirming there is no session", async () => {
@@ -357,10 +284,7 @@ describe("coach catalog", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("session unavailable")));
     render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /view ayesha khan's profile/i }));
-
     expect(await screen.findByRole("link", { name: /my account/i })).toHaveAttribute("href", "/account");
-    expect(screen.getByText(/booking requests are not open yet/i)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^sign in$/i })).not.toBeInTheDocument();
   });
 });

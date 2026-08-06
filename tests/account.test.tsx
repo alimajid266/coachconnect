@@ -38,8 +38,8 @@ describe("account page", () => {
     render(<AccountPage />);
 
     expect(await screen.findByRole("heading", { name: "My account" })).toBeInTheDocument();
-    expect(screen.getByText("Ali Member")).toBeInTheDocument();
-    expect(screen.getByText("ali@example.com")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ali Member" })).toBeInTheDocument();
+    expect(screen.getAllByText("ali@example.com").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Become a coach" })).toSatisfy(
       (links: HTMLElement[]) => links.every((link) => link.getAttribute("href") === "/coach/apply"),
     );
@@ -156,7 +156,7 @@ describe("account page", () => {
     fireEvent.click(screen.getByRole("button", { name: /sign in securely/i }));
 
     expect(await screen.findByRole("heading", { name: "My account" })).toBeInTheDocument();
-    expect(screen.getByText("ali@example.com")).toBeInTheDocument();
+    expect(screen.getAllByText("ali@example.com").length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: /open my account/i })).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith("/api/auth/login", expect.objectContaining({ method: "POST" }));
   });

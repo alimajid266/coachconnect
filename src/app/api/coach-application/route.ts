@@ -70,6 +70,9 @@ export async function PUT(request: NextRequest) {
     if (!authData.user) {
       return applyCookies(NextResponse.json({ error: "Sign in to save a coach application." }, { status: 401 }));
     }
+    if (draft.profile_image_path && !draft.profile_image_path.startsWith(`${authData.user.id}/`)) {
+      return applyCookies(NextResponse.json({ error: "The profile image must belong to your account." }, { status: 400 }));
+    }
 
     const { data, error } = await supabase
       .from("coach_applications")

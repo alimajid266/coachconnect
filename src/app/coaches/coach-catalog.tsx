@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
-import CoachLocationPreview from "@/app/coaches/coach-location-preview";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import CoachMap from "@/app/coaches/coach-map";
 import SiteHeader from "@/components/site-header";
-import { allSports, coaches as demoCoaches, formatCoachPrice, type Coach } from "@/lib/coaches";
+import { interpretCoachQuery, recommendCoaches, type DiscoveryFilters } from "@/lib/coach-discovery";
+import { coaches as demoCoaches, formatCoachPrice, type Coach } from "@/lib/coaches";
 
 type Props = {
   initialQuery: string;
@@ -22,20 +23,21 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
   const [mode, setMode] = useState("any");
   const [sort, setSort] = useState<SortOption>("recommended");
   const [showMap, setShowMap] = useState(false);
-  const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
-  const [approvedCoaches, setApprovedCoaches] = useState<Coach[]>(initialCoaches);
+  const [dismissedInterpretations, setDismissedInterpretations] = useState<string[]>([]);
+  const [approvedCoaches, setApprovedCoaches] = useState<Coach[]>(() => initialCoaches.filter((coach) => !coach.isDemo));
+  const [databaseDemoCoaches, setDatabaseDemoCoaches] = useState<Coach[]>(() => initialCoaches.filter((coach) => coach.isDemo));
+  const [demoCatalogStatus, setDemoCatalogStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [catalogStatus, setCatalogStatus] = useState<"loading" | "ready" | "unavailable">("loading");
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  function openCoach(coach: Coach) {
-    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setSelectedCoach(coach);
-  }
-
-  function closeCoach() {
-    setSelectedCoach(null);
+  function profileHref(coach: Coach) {
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("query", query.trim());
+    if (city !== "any") params.set("city", city);
+    if (sport !== "any") params.set("sport", sport);
+    if (mode !== "any") params.set("mode", mode);
+    if (sort !== "recommended") params.set("sort", sort);
+    const returnTo = params.size > 0 ? `/coaches?${params.toString()}` : "/coaches";
+    return `/coaches/${encodeURIComponent(coach.id)}?returnTo=${encodeURIComponent(returnTo)}`;
   }
 
   useEffect(() => {
@@ -43,100 +45,98 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
     fetch("/api/coaches", { cache: "no-store", credentials: "same-origin" })
       .then(async (response) => {
         if (!response.ok) throw new Error("catalog unavailable");
-        const body = await response.json() as { coaches?: unknown };
+        const body = await response.json() as { coaches?: unknown; demos?: unknown; demosAvailable?: unknown };
         if (!Array.isArray(body.coaches)) throw new Error("invalid catalog response");
         if (!cancelled) {
           setApprovedCoaches(body.coaches as Coach[]);
+          const demosAvailable = body.demosAvailable === true && Array.isArray(body.demos);
+          setDatabaseDemoCoaches(demosAvailable ? body.demos as Coach[] : []);
+          setDemoCatalogStatus(demosAvailable ? "ready" : "unavailable");
           setCatalogStatus("ready");
         }
       })
       .catch(() => {
-        if (!cancelled) setCatalogStatus("unavailable");
+        if (!cancelled) {
+          setDemoCatalogStatus("unavailable");
+          setCatalogStatus("unavailable");
+        }
       });
     return () => { cancelled = true; };
   }, []);
-
-  useEffect(() => {
-    if (!selectedCoach) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeButtonRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setSelectedCoach(null);
-        return;
-      }
-
-      if (event.key !== "Tab" || !dialogRef.current) return;
-      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
-        "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])",
-      ));
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = previousOverflow;
-      previousFocusRef.current?.focus();
-    };
-  }, [selectedCoach]);
-
   const catalogCoaches = useMemo(() => {
-    const byId = new Map<string, Coach>(demoCoaches.map((coach) => [coach.id, coach]));
-    for (const coach of approvedCoaches) byId.set(coach.id, coach);
+    const byId = new Map<string, Coach>();
+    if (demoCatalogStatus !== "ready") {
+      for (const coach of demoCoaches) byId.set(coach.id, { ...coach, isDemo: true });
+    }
+    for (const coach of databaseDemoCoaches) byId.set(coach.id, { ...coach, isDemo: true, badge: "Demo profile" });
+    for (const coach of approvedCoaches) byId.set(coach.id, { ...coach, isDemo: false });
     return Array.from(byId.values());
-  }, [approvedCoaches]);
+  }, [approvedCoaches, databaseDemoCoaches, demoCatalogStatus]);
 
   const availableCities = useMemo(() => Array.from(new Set(
     catalogCoaches.filter((coach) => coach.location !== "Online").map((coach) => coach.location),
   )).sort(), [catalogCoaches]);
+  const availableSports = useMemo(() => Array.from(new Set(catalogCoaches.flatMap((coach) => coach.sports))).sort(), [catalogCoaches]);
 
   const activeCity = catalogStatus === "ready" && city !== "any" && !availableCities.includes(city)
     ? "any"
     : city;
 
-  const visibleCoaches = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    const queryTerms = normalizedQuery
-      .split(/\s+/)
-      .filter((term) => term && !["a", "coach", "coaches", "coaching", "for", "the"].includes(term));
-    const matches = catalogCoaches.filter((coach) => {
-      const searchable = [coach.name, ...coach.sports, coach.specialty, coach.location, coach.mode]
-        .join(" ")
-        .toLowerCase();
-      return (queryTerms.length === 0 || queryTerms.every((term) => searchable.includes(term)))
-        && (activeCity === "any" || coach.location === activeCity)
-        && (sport === "any" || coach.sports.includes(sport as (typeof coach.sports)[number]))
-        && (mode === "any"
-          || (mode === "Online" && coach.offersOnline)
-          || (mode === "In person" && coach.offersInPerson));
-    });
+  const interpretation = useMemo(() => interpretCoachQuery(query), [query]);
+  const effectiveFilters: DiscoveryFilters = useMemo(() => ({
+    sport: dismissedInterpretations.includes("sport") ? undefined : interpretation.filters.sport,
+    city: dismissedInterpretations.includes("city") ? undefined : interpretation.filters.city,
+    level: dismissedInterpretations.includes("level") ? undefined : interpretation.filters.level,
+    format: dismissedInterpretations.includes("format") ? undefined : interpretation.filters.format,
+    affordability: dismissedInterpretations.includes("affordability") ? undefined : interpretation.filters.affordability,
+    maxPrice: dismissedInterpretations.includes("maxPrice") ? undefined : interpretation.filters.maxPrice,
+    day: dismissedInterpretations.includes("day") ? undefined : interpretation.filters.day,
+    tags: interpretation.filters.tags.filter((tag) => !dismissedInterpretations.includes(`tag:${tag}`)),
+  }), [dismissedInterpretations, interpretation]);
 
+  const recommendations = useMemo(() => recommendCoaches(catalogCoaches, {
+    ...interpretation,
+    filters: effectiveFilters,
+  }), [catalogCoaches, effectiveFilters, interpretation]);
+
+  const visibleRecommendations = useMemo(() => {
+    const matches = recommendations.filter(({ coach }) => (
+      (activeCity === "any" || coach.location === activeCity)
+      && (sport === "any" || coach.sports.includes(sport))
+      && (mode === "any"
+        || (mode === "Online" && coach.offersOnline)
+        || (mode === "In person" && coach.offersInPerson))
+    ));
+    if (sort === "recommended") return matches;
     return [...matches].sort((first, second) => {
       let comparison = 0;
-      if (sort === "rating") comparison = (second.rating ?? -1) - (first.rating ?? -1) || second.reviewCount - first.reviewCount;
-      else if (sort === "price-low") comparison = first.price - second.price;
-      else if (sort === "price-high") comparison = second.price - first.price;
-      else comparison = first.rank - second.rank;
-      return comparison || String(first.id).localeCompare(String(second.id));
+      if (sort === "rating") comparison = (second.coach.rating ?? -1) - (first.coach.rating ?? -1) || second.coach.reviewCount - first.coach.reviewCount;
+      else if (sort === "price-low") comparison = first.coach.price - second.coach.price;
+      else comparison = second.coach.price - first.coach.price;
+      return comparison || String(first.coach.id).localeCompare(String(second.coach.id));
     });
-  }, [activeCity, catalogCoaches, mode, query, sort, sport]);
+  }, [activeCity, mode, recommendations, sort, sport]);
+
+  const visibleCoaches = useMemo(() => visibleRecommendations.map((entry) => entry.coach), [visibleRecommendations]);
+  const recommendationById = useMemo(() => new Map(visibleRecommendations.map((entry) => [entry.coach.id, entry])), [visibleRecommendations]);
+  const correctionLabel = (value: string, fallback: string) => {
+    const correction = interpretation.corrections.find((entry) => entry.target === value);
+    return correction ? `${correction.source} → ${value}` : fallback;
+  };
+  const interpretationChips = [
+    effectiveFilters.sport && { key: "sport", label: correctionLabel(effectiveFilters.sport, `Sport: ${effectiveFilters.sport}`) },
+    effectiveFilters.city && { key: "city", label: correctionLabel(effectiveFilters.city, `City: ${effectiveFilters.city}`) },
+    effectiveFilters.level && { key: "level", label: correctionLabel(effectiveFilters.level, `Level: ${effectiveFilters.level}`) },
+    effectiveFilters.format && { key: "format", label: correctionLabel(effectiveFilters.format, `Format: ${effectiveFilters.format}`) },
+    effectiveFilters.affordability && { key: "affordability", label: "Affordable first" },
+    effectiveFilters.maxPrice !== undefined && { key: "maxPrice", label: `Up to Rs ${effectiveFilters.maxPrice.toLocaleString("en-PK")}` },
+    effectiveFilters.day && { key: "day", label: `Day: ${effectiveFilters.day}` },
+    ...effectiveFilters.tags.map((tag) => ({ key: `tag:${tag}`, label: `Focus: ${tag}` })),
+  ].filter((chip): chip is { key: string; label: string } => Boolean(chip));
 
   const clearFilters = () => {
     setQuery("");
+    setDismissedInterpretations([]);
     setCity("any");
     setSport("any");
     setMode("any");
@@ -164,7 +164,10 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
               type="search"
               placeholder="Name, sport or specialty"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setDismissedInterpretations([]);
+              }}
             />
           </label>
           <label>
@@ -178,7 +181,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
             <span>Sport</span>
             <select aria-label="Sport" value={sport} onChange={(event) => setSport(event.target.value)}>
               <option value="any">Any sport</option>
-              {allSports.map((entry) => <option value={entry} key={entry}>{entry}</option>)}
+              {availableSports.map((entry) => <option value={entry} key={entry}>{entry}</option>)}
             </select>
           </label>
           <label>
@@ -201,6 +204,29 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
           <button type="button" onClick={clearFilters}>Clear filters</button>
         </section>
 
+        {(interpretationChips.length > 0 || interpretation.conflicts.length > 0) && (
+          <section className="catalog-interpretation" aria-label="Search interpretation">
+            <div>
+              <strong>We interpreted your search as</strong>
+              {interpretationChips.length > 0 && (
+                <div className="catalog-interpretation-chips">
+                  {interpretationChips.map((chip) => (
+                    <button
+                      key={chip.key}
+                      type="button"
+                      aria-label={`Remove ${chip.label}`}
+                      onClick={() => setDismissedInterpretations((current) => [...current, chip.key])}
+                    >
+                      {chip.label} <span aria-hidden="true">×</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {interpretation.conflicts.map((conflict) => <p role="alert" key={conflict}>{conflict}</p>)}
+          </section>
+        )}
+
         <div className="catalog-results-heading">
           <p role="status">{catalogStatus === "loading" && catalogCoaches.length === 0
             ? "Loading coaches"
@@ -218,10 +244,12 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
         )}
 
         <div className={`catalog-content${showMap ? " catalog-content-with-map" : ""}`}>
-          {showMap && <CoachMap city={city} coaches={visibleCoaches} onViewProfile={openCoach} />}
+          {showMap && <CoachMap city={city} coaches={visibleCoaches} profileHref={profileHref} />}
           {visibleCoaches.length > 0 ? (
           <section className="catalog-grid" aria-label="Coach results">
-            {visibleCoaches.map((coach) => (
+            {visibleCoaches.map((coach) => {
+              const recommendation = recommendationById.get(coach.id);
+              return (
               <article className="catalog-card" key={coach.id}>
                 <div className="catalog-card-image">
                   {coach.image ? (
@@ -241,27 +269,39 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
                 <div className="catalog-card-body">
                   <div className="catalog-card-title">
                     <h2>{coach.name}</h2>
-                    {coach.rating === null
-                      ? <span>New</span>
-                      : <span aria-label={`${coach.rating} out of 5 stars`}>★ {coach.rating}</span>}
+                    {coach.isDemo
+                      ? <span>Demo</span>
+                      : coach.rating === null
+                        ? <span>New</span>
+                        : <span aria-label={`${coach.rating} out of 5 stars`}>★ {coach.rating}</span>}
                   </div>
+                  {recommendation?.label && (
+                    <div className="catalog-match-summary">
+                      <b>{recommendation.label}</b>
+                      {recommendation.reasons.length > 0 && <span>{recommendation.reasons.slice(0, 3).join(" · ")}</span>}
+                    </div>
+                  )}
                   <p>{coach.area !== "Online" && coach.area !== coach.location ? `${coach.area}, ` : ""}{coach.location} · {coach.sports.join(" · ")} · {coach.mode}</p>
                   <strong>{coach.specialty}</strong>
                   <div className="catalog-card-footer">
                     <span><b>{formatCoachPrice(coach.price)}</b> per session</span>
-                    <span>{coach.rating === null ? "Newly approved" : `${coach.reviewCount} reviews · ${coach.lessonCount} lessons`}</span>
+                    <span>{coach.isDemo
+                      ? "Demo profile"
+                      : coach.lessonCount > 0
+                        ? `${coach.lessonCount} lessons`
+                        : coach.rating === null ? "New coach" : `${coach.reviewCount} reviews`}</span>
                   </div>
-                  <button
+                  <Link
                     className="catalog-profile-button"
-                    type="button"
                     aria-label={`View ${coach.name}'s profile`}
-                    onClick={() => openCoach(coach)}
+                    href={profileHref(coach)}
                   >
                     View profile
-                  </button>
+                  </Link>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </section>
           ) : catalogStatus === "loading" ? (
           <section className="catalog-empty">
@@ -282,95 +322,6 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
           )}
         </div>
       </main>
-
-      {selectedCoach && (
-        <div className="catalog-profile-backdrop" onMouseDown={(event) => {
-          if (event.target === event.currentTarget) closeCoach();
-        }}>
-          <section ref={dialogRef} className="catalog-profile" role="dialog" aria-modal="true" aria-labelledby="catalog-profile-name">
-            <button ref={closeButtonRef} className="catalog-profile-close" type="button" aria-label="Close coach profile" onClick={closeCoach}>×</button>
-            <div className="catalog-profile-image">
-              {selectedCoach.image ? (
-                <Image src={selectedCoach.image} alt="" fill sizes="(max-width: 680px) 100vw, 520px" />
-              ) : (
-                <div className="catalog-coach-placeholder" aria-hidden="true">
-                  {selectedCoach.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
-                </div>
-              )}
-            </div>
-            <div className="catalog-profile-body">
-              {selectedCoach.isDemo && <span className="catalog-demo-label">Demo profile</span>}
-              <p>{selectedCoach.area !== "Online" && selectedCoach.area !== selectedCoach.location ? `${selectedCoach.area}, ` : ""}{selectedCoach.location} · {selectedCoach.sports.join(" · ")} · {selectedCoach.mode}</p>
-              <h2 id="catalog-profile-name">{selectedCoach.name}</h2>
-              <strong>{selectedCoach.specialty}</strong>
-              <div className="catalog-profile-sports" aria-label="Sports coached">
-                {selectedCoach.sports.map((entry) => <span key={entry}>{entry}</span>)}
-              </div>
-              <div className="catalog-profile-summary">
-                {selectedCoach.rating === null
-                  ? <span><b>New</b>No reviews yet</span>
-                  : <span><b>★ {selectedCoach.rating}</b>{selectedCoach.reviewCount} reviews</span>}
-                {selectedCoach.lessonCount > 0 && <span aria-label={`${selectedCoach.lessonCount} lessons taught`}><b>{selectedCoach.lessonCount}</b>lessons taught</span>}
-                <span><b>{formatCoachPrice(selectedCoach.price)}</b>60-minute session</span>
-              </div>
-              <section className="catalog-profile-about">
-                <h3>About {selectedCoach.name.split(" ")[0]}</h3>
-                <p>{selectedCoach.bio}</p>
-              </section>
-              <div className="catalog-profile-fit-grid">
-                <section className="catalog-profile-fit">
-                  <h3>Who {selectedCoach.name.split(" ")[0]} teaches</h3>
-                  <div>{selectedCoach.audiences.map((audience) => <span key={audience}>{audience}</span>)}</div>
-                </section>
-                <section className="catalog-profile-fit">
-                  <h3>Levels supported</h3>
-                  <div>{selectedCoach.levels.map((level) => <span key={level}>{level}</span>)}</div>
-                </section>
-              </div>
-              <div className="catalog-profile-details">
-                <section>
-                  <h3>Experience and credentials</h3>
-                  <strong>{selectedCoach.experience}</strong>
-                  <ul>{selectedCoach.credentials.map((credential) => <li key={credential}>{credential}</li>)}</ul>
-                </section>
-                {(selectedCoach.coachingStyle || selectedCoach.languages.length > 0) && <section>
-                  <h3>Coaching style</h3>
-                  {selectedCoach.coachingStyle && <p>{selectedCoach.coachingStyle}</p>}
-                  {selectedCoach.languages.length > 0 && <span><b>Languages</b>{selectedCoach.languages.join(" · ")}</span>}
-                </section>}
-              </div>
-              <section className="catalog-profile-plan">
-                <h3>Lesson plan</h3>
-                <ol>
-                  {selectedCoach.lessonPlan.map((step) => (
-                    <li key={step.title}>
-                      <strong>{step.title}</strong>
-                      <p>{step.description}</p>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-              {selectedCoach.availability.length > 0 && <section className="catalog-profile-availability">
-                <h3>Weekly availability</h3>
-                <div>{selectedCoach.availability.map((day) => <span key={day}>{day}</span>)}</div>
-              </section>}
-              <CoachLocationPreview coach={selectedCoach} />
-              {selectedCoach.faqs.length > 0 && <section className="catalog-profile-faq">
-                <h3>Frequently asked questions</h3>
-                <div>
-                  {selectedCoach.faqs.map((faq) => (
-                    <details key={faq.question}>
-                      <summary>{faq.question}</summary>
-                      <p>{faq.answer}</p>
-                    </details>
-                  ))}
-                </div>
-              </section>}
-              <span className="catalog-profile-reserve">Booking requests are not open yet.</span>
-            </div>
-          </section>
-        </div>
-      )}
     </div>
   );
 }
