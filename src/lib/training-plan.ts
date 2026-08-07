@@ -1,4 +1,4 @@
-import { generateOpenRouterJson } from "@/lib/openrouter-ai";
+import { generateGeminiJson } from "@/lib/gemini-ai";
 
 export type TrainingPlanDay = { day: string; focus: string; warmup: string[]; workout: string[]; cooldown: string[]; minutes: number };
 export type TrainingPlan = { title: string; summary: string; safetyNote: string; weeks: number; sessions: TrainingPlanDay[] };
@@ -50,7 +50,7 @@ export async function generateTrainingPlan(input: Input, apiKey: string, fetcher
         }, required: ["title", "summary", "safetyNote", "sessions"], additionalProperties: false,
       };
   try {
-    const result = await generateOpenRouterJson(apiKey, prompt, "training_plan", schema, 2200, fetcher);
+    const result = await generateGeminiJson(apiKey, prompt, schema, 2200, fetcher);
     const plan = parsePlan(result.value, input);
     return plan ? { plan, generatedBy: result.model } : { plan: fallbackPlan(input), generatedBy: "CoachConnect fallback" };
   } catch {

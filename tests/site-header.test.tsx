@@ -7,6 +7,13 @@ afterEach(() => {
 });
 
 describe("site header", () => {
+  it("does not repeat the coach discovery link on the coach catalog", () => {
+    render(<SiteHeader initialSession={{ user: null }} hideCoachDiscoveryLink />);
+
+    expect(screen.queryByRole("link", { name: /find a coach/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^sign in$/i })).toBeInTheDocument();
+  });
+
   it("keeps one CoachConnect logo and shows account-aware member actions", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,

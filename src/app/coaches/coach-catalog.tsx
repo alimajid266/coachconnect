@@ -196,7 +196,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
   return (
     <div className="catalog-page">
       <a className="skip-link" href="#catalog-results">Skip to coach results</a>
-      <SiteHeader />
+      <SiteHeader hideCoachDiscoveryLink />
 
       <main className="catalog-main" id="catalog-results">
         <section className="catalog-intro">
@@ -256,7 +256,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
         </section>
 
         <div className="catalog-ai-status">
-          <span>{aiStatus === "ready" ? "AI recommendations generated through OpenRouter's free model pool." : "Standard search works instantly. Use AI search for natural-language interpretation and grounded recommendations through free models."}</span>
+          <span>{aiStatus === "ready" ? "Search interpretation and coach recommendations generated with Gemini 3.5 Flash-Lite." : "Standard search works instantly. Use Gemini for natural-language interpretation and grounded coach recommendations."}</span>
           {aiError && <p role="alert">{aiError} Showing standard search results instead.</p>}
         </div>
 
@@ -380,6 +380,17 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
           )}
         </div>
         {visibleRecommendations.length > PAGE_SIZE && <nav className="catalog-pagination" aria-label="Coach result pages"><button type="button" disabled={safePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Previous page</button><span>Page {safePage} of {pageCount}</span><button type="button" disabled={safePage === pageCount} onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}>Next page</button></nav>}
+        <section className="catalog-policy" aria-labelledby="refund-policy-heading">
+          <div>
+            <p className="eyebrow">Book with clarity</p>
+            <h2 id="refund-policy-heading">Refund and cancellation policy</h2>
+          </div>
+          <div className="catalog-policy-points">
+            <p><strong>At least 24 hours before the session:</strong> cancellation is eligible for a full refund or credit from the coach.</p>
+            <p><strong>Less than 24 hours:</strong> the coach&apos;s stated late-cancellation terms apply, unless the coach cancels.</p>
+            <p><strong>Current MVP:</strong> CoachConnect records booking and payment-demo status but does not process real payments. Any eligible refund is completed outside the platform.</p>
+          </div>
+        </section>
       </main>
     </div>
   );

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import SiteLogo from "@/components/site-logo";
+import SportsLoader from "@/components/sports-loader";
 import type { CoachApplicationStatus } from "@/lib/coach-application";
 
 type Application = {
@@ -108,7 +109,7 @@ export default function AdminCoachApplicationsPage() {
 
       {error && <p className="form-status error" role="alert">{error}</p>}
       {message && <p className="form-status success" role="status">{message}</p>}
-      {loading && <p>Loading coach applications…</p>}
+      {loading && <SportsLoader message="Loading coach applications…" compact />}
       {!loading && !error && applications.length === 0 && <section className="admin-empty"><h2>No applications to review</h2><p>New submissions will appear here.</p></section>}
 
       <section className="admin-application-list" aria-label="Coach applications">
@@ -134,7 +135,7 @@ export default function AdminCoachApplicationsPage() {
                   <button className="button button-accent" disabled={busyId === application.userId} onClick={() => review(application, "APPROVED")}>Approve profile</button>
                 </div>
               </div>}
-              {application.status === "APPROVED" && <div className="admin-review-controls"><label>Removal reason<textarea rows={3} value={notes[application.userId] ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [application.userId]: event.target.value }))} placeholder="Required before removing this profile" /></label><div><p>Removing a coach hides the profile from the public catalog without deleting the member account or review history.</p><button className="button button-secondary" disabled={busyId === application.userId} onClick={() => review(application, "SUSPENDED")}>Remove from catalog</button></div></div>}
+              {application.status === "APPROVED" && <div className="admin-review-controls admin-removal-controls"><label>Removal reason<textarea rows={3} value={notes[application.userId] ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [application.userId]: event.target.value }))} placeholder="Required before removing this profile" /></label><div><p>Removing a coach hides the profile from the public catalog without deleting the member account or review history.</p><button className="button button-secondary" disabled={busyId === application.userId} onClick={() => review(application, "SUSPENDED")}>Remove from catalog</button></div></div>}
               {application.status === "SUSPENDED" && <div className="admin-review-controls"><div><p>This coach is removed from the public catalog. Restore only after resolving the recorded concern.</p><button className="button button-accent" disabled={busyId === application.userId} onClick={() => review(application, "APPROVED")}>Restore coach profile</button></div></div>}
               <div className="admin-review-controls">
                 <label>Full account suspension reason<textarea rows={3} value={notes[application.userId] ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [application.userId]: event.target.value }))} placeholder="Required to suspend account and booking capabilities" /></label>

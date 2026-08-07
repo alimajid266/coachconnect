@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
   profile: vi.fn(),
   updateProfile: vi.fn(),
+  ensureDraft: vi.fn(),
   upload: vi.fn(),
   createSignedUrl: vi.fn(),
   rpc: vi.fn(),
@@ -33,10 +34,12 @@ vi.mock("@/lib/supabase/route", () => ({
     supabase: {
       auth: { getUser: mocks.getUser },
       rpc: mocks.attachAd,
-      from: () => ({
-        select: () => ({ eq: () => ({ maybeSingle: mocks.profile }) }),
-        update: mocks.updateProfile,
-      }),
+      from: (table: string) => table === "profiles"
+        ? {
+            select: () => ({ eq: () => ({ maybeSingle: mocks.profile }) }),
+            update: mocks.updateProfile,
+          }
+        : { upsert: mocks.ensureDraft },
     },
     applyCookies: mocks.applyCookies,
   }),
@@ -60,6 +63,7 @@ describe("coach profile image upload", () => {
     mocks.getUser.mockResolvedValue({ data: { user: { id: "11111111-1111-4111-8111-111111111111" } }, error: null });
     mocks.profile.mockResolvedValue({ data: { account_status: "ACTIVE" }, error: null });
     mocks.updateProfile.mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
+    mocks.ensureDraft.mockResolvedValue({ error: null });
     mocks.rpc.mockResolvedValue({ data: true, error: null });
     mocks.attachAd.mockResolvedValue({ data: true, error: null });
     mocks.application.mockResolvedValue({ data: null, error: null });
@@ -115,6 +119,10 @@ describe("coach profile image upload", () => {
     const response = await POST(imageRequest(new File([new Uint8Array(png)], "ad.png", { type: "image/png" }), "coach-ad"));
     const uploadedPath = mocks.upload.mock.calls[0]?.[0] as string;
     expect(response.status).toBe(201);
+    expect(mocks.ensureDraft).toHaveBeenCalledWith(
+      { user_id: "11111111-1111-4111-8111-111111111111" },
+      { onConflict: "user_id", ignoreDuplicates: true },
+    );
     expect(mocks.attachAd).toHaveBeenCalledWith("attach_coach_ad_image", { image_path: uploadedPath });
     expect(await response.json()).toMatchObject({ path: uploadedPath, purpose: "coach-ad" });
   });

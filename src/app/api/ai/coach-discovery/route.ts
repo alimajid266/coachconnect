@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     return NextResponse.json({ error: "Send AI searches as JSON." }, { status: 415 });
   }
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "AI search is not configured yet." }, { status: 503 });
   try {
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     response.headers.set("Cache-Control", "no-store, max-age=0");
     return response;
   } catch (error) {
-    console.error("OpenRouter coach discovery failed:", error instanceof Error ? error.message : "unknown error");
+    console.error("Gemini coach discovery failed:", error instanceof Error ? error.message : "unknown error");
     return NextResponse.json({ error: "AI search is temporarily unavailable. Standard search still works." }, { status: 502 });
   }
 }

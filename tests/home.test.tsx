@@ -9,7 +9,7 @@ describe("CoachConnect home page", () => {
     render(<HomePage />);
 
     expect(screen.getByRole("heading", { level: 1, name: /train smarter.*play bolder/i })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /football coaching session/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /american football training session/i })).toBeInTheDocument();
     expect(screen.getAllByText(/12 sports/i).length).toBeGreaterThan(0);
     expect(screen.queryByRole("region", { name: /coach results/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /view .*profile/i })).not.toBeInTheDocument();
@@ -19,10 +19,23 @@ describe("CoachConnect home page", () => {
   it("uses Ali's supplied sports photography without presenting athletes as coaches", () => {
     render(<HomePage />);
 
-    expect(screen.getByRole("img", { name: /football coaching session/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /american football training session/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /cricket stadium/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /tennis serve practice/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /football training on the pitch/i })).toBeInTheDocument();
+  });
+
+  it("shows all twelve supported sports with a relevant image", () => {
+    render(<HomePage />);
+
+    const cards = Array.from(document.querySelectorAll(".sport-card"));
+    expect(cards).toHaveLength(12);
+    cards.forEach((card) => expect(card.querySelector("img")).toBeInTheDocument());
+    expect(cards.map((card) => card.textContent)).toEqual(expect.arrayContaining([
+      expect.stringContaining("Ice Hockey"),
+      expect.stringContaining("Table Tennis"),
+      expect.stringContaining("Basketball"),
+    ]));
   });
 
   it("uses the dedicated coach catalog for every discovery link", () => {

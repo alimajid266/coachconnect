@@ -5,6 +5,18 @@ import AdminCoachApplicationsPage from "@/app/admin/coaches/page";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("coach application review page", () => {
+  it("uses the shared branded loader while applications are loading", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+
+    render(<AdminCoachApplicationsPage />);
+
+    expect(screen.getByRole("status")).toHaveTextContent(/loading coach applications/i);
+    expect(document.querySelector(".sports-loader-logo")).toHaveAttribute(
+      "src",
+      "/brand/coachconnect-linked-rings.svg",
+    );
+  });
+
   it("shows administrators the submitted profile and safe review actions", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
@@ -70,5 +82,31 @@ describe("coach application review page", () => {
     expect(screen.getByText(/removed from the public catalog/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /delete member account/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /suspend full member account/i })).toBeInTheDocument();
+  });
+
+  it("keeps the removal reason visually grouped with the catalog-removal action", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        applications: [{
+          userId: "member-3",
+          applicantName: "Approved Coach",
+          status: "APPROVED",
+          headline: "Approved coach",
+          sports: ["Football"],
+          offersOnline: true,
+          offersInPerson: false,
+          accountStatus: "ACTIVE",
+        }],
+      }),
+    }));
+
+    render(<AdminCoachApplicationsPage />);
+
+    await screen.findByRole("heading", { name: "Approved Coach" });
+    const removalReason = screen.getByLabelText("Removal reason");
+    expect(removalReason.closest(".admin-removal-controls")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Remove from catalog" }).closest(".admin-removal-controls")).not.toBeNull();
   });
 });

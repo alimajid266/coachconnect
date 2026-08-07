@@ -25,9 +25,10 @@ type SessionState =
 type SiteHeaderProps = {
   initialSession?: { user: SessionUser | null };
   onSessionResolved?: (user: SessionUser | null, status: "ready" | "unavailable") => void;
+  hideCoachDiscoveryLink?: boolean;
 };
 
-export default function SiteHeader({ initialSession, onSessionResolved }: SiteHeaderProps = {}) {
+export default function SiteHeader({ initialSession, onSessionResolved, hideCoachDiscoveryLink = false }: SiteHeaderProps = {}) {
   const [session, setSession] = useState<SessionState>(
     initialSession
       ? { status: "ready", user: initialSession.user }
@@ -105,7 +106,7 @@ export default function SiteHeader({ initialSession, onSessionResolved }: SiteHe
       <nav className="container global-nav" aria-label="Main navigation">
         <SiteLogo />
         <div className="global-nav-links">
-          <Link href="/coaches">Find a coach</Link>
+          {!hideCoachDiscoveryLink && <Link href="/coaches">Find a coach</Link>}
           {session.status === "loading" ? (
             <span className="nav-session-state" aria-live="polite">Checking account…</span>
           ) : session.status === "unavailable" ? (

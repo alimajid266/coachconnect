@@ -1,7 +1,7 @@
 import { interpretCoachQuery, type CoachQueryInterpretation } from "@/lib/coach-discovery";
-import { generateOpenRouterJson, OPENROUTER_AI_LABEL } from "@/lib/openrouter-ai";
+import { generateGeminiJson, GEMINI_AI_LABEL } from "@/lib/gemini-ai";
 
-export const AI_DISCOVERY_MODEL = OPENROUTER_AI_LABEL;
+export const AI_DISCOVERY_MODEL = GEMINI_AI_LABEL;
 
 export type GeminiCatalogCoach = {
   id: string;
@@ -19,7 +19,7 @@ export type GeminiCatalogCoach = {
 type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
 async function generateJson(apiKey: string, prompt: string, schema: Record<string, unknown>, fetcher: Fetcher) {
-  return (await generateOpenRouterJson(apiKey, prompt, "coach_discovery", schema, 1400, fetcher)).value;
+  return (await generateGeminiJson(apiKey, prompt, schema, 1400, fetcher)).value;
 }
 
 function strings(value: unknown, limit = 8) {

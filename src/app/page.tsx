@@ -6,11 +6,15 @@ const featuredSports = [
   { number: "01", name: "Cricket", detail: "Batting, bowling and fielding", image: "/images/coach-zainab.jpg", imageAlt: "Cricket stadium" },
   { number: "02", name: "Football", detail: "Control, passing and movement", image: "/images/coach-danish.jpg", imageAlt: "Football training on the pitch" },
   { number: "03", name: "Tennis", detail: "Technique and match confidence", image: "/images/coach-omar.jpg", imageAlt: "Tennis serve practice" },
-  { number: "04", name: "Strength", detail: "Power, mobility and conditioning" },
-  { number: "05", name: "Swimming", detail: "Confidence, strokes and endurance" },
-  { number: "06", name: "Badminton", detail: "Footwork, serves and rallies" },
-  { number: "07", name: "Boxing", detail: "Safe fundamentals and fitness" },
-  { number: "08", name: "Yoga", detail: "Balance, mobility and recovery" },
+  { number: "04", name: "Strength", detail: "Power, mobility and conditioning", image: "/images/coach-bilal.jpg", imageAlt: "Strength training with free weights" },
+  { number: "05", name: "Swimming", detail: "Confidence, strokes and endurance", image: "/images/coach-farhan.jpg", imageAlt: "Swimmer training in a pool" },
+  { number: "06", name: "Badminton", detail: "Footwork, serves and rallies", image: "/images/coach-hira.jpg", imageAlt: "Badminton player jumping for a shot" },
+  { number: "07", name: "Boxing", detail: "Safe fundamentals and fitness", image: "/images/coach-mariam.jpg", imageAlt: "Boxing gloves ready for training" },
+  { number: "08", name: "Yoga", detail: "Balance, mobility and recovery", image: "/images/coach-rida.jpg", imageAlt: "Yoga balance practice outdoors" },
+  { number: "09", name: "Basketball", detail: "Shooting, movement and teamwork", image: "/images/coach-usman.jpg", imageAlt: "Basketball approaching the hoop" },
+  { number: "10", name: "Running", detail: "Form, pacing and endurance", image: "/images/coach-nadia.jpg", imageAlt: "Runners training together" },
+  { number: "11", name: "Table Tennis", detail: "Serve, spin and fast reactions", image: "/images/coach-iqra.jpg", imageAlt: "Table tennis paddle and ball" },
+  { number: "12", name: "Ice Hockey", detail: "Skating, puck control and teamwork", image: "/images/coach-sameer.jpg", imageAlt: "Ice hockey match in progress" },
 ];
 
 export default function HomePage() {
@@ -50,10 +54,7 @@ export default function HomePage() {
             <div className="hero-stage">
               <div className="hero-orbit" aria-hidden="true" />
               <div className="hero-photo">
-                <Image src="/images/football-training-poster.jpg" alt="Football coaching session under the floodlights" fill priority sizes="(max-width: 980px) 90vw, 42vw" />
-                <video className="hero-training-video" aria-label="Football coaching session" autoPlay muted loop playsInline preload="metadata" poster="/images/football-training-poster.jpg">
-                  <source src="/videos/football-training-loop.mp4" type="video/mp4" />
-                </video>
+                <Image src="/images/american-football-training.jpg" alt="American football training session on the field" fill priority sizes="(max-width: 980px) 90vw, 42vw" />
               </div>
               <div className="hero-sport-inset" aria-hidden="true"><Image src="/images/coach-ayesha.jpg" alt="" fill sizes="180px" /></div>
               <div className="hero-chip hero-chip-top"><span aria-hidden="true">01</span><strong>One-to-one coaching</strong><small>Built around you</small></div>

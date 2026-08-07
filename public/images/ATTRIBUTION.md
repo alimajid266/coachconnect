@@ -21,4 +21,12 @@ Source image URLs:
 - `coach-sameer.jpg` (ice hockey): https://images.unsplash.com/photo-1580748141549-71748dbe0bdc
 - `coach-iqra.jpg` (table tennis): https://images.unsplash.com/photo-1534158914592-062992fbe900
 
-These photographs are used under the Unsplash License as illustrative sport/training imagery. Demo-profile UI labels and alternative text explicitly describe them as illustrative; the people shown are not represented as the fictional Demo coaches.
+## American-football homepage hero
+
+- `american-football-training.jpg`: “American football players field, Texas”
+- Openverse record: https://api.openverse.org/v1/images/d355bdc0-eac5-472a-a7d8-3e50d1352459/
+- Original landing page: https://www.rawpixel.com/image/6111779/photo-image-public-domain-people-free
+- License: CC0 1.0 Universal — https://creativecommons.org/publicdomain/zero/1.0/
+- Local treatment: resized and JPEG-optimized for the CoachConnect homepage.
+
+The Unsplash photographs are used under the Unsplash License as illustrative sport/training imagery. The American-football hero is used under CC0. Demo-profile UI labels and alternative text explicitly describe all sport photographs as illustrative; the people shown are not represented as the fictional Demo coaches.

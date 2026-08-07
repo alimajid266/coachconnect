@@ -38,6 +38,14 @@ describe("coach catalog", () => {
     expect(screen.getByRole("heading", { name: "Bilal Raza" })).toBeInTheDocument();
   });
 
+  it("explains the marketplace cancellation and refund policy honestly", () => {
+    renderCatalog();
+
+    expect(screen.getByRole("heading", { name: /refund and cancellation policy/i })).toBeInTheDocument();
+    expect(screen.getByText(/24 hours before the session/i)).toBeInTheDocument();
+    expect(screen.getByText(/does not process real payments/i)).toBeInTheDocument();
+  });
+
   it("links every catalog card to a standalone profile page", () => {
     renderCatalog();
     const link = screen.getByRole("link", { name: /view ayesha khan's profile/i });

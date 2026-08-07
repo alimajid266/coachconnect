@@ -1,5 +1,11 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, describe, expect, it } from "vitest";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { config as loadEnvironment } from "dotenv";
+
+// Local integration tests must use one matching Supabase URL/key set. Override
+// inherited shell values with the ignored project-local development file when
+// it exists; hosted CI continues to use its injected environment variables.
+loadEnvironment({ path: ".env.local", override: true, quiet: true });
 
 const apiUrl = process.env.SUPABASE_URL;
 const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;

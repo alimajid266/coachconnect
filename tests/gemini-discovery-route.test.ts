@@ -27,7 +27,7 @@ function request(body: unknown, contentType = "application/json") {
 describe("AI coach discovery route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("OPENROUTER_API_KEY", "server-only-test-key");
+    vi.stubEnv("GEMINI_API_KEY", "server-only-test-key");
     mocks.getUser.mockResolvedValue({ data: { user: { id: "member-1" } }, error: null });
     mocks.rpc.mockImplementation(async (name: string) => name === "consume_ai_discovery_quota"
       ? { data: true, error: null } : { data: [approvedCoach], error: null });

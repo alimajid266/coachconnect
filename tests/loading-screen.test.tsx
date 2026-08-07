@@ -7,6 +7,10 @@ describe("route loading screen", () => {
     render(<Loading />);
 
     expect(screen.getByRole("status")).toHaveTextContent(/preparing your next session/i);
-    expect(document.querySelector(".sports-loader-mark")).toHaveTextContent("CC");
+    expect(document.querySelector(".sports-loader-logo")).toHaveAttribute(
+      "src",
+      "/brand/coachconnect-linked-rings.svg",
+    );
+    expect(document.querySelector(".sports-loader-mark")).not.toBeInTheDocument();
   });
 });

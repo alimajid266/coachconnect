@@ -128,6 +128,21 @@ export async function POST(request: NextRequest) {
       return applyCookies(NextResponse.json({ error: "Upload a complete, valid JPEG, PNG, or WebP image up to 25 megapixels." }, { status: 400 }));
     }
 
+    if (purpose === "coach-ad") {
+      const { error: draftError } = await supabase
+        .from("coach_applications")
+        .upsert(
+          { user_id: authData.user.id },
+          { onConflict: "user_id", ignoreDuplicates: true },
+        );
+      if (draftError) {
+        return applyCookies(NextResponse.json(
+          { error: "Save your coach application before adding ad images." },
+          { status: 400 },
+        ));
+      }
+    }
+
     const bucket = storageAdmin.storage.from("coach-profile-images");
     const path = `${authData.user.id}/${randomUUID()}.webp`;
     const { error: uploadError } = await bucket.upload(path, new Uint8Array(processedImage), {

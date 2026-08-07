@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   const originRejection = rejectCrossOriginRequest(request);
   if (originRejection) return originRejection;
   try {
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return NextResponse.json({ error: "AI training plans are not configured yet." }, { status: 503 });
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
     const { data: auth } = await supabase.auth.getUser();
