@@ -124,6 +124,20 @@ describe("account deletion route", () => {
     expect(mocks.signOut).not.toHaveBeenCalled();
   });
 
+  it("explains that future active sessions must be resolved before deletion", async () => {
+    mocks.getUser.mockResolvedValue({
+      data: { user: { id: "member-1", email: "member@example.com" } },
+      error: null,
+    });
+    mocks.rpc.mockResolvedValue({ data: null, error: { message: "Resolve future active sessions before deleting your account" } });
+
+    const result = await DELETE(request());
+
+    expect(result.status).toBe(409);
+    expect(await result.json()).toEqual({ error: "Cancel or decline your future sessions before deleting your account." });
+    expect(mocks.signOut).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["returns an error", () => mocks.signOut.mockResolvedValueOnce({ error: { message: "session unavailable" } })],
     ["throws", () => mocks.signOut.mockRejectedValueOnce(new Error("session unavailable"))],

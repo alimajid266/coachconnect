@@ -132,7 +132,7 @@ describe("coach application page", () => {
     expect(screen.queryByText(/administrator review/i)).not.toBeInTheDocument();
   });
 
-  it("explains that edits to an approved profile return to team review", async () => {
+  it("keeps later edits live after the coach has been approved once", async () => {
     const application = {
       userId: "member-1",
       status: "APPROVED",
@@ -154,7 +154,7 @@ describe("coach application page", () => {
     };
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ application }) })
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ application: { ...application, headline: "Patient online tennis coach", status: "SUBMITTED" } }) });
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ application: { ...application, headline: "Patient online tennis coach", status: "APPROVED" } }) });
     vi.stubGlobal("fetch", fetchMock);
 
     render(<CoachApplicationPage />);
@@ -162,8 +162,8 @@ describe("coach application page", () => {
     fireEvent.change(screen.getByLabelText(/professional headline/i), { target: { value: "Patient online tennis coach" } });
     fireEvent.click(screen.getByRole("button", { name: /save profile updates/i }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Profile updates submitted for CoachConnect team review.");
-    expect(screen.getByText(/editing is paused while the team reviews/i)).toBeInTheDocument();
+    expect(await screen.findByRole("status")).toHaveTextContent("Coach profile updates are live.");
+    expect(screen.queryByText(/editing is paused while the team reviews/i)).not.toBeInTheDocument();
   });
 
   it("shows a suspension reason and a recovery path", async () => {

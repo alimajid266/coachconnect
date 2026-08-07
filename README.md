@@ -12,6 +12,33 @@ CoachConnect is a sports-coach marketplace MVP for adults in Pakistan. The proto
 - Public deployment: `https://coachconnect-sigma.vercel.app`.
 - Monetary cost: Rs 0.
 
+### Required baseline status
+
+| Capability | Status | Current boundary |
+|---|---|---|
+| User authentication | **Live** | Supabase email/password accounts and server-managed sessions |
+| Browse and search coaches | **Live** | Approved catalog, ordinary filters, typo-tolerant natural-language interpretation |
+| Coach profiles | **Live** | Dedicated public profile routes with publication-safe fields |
+| Explainable coach recommendations | **Live in current code** | Deterministic ranking with visible match reasons; no paid AI API |
+| Natural-language search | **Live in current code** | Extracts sport, city, level, format, budget, day, and goals; corrections remain editable |
+| Booking system | **Release candidate verified locally** | Conflict-safe request, acceptance, cancellation, completion, participant schedules, private meeting details, and cancellation-policy outcomes are implemented; hosted migration and live verification remain required |
+| Coach availability management | **Release candidate verified locally** | Approved coaches can add and remove slots; database serialization protects booking, suspension, deletion, and cross-role schedule conflicts; hosted migration and live verification remain required |
+| Ratings and reviews | **Planned** | Only reviews tied to completed bookings may become public; demo profiles must not fabricate them |
+| Dockerized application | **Implemented locally** | Hardened loopback-only Compose workflow |
+| Maintained documentation | **Required continuously** | Requirements, plan, scope, README, screens, and architecture must change with the code |
+
+The required AI baseline is satisfied by two meaningful, zero-cost systems: **explainable coach recommendations** and **natural-language search**. AI-generated training plans remain optional until booking, availability, and verified reviews are complete.
+
+## Documentation map
+
+- `PRODUCT_REQUIREMENTS.md` — authoritative product and quality requirements
+- `PLAN.md` — delivery order, architecture decisions, and verification gates
+- `SCOPE.md` — scope-change log and priority order
+- `SCREEN_MAP.md` — intended routes and screen responsibilities
+- `README.md` — current implementation status, setup, privacy, and verification
+
+Every feature change must update the affected documentation in the same reviewed change. Status language must remain explicit: **Live**, **In progress**, or **Planned**.
+
 ## Architecture
 
 - Next.js 16, React 19, TypeScript

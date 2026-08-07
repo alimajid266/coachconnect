@@ -121,6 +121,7 @@ describe("public coaches route", () => {
     expect(body.demos[0]).toMatchObject({
       languages: ["English", "Urdu"],
       coachingStyle: "Patient and structured.",
+      image: "/images/coach-ayesha.jpg",
       lessonPlan: [
         { title: "Step 1", description: "Warm-up" },
         { title: "Step 2", description: "Focused drill" },

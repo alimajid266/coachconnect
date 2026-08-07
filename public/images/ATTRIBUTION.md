@@ -21,4 +21,4 @@ Source image URLs:
 - `coach-sameer.jpg` (ice hockey): https://images.unsplash.com/photo-1580748141549-71748dbe0bdc
 - `coach-iqra.jpg` (table tennis): https://images.unsplash.com/photo-1534158914592-062992fbe900
 
-These photographs are temporary design content. Before public launch, confirm final asset licensing/attribution requirements and ensure the people shown are not presented as the fictional coach identities.
+These photographs are used under the Unsplash License as illustrative sport/training imagery. Demo-profile UI labels and alternative text explicitly describe them as illustrative; the people shown are not represented as the fictional Demo coaches.

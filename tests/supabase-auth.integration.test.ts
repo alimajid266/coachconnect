@@ -9,13 +9,13 @@ const createdUserIds: string[] = [];
 
 function publicClient(): SupabaseClient {
   return createClient(apiUrl!, publishableKey!, {
-    auth: { autoRefreshToken: false, persistSession: false },
+    auth: { autoRefreshToken: false, persistSession: false, storageKey: `cc-public-${crypto.randomUUID()}` },
   });
 }
 
 function serviceClient(): SupabaseClient {
   return createClient(apiUrl!, serviceRoleKey!, {
-    auth: { autoRefreshToken: false, persistSession: false },
+    auth: { autoRefreshToken: false, persistSession: false, storageKey: `cc-public-${crypto.randomUUID()}` },
   });
 }
 
@@ -147,12 +147,12 @@ runIntegration("Supabase account and coach capability policies", () => {
       .update({ headline: "Updated tennis coaching for confident match play" })
       .eq("user_id", applicantId);
     expect(approvedEdit.error).toBeNull();
-    const pendingRevision = await reviewer
+    const liveRevision = await reviewer
       .from("coach_applications")
       .select("status")
       .eq("user_id", applicantId)
       .single();
-    expect(pendingRevision.data?.status).toBe("SUBMITTED");
+    expect(liveRevision.data?.status).toBe("APPROVED");
 
     const reviewerDraft = await reviewer.from("coach_applications").insert({ user_id: reviewerId });
     expect(reviewerDraft.error).toBeNull();
@@ -162,6 +162,181 @@ runIntegration("Supabase account and coach capability policies", () => {
       note: "Self review attempt",
     });
     expect(selfReview.error?.message).toContain("Self-review");
+  });
+
+  it("prevents booking conflicts and enforces the request, acceptance, and cancellation lifecycle", async () => {
+    const coachAccount = await createAuthenticatedMember("Schedule Coach");
+    const athleteOne = await createAuthenticatedMember("Schedule Athlete One");
+    const athleteTwo = await createAuthenticatedMember("Schedule Athlete Two");
+    const reviewerAccount = await createAuthenticatedMember("Schedule Reviewer");
+    const admin = serviceClient();
+    expect((await admin.from("profiles").update({ role: "ADMIN" }).eq("id", reviewerAccount.userId)).error).toBeNull();
+
+    const draft = await coachAccount.client.from("coach_applications").insert({
+      user_id: coachAccount.userId,
+      headline: "Structured online tennis coaching",
+      bio: "I help adults build consistent technique through clear online sessions, focused practice tasks, and practical feedback adapted to their current level.",
+      sports: ["Tennis"], experience_years: 5,
+      qualifications: "Community tennis coaching certificate",
+      audiences: ["Adults"], levels: ["Beginner"],
+      lesson_plan: "We review goals, warm up safely, practise one focused skill, apply it, and finish with a clear plan.",
+      session_price_pkr: 3000, offers_online: true, offers_in_person: false,
+    });
+    expect(draft.error).toBeNull();
+    expect((await coachAccount.client.rpc("submit_coach_application")).error).toBeNull();
+    expect((await reviewerAccount.client.rpc("review_coach_application", {
+      target_user_id: coachAccount.userId, decision: "APPROVED", note: "Initial coach capability approved.",
+    })).error).toBeNull();
+
+    const start = new Date(Date.now() + 72 * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const createdSlot = await coachAccount.client.rpc("create_coach_availability_slot", {
+      requested_start: start.toISOString(), requested_end: end.toISOString(), requested_mode: "ONLINE",
+    });
+    expect(createdSlot.error).toBeNull();
+    const slotId = createdSlot.data?.id as string;
+    expect(slotId).toBeTruthy();
+
+    const attempts = await Promise.all([
+      athleteOne.client.rpc("request_coach_booking", { target_slot_id: slotId, requested_note: "First request" }),
+      athleteTwo.client.rpc("request_coach_booking", { target_slot_id: slotId, requested_note: "Concurrent request" }),
+    ]);
+    expect(attempts.filter((attempt) => attempt.error === null)).toHaveLength(1);
+    expect(attempts.filter((attempt) => attempt.error !== null)).toHaveLength(1);
+    const winner = attempts[0].error === null ? athleteOne : athleteTwo;
+    const bookingId = attempts.find((attempt) => attempt.error === null)?.data?.id as string;
+
+    const coachSchedule = await coachAccount.client.rpc("list_my_coach_schedule");
+    expect(coachSchedule.error).toBeNull();
+    expect(coachSchedule.data).toContainEqual(expect.objectContaining({ booking_id: bookingId, status: "REQUESTED" }));
+    const accepted = await coachAccount.client.rpc("respond_to_coach_booking", { target_booking_id: bookingId, accept_booking: true });
+    expect(accepted.error).toBeNull();
+    expect(accepted.data?.status).toBe("CONFIRMED");
+
+    const athleteSchedule = await winner.client.rpc("list_my_coach_schedule");
+    expect(athleteSchedule.data).toContainEqual(expect.objectContaining({ booking_id: bookingId, status: "CONFIRMED", meeting_details: null }));
+
+    const athleteDetailsAttempt = await winner.client.rpc("set_coach_booking_meeting_details", {
+      target_booking_id: bookingId,
+      requested_details: "Athletes cannot set this value.",
+    });
+    expect(athleteDetailsAttempt.error).not.toBeNull();
+    const meetingDetails = "Private video link: https://meet.example/session-123";
+    const savedDetails = await coachAccount.client.rpc("set_coach_booking_meeting_details", {
+      target_booking_id: bookingId,
+      requested_details: meetingDetails,
+    });
+    expect(savedDetails.error).toBeNull();
+    expect(savedDetails.data?.meeting_details).toBe(meetingDetails);
+    const participantSchedule = await winner.client.rpc("list_my_coach_schedule");
+    expect(participantSchedule.data).toContainEqual(expect.objectContaining({ booking_id: bookingId, meeting_details: meetingDetails }));
+    const unrelatedSchedule = await (winner.userId === athleteOne.userId ? athleteTwo : athleteOne).client.rpc("list_my_coach_schedule");
+    expect(unrelatedSchedule.data).not.toContainEqual(expect.objectContaining({ booking_id: bookingId }));
+
+    const blockedDeletion = await winner.client.rpc("delete_my_account");
+    expect(blockedDeletion.error?.message).toMatch(/future active sessions/i);
+
+    const cancelled = await winner.client.rpc("cancel_coach_booking", { target_booking_id: bookingId, requested_reason: "Plans changed" });
+    expect(cancelled.error).toBeNull();
+    expect(cancelled.data?.status).toBe("CANCELLED_BY_ATHLETE");
+    expect(cancelled.data?.payment_status).toBe("NOT_COLLECTED");
+
+    const directRead = await winner.client.from("coach_bookings").select("id");
+    expect(directRead.error).not.toBeNull();
+
+    const secondStart = new Date(Date.now() + 96 * 60 * 60 * 1000);
+    const secondEnd = new Date(secondStart.getTime() + 60 * 60 * 1000);
+    const secondSlot = await coachAccount.client.rpc("create_coach_availability_slot", {
+      requested_start: secondStart.toISOString(), requested_end: secondEnd.toISOString(), requested_mode: "ONLINE",
+    });
+    expect(secondSlot.error).toBeNull();
+    const secondRequest = await athleteOne.client.rpc("request_coach_booking", {
+      target_slot_id: secondSlot.data?.id, requested_note: "Request before suspension",
+    });
+    expect(secondRequest.error).toBeNull();
+    expect((await reviewerAccount.client.rpc("review_coach_application", {
+      target_user_id: coachAccount.userId, decision: "SUSPENDED", note: "Temporary safety suspension.",
+    })).error).toBeNull();
+    const acceptanceAfterSuspension = await coachAccount.client.rpc("respond_to_coach_booking", {
+      target_booking_id: secondRequest.data?.id, accept_booking: true,
+    });
+    expect(acceptanceAfterSuspension.error).not.toBeNull();
+    const safeDecline = await coachAccount.client.rpc("respond_to_coach_booking", {
+      target_booking_id: secondRequest.data?.id, accept_booking: false,
+    });
+    expect(safeDecline.error).toBeNull();
+    expect(safeDecline.data?.status).toBe("DECLINED");
+
+    expect((await reviewerAccount.client.rpc("review_coach_application", {
+      target_user_id: coachAccount.userId, decision: "APPROVED", note: "Coach capability restored.",
+    })).error).toBeNull();
+    const suspendedAccount = await reviewerAccount.client.rpc("set_member_account_suspension", {
+      target_user_id: coachAccount.userId, suspend_account: true, requested_reason: "Account-level safety review.",
+    });
+    expect(suspendedAccount.error).toBeNull();
+    expect(suspendedAccount.data?.account_status).toBe("SUSPENDED");
+    expect((await coachAccount.client.rpc("list_my_coach_schedule")).error?.message).toMatch(/active account/i);
+    expect((await coachAccount.client.from("profiles").select("display_name").eq("id", coachAccount.userId)).data).toEqual([]);
+    expect((await coachAccount.client.from("coach_applications").select("status").eq("user_id", coachAccount.userId)).data).toEqual([]);
+    expect((await coachAccount.client.rpc("submit_coach_application")).error).not.toBeNull();
+    const hiddenWhileSuspended = await publicClient().rpc("get_public_coach", { target_user_id: coachAccount.userId });
+    expect(hiddenWhileSuspended.data).toEqual([]);
+    const restoredAccount = await reviewerAccount.client.rpc("set_member_account_suspension", {
+      target_user_id: coachAccount.userId, suspend_account: false, requested_reason: null,
+    });
+    expect(restoredAccount.error).toBeNull();
+    expect(restoredAccount.data?.account_status).toBe("ACTIVE");
+
+    const overlapStart = new Date(Date.now() + 120 * 60 * 60 * 1000);
+    const overlapEnd = new Date(overlapStart.getTime() + 60 * 60 * 1000);
+    const targetOverlapSlot = await coachAccount.client.rpc("create_coach_availability_slot", {
+      requested_start: overlapStart.toISOString(), requested_end: overlapEnd.toISOString(), requested_mode: "ONLINE",
+    });
+    expect(targetOverlapSlot.error).toBeNull();
+    expect((await athleteOne.client.from("coach_applications").insert({
+      user_id: athleteOne.userId,
+      headline: "Safe online coaching", bio: "A sufficiently detailed biography for an approved dual-role test coach account and schedule.",
+      sports: ["Tennis"], experience_years: 3, qualifications: "Test coaching qualification",
+      audiences: ["Adults"], levels: ["Beginner"],
+      lesson_plan: "Warm up, practise one skill, apply feedback, cool down and review the next safe step.",
+      session_price_pkr: 2500, offers_online: true, offers_in_person: false,
+    })).error).toBeNull();
+    expect((await athleteOne.client.rpc("submit_coach_application")).error).toBeNull();
+    expect((await reviewerAccount.client.rpc("review_coach_application", {
+      target_user_id: athleteOne.userId, decision: "APPROVED", note: "Dual-role schedule test approval.",
+    })).error).toBeNull();
+    const ownOverlapSlot = await athleteOne.client.rpc("create_coach_availability_slot", {
+      requested_start: overlapStart.toISOString(), requested_end: overlapEnd.toISOString(), requested_mode: "ONLINE",
+    });
+    expect(ownOverlapSlot.error).toBeNull();
+    const crossRoleConflict = await athleteOne.client.rpc("request_coach_booking", {
+      target_slot_id: targetOverlapSlot.data?.id, requested_note: "Must conflict with my coach availability",
+    });
+    expect(crossRoleConflict.error?.message).toMatch(/overlaps availability/i);
+
+    const raceStart = new Date(Date.now() + 144 * 60 * 60 * 1000);
+    const raceEnd = new Date(raceStart.getTime() + 60 * 60 * 1000);
+    const raceSlot = await coachAccount.client.rpc("create_coach_availability_slot", {
+      requested_start: raceStart.toISOString(), requested_end: raceEnd.toISOString(), requested_mode: "ONLINE",
+    });
+    const requestVersusDelete = await Promise.all([
+      athleteTwo.client.rpc("request_coach_booking", { target_slot_id: raceSlot.data?.id, requested_note: "Racing slot deletion" }),
+      coachAccount.client.rpc("cancel_coach_availability_slot", { target_slot_id: raceSlot.data?.id }),
+    ]);
+    expect(requestVersusDelete.filter((result) => result.error === null)).toHaveLength(1);
+
+    const disposableAthlete = await createAuthenticatedMember("Disposable Race Athlete");
+    const deletionRaceStart = new Date(Date.now() + 168 * 60 * 60 * 1000);
+    const deletionRaceEnd = new Date(deletionRaceStart.getTime() + 60 * 60 * 1000);
+    const deletionRaceSlot = await coachAccount.client.rpc("create_coach_availability_slot", {
+      requested_start: deletionRaceStart.toISOString(), requested_end: deletionRaceEnd.toISOString(), requested_mode: "ONLINE",
+    });
+    const bookingVersusAccountDeletion = await Promise.all([
+      disposableAthlete.client.rpc("request_coach_booking", { target_slot_id: deletionRaceSlot.data?.id, requested_note: "Racing account deletion" }),
+      disposableAthlete.client.rpc("delete_my_account"),
+    ]);
+    expect(bookingVersusAccountDeletion.filter((result) => result.error === null)).toHaveLength(1);
+    expect(bookingVersusAccountDeletion.filter((result) => result.error !== null)).toHaveLength(1);
   });
 
   it("permanently deletes only the authenticated member and cascades private profile data", async () => {

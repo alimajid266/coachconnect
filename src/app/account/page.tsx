@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import SiteHeader, { type SessionUser } from "@/components/site-header";
 import SiteLogo from "@/components/site-logo";
+import SportsLoader from "@/components/sports-loader";
+import ScheduleManager from "@/components/schedule-manager";
 
 type Mode = "login" | "register";
 type PageState = "loading" | "unavailable" | "anonymous" | "authenticated" | "deleted";
@@ -224,9 +226,7 @@ export default function AccountPage() {
   if (pageState === "loading") {
     return (
       <main className="account-state">
-        <SiteLogo />
-        <p className="eyebrow">Secure account</p>
-        <h1>Checking your account…</h1>
+        <SportsLoader message="Checking your account…" compact />
       </main>
     );
   }
@@ -269,6 +269,8 @@ export default function AccountPage() {
             <h1>My account</h1>
             <p>Manage your CoachConnect access and coaching activity.</p>
           </section>
+
+          <ScheduleManager userId={String(user.id)} approvedCoach={coachStatus === "APPROVED"} />
 
           <section className="member-account-grid" aria-label="Account details and actions">
             <article className="account-summary-card">

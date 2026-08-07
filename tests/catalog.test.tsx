@@ -27,7 +27,8 @@ describe("coach catalog", () => {
     expect(resultCount).toBeGreaterThan(10);
     expect(screen.getAllByRole("article").length).toBeGreaterThan(10);
     expect(screen.getAllByText("Demo profile").length).toBeGreaterThanOrEqual(coaches.length);
-    expect(document.querySelectorAll(".catalog-coach-placeholder")).toHaveLength(coaches.length);
+    expect(document.querySelectorAll(".catalog-coach-placeholder")).toHaveLength(0);
+    expect(screen.getAllByRole("img", { name: /illustrative .* training image/i })).toHaveLength(coaches.length);
     const ayeshaHeading = screen.getByRole("heading", { name: "Ayesha Khan" });
     expect(ayeshaHeading).toBeInTheDocument();
     const ayeshaCard = ayeshaHeading.closest("article") as HTMLElement;

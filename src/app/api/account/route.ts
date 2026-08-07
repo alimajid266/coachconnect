@@ -45,6 +45,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { data, error } = await supabase.rpc("delete_my_account");
+    if (error?.message?.includes("Resolve future active sessions")) {
+      return applyCookies(NextResponse.json(
+        { error: "Cancel or decline your future sessions before deleting your account." },
+        { status: 409 },
+      ));
+    }
     if (error || data !== true) {
       return applyCookies(NextResponse.json(
         { error: "Unable to delete your account." },

@@ -12,4 +12,5 @@ src/generated/prisma/
 *.db
 *.db-journal
 .vercel
+.hermes/
 .env*

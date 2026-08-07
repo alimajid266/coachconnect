@@ -106,28 +106,92 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function aliasesIn(query: string, concepts: ConceptMap) {
-  const found: Array<{ concept: string; alias: string }> = [];
-  for (const [concept, aliases] of Object.entries(concepts)) {
-    const ordered = [...aliases].sort((first, second) => second.length - first.length);
-    const alias = ordered.find((candidate) => new RegExp(`(?:^|\\s)${escapeRegExp(normalize(candidate))}(?:$|\\s)`).test(query));
-    if (alias) found.push({ concept, alias: normalize(alias) });
+type ConceptMatch = {
+  concept: string;
+  alias: string;
+  confidence: DiscoveryConfidence;
+};
+
+function damerauLevenshtein(first: string, second: string) {
+  const rows = first.length + 1;
+  const columns = second.length + 1;
+  const distance = Array.from({ length: rows }, () => Array<number>(columns).fill(0));
+  for (let row = 0; row < rows; row += 1) distance[row][0] = row;
+  for (let column = 0; column < columns; column += 1) distance[0][column] = column;
+
+  for (let row = 1; row < rows; row += 1) {
+    for (let column = 1; column < columns; column += 1) {
+      const substitutionCost = first[row - 1] === second[column - 1] ? 0 : 1;
+      distance[row][column] = Math.min(
+        distance[row - 1][column] + 1,
+        distance[row][column - 1] + 1,
+        distance[row - 1][column - 1] + substitutionCost,
+      );
+      if (
+        row > 1
+        && column > 1
+        && first[row - 1] === second[column - 2]
+        && first[row - 2] === second[column - 1]
+      ) {
+        distance[row][column] = Math.min(distance[row][column], distance[row - 2][column - 2] + 1);
+      }
+    }
+  }
+  return distance[first.length][second.length];
+}
+
+function fuzzyThreshold(length: number) {
+  if (length <= 3) return 0;
+  if (length <= 8) return 1;
+  return 2;
+}
+
+function fuzzyConceptsIn(query: string, concepts: ConceptMap, exact: ConceptMatch[]) {
+  const exactConcepts = new Set(exact.map((entry) => entry.concept));
+  const found: ConceptMatch[] = [];
+  for (const source of query.split(" ")) {
+    const threshold = fuzzyThreshold(source.length);
+    if (threshold === 0 || stopWords.has(source) || /^\d+$/.test(source)) continue;
+    const candidates = Object.keys(concepts)
+      .map((concept) => ({ concept, target: normalize(concept) }))
+      .filter(({ concept, target }) => !exactConcepts.has(concept) && !target.includes(" ") && target !== source)
+      .map(({ concept, target }) => ({ concept, distance: damerauLevenshtein(source, target) }))
+      .filter((candidate) => candidate.distance <= threshold)
+      .sort((first, second) => first.distance - second.distance || first.concept.localeCompare(second.concept));
+    const best = candidates[0];
+    if (!best || (candidates[1] && candidates[1].distance === best.distance)) continue;
+    found.push({
+      concept: best.concept,
+      alias: source,
+      confidence: best.distance === 1 ? "high" : "medium",
+    });
+    exactConcepts.add(best.concept);
   }
   return found;
 }
 
-function uniqueConcept(found: Array<{ concept: string; alias: string }>) {
+function aliasesIn(query: string, concepts: ConceptMap) {
+  const exact: ConceptMatch[] = [];
+  for (const [concept, aliases] of Object.entries(concepts)) {
+    const ordered = [...aliases].sort((first, second) => second.length - first.length);
+    const alias = ordered.find((candidate) => new RegExp(`(?:^|\\s)${escapeRegExp(normalize(candidate))}(?:$|\\s)`).test(query));
+    if (alias) exact.push({ concept, alias: normalize(alias), confidence: "high" });
+  }
+  return [...exact, ...fuzzyConceptsIn(query, concepts, exact)];
+}
+
+function uniqueConcept(found: ConceptMatch[]) {
   const concepts = [...new Set(found.map((entry) => entry.concept))];
   return concepts.length === 1 ? concepts[0] : undefined;
 }
 
-function correctionEntries(found: Array<{ concept: string; alias: string }>) {
+function correctionEntries(found: ConceptMatch[]) {
   return found
     .filter((entry) => normalize(entry.concept) !== entry.alias)
-    .map((entry): DiscoveryCorrection => ({ source: entry.alias, target: entry.concept, confidence: "high" }));
+    .map((entry): DiscoveryCorrection => ({ source: entry.alias, target: entry.concept, confidence: entry.confidence }));
 }
 
-function removeRecognized(query: string, groups: Array<Array<{ concept: string; alias: string }>>) {
+function removeRecognized(query: string, groups: ConceptMatch[][]) {
   let residual = ` ${query} `;
   const aliases = groups.flat().map((entry) => entry.alias).sort((first, second) => second.length - first.length);
   for (const alias of aliases) residual = residual.replace(new RegExp(`\\s${escapeRegExp(alias)}(?=\\s)`, "g"), " ");

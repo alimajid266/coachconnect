@@ -66,6 +66,14 @@ export async function POST(request: NextRequest) {
     if (!authData.user) {
       return applyCookies(NextResponse.json({ error: "Sign in to upload a coach profile image." }, { status: 401 }));
     }
+    const { data: activeProfile, error: profileError } = await supabase
+      .from("profiles")
+      .select("account_status")
+      .eq("id", authData.user.id)
+      .maybeSingle();
+    if (profileError || activeProfile?.account_status !== "ACTIVE") {
+      return applyCookies(NextResponse.json({ error: "An active account is required to upload images." }, { status: 403 }));
+    }
     const url = process.env.SUPABASE_INTERNAL_URL ?? process.env.SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !serviceRoleKey) {

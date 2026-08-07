@@ -1,6 +1,6 @@
 # CoachConnect — Focused Zero-Cost MVP Plan
 
-**Status:** Polished home and Supabase account foundation complete; public discovery and weekly availability selection implemented. Authenticated booking persistence remains deferred.
+**Status:** Public discovery, durable demo/approved profiles, and secure coach onboarding are live. The active phase adds the Airbnb-inspired visual refresh, resilient fuzzy discovery, real schedules, and authenticated booking persistence without payment collection.
 
 **Launch market:** Pakistan  
 **Currency:** Pakistani rupees (PKR), displayed as `Rs 3,000`  
@@ -29,7 +29,7 @@ Members can:
 
 Members with coach capability can also:
 
-1. Create and edit a coach profile.
+1. Create and edit a coach profile. Administrator approval is required only when coach capability is first created; later profile, image, and schedule edits publish without another approval unless the coach is suspended.
 2. List coaching services.
 3. Explain what each service includes and excludes.
 4. Set weekly availability and time off.
@@ -39,7 +39,7 @@ Members with coach capability can also:
 
 An administrator can:
 
-1. Approve or reject coach profiles.
+1. Approve or reject new coach-capability applications.
 2. Suspend coach capability without automatically blocking athlete use.
 3. Separately suspend an entire account for a recorded safety reason.
 4. View bookings required for support.

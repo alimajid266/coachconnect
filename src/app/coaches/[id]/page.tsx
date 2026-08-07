@@ -3,7 +3,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 import CoachLocationPreview from "@/app/coaches/coach-location-preview";
+import CoachBookingPanel from "@/components/coach-booking-panel";
 import SiteHeader from "@/components/site-header";
 import { attachSignedProfileImage, publicCoach } from "@/lib/public-coaches";
 import { coaches, formatCoachPrice, type Coach } from "@/lib/coaches";
@@ -26,7 +28,9 @@ async function loadCoach(id: string): Promise<Coach | null> {
   const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
   if (!url || !publishableKey) return fallbackDemo;
 
-  const supabase = createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const supabase = createClient(url, publishableKey, {
+    auth: { autoRefreshToken: false, persistSession: false, storageKey: `coach-profile-${randomUUID()}` },
+  });
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
   const { data, error } = isUuid
     ? await supabase.rpc("get_public_coach", { target_user_id: id })
@@ -69,7 +73,7 @@ export default async function CoachProfilePage({ params, searchParams }: Profile
           <header className="coach-profile-hero">
             <div className="coach-profile-portrait">
               {coach.image
-                ? <Image src={coach.image} alt={`${coach.name}, ${coach.sports.join(" and ")} coach`} fill sizes="(max-width: 720px) 100vw, 360px" priority />
+                ? <Image src={coach.image} alt={coach.isDemo ? `Illustrative ${coach.sports.join(" and ")} training image for Demo profile` : `${coach.name}, ${coach.sports.join(" and ")} coach`} fill sizes="(max-width: 720px) 100vw, 360px" priority />
                 : <div className="catalog-coach-placeholder" aria-hidden="true">{coach.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</div>}
             </div>
             <div className="coach-profile-heading">
@@ -92,6 +96,7 @@ export default async function CoachProfilePage({ params, searchParams }: Profile
           </header>
 
           <div className="coach-profile-content">
+            <CoachBookingPanel coachId={coach.id} coachName={coach.name} isDemo={coach.isDemo === true} pricePkr={coach.price} />
             <section><h2>About {firstName}</h2><p>{coach.bio}</p></section>
             <div className="catalog-profile-fit-grid">
               <section className="catalog-profile-fit"><h2>Who {firstName} teaches</h2><div>{coach.audiences.map((audience) => <span key={audience}>{audience}</span>)}</div></section>
@@ -105,7 +110,6 @@ export default async function CoachProfilePage({ params, searchParams }: Profile
             {coach.availability.length > 0 && <section className="catalog-profile-availability"><h2>{coach.isDemo ? "Example availability" : "Weekly availability"}</h2><div>{coach.availability.map((day) => <span key={day}>{day}</span>)}</div></section>}
             <CoachLocationPreview coach={coach} />
             {coach.faqs.length > 0 && <section className="catalog-profile-faq"><h2>Frequently asked questions</h2><div>{coach.faqs.map((faq) => <details key={faq.question}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</div></section>}
-            <section className="coach-profile-booking"><h2>Train with {firstName}</h2><p>Booking requests are not open yet. You can review this profile while scheduling is being prepared.</p><button className="button button-accent" type="button" disabled>Booking coming soon</button></section>
           </div>
         </article>
       </main>

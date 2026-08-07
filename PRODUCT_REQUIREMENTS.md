@@ -50,7 +50,8 @@ Every registered member can act as an athlete, including an approved coach.
 Any registered member may start a coach application from the same account. Approval adds coach tools without removing athlete tools.
 
 - Create and edit a coach profile draft.
-- Submit the profile for administrator approval.
+- Submit once for administrator approval when coach capability is first created.
+- After approval, publish ordinary profile, image, service, and schedule edits without another administrator review unless the coach is suspended.
 - Create services in PKR.
 - State inclusions, exclusions, equipment, and what to bring.
 - Set weekly availability and time off.
@@ -113,9 +114,9 @@ Each public coach profile should clearly show:
 
 1. Member creates the same neutral account used by every other member.
 2. Member chooses to offer coaching and completes a coach profile and services.
-3. Coach submits for review.
-4. Administrator approves or rejects it.
-5. Only approved profiles become public.
+3. Coach submits the initial profile for review.
+4. Administrator approves or rejects creation of coach capability.
+5. Only approved coaches become public; later edits remain public without repeated approval unless the coach is suspended.
 
 ### Verified review
 
@@ -192,6 +193,22 @@ CoachConnect does not hold money in this MVP and cannot issue a financial refund
 - Dockerized final application.
 - Unit, database, and browser tests.
 - Brief plain-language testing steps delivered in chat after every phase.
+
+## Engineering and documentation contract
+
+- Use production-quality TypeScript, explicit domain boundaries, secure defaults, and tests for every trust-critical workflow.
+- Keep the architecture clean: UI components do not authorize actions, server routes validate inputs, and Supabase policies/functions enforce account and marketplace permissions.
+- Keep the application responsive and keyboard accessible; decorative motion must respect reduced-motion preferences.
+- Preserve a reproducible Dockerized application and documented local setup.
+- Maintain repository documentation in the same change as the behavior it describes. Do not defer documentation cleanup until the end.
+- Mark capabilities as **Live**, **In progress**, or **Planned**. Never describe a planned AI, booking, availability, review, deployment, or provider integration as operating.
+- Use these sources of truth:
+  - `PRODUCT_REQUIREMENTS.md` — required product behavior and quality bar
+  - `PLAN.md` — implementation sequence and verification gates
+  - `SCOPE.md` — accepted changes and priority decisions
+  - `README.md` — current status, setup, architecture, and verification commands
+  - `SCREEN_MAP.md` and `architecture/` — screen and system-flow documentation
+- A feature is not complete until its implementation, tests, and affected documentation agree.
 
 ## Bottlenecks and required safeguards
 

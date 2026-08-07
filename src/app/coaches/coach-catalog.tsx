@@ -255,7 +255,9 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
                   {coach.image ? (
                     <Image
                       src={coach.image}
-                      alt={`${coach.name}, ${coach.sports.join(" and ")} coach`}
+                      alt={coach.isDemo
+                        ? `Illustrative ${coach.sports.join(" and ")} training image for Demo profile`
+                        : `${coach.name}, ${coach.sports.join(" and ")} coach`}
                       fill
                       sizes="(max-width: 680px) 100vw, (max-width: 1050px) 50vw, 33vw"
                     />

@@ -28,6 +28,32 @@ describe("coach discovery interpreter", () => {
     expect(interpretCoachQuery(`coach in ${query}`).filters.city).toBe(city);
   });
 
+  it.each([
+    ["iflamabad", "Islamabad"],
+    ["karahci", "Karachi"],
+  ])("corrects previously unseen city misspelling %s to %s", (query, city) => {
+    const result = interpretCoachQuery(`coach in ${query}`);
+    expect(result.filters.city).toBe(city);
+    expect(result.corrections).toContainEqual(expect.objectContaining({ source: query, target: city }));
+  });
+
+  it.each([
+    ["swiming", "Swimming"],
+    ["baskteball", "Basketball"],
+  ])("corrects previously unseen sport misspelling %s to %s", (query, sport) => {
+    const result = interpretCoachQuery(query);
+    expect(result.filters.sport).toBe(sport);
+    expect(result.corrections).toContainEqual(expect.objectContaining({ source: query, target: sport }));
+  });
+
+  it("does not guess from ambiguous or very short fragments", () => {
+    const result = interpretCoachQuery("coach in is for box");
+    expect(result.filters.city).toBeUndefined();
+    expect(result.filters.sport).toBeUndefined();
+    expect(result.corrections).toEqual([]);
+    expect(result.keywords).toContain("box");
+  });
+
   it("recognizes level, format, affordability, specialty, and day without inventing a budget", () => {
     const result = interpretCoachQuery("cheap newbie virtual batting coach on saturday");
     expect(result.filters).toMatchObject({

@@ -220,12 +220,9 @@ export default function CoachApplicationPage() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "The draft could not be saved.");
-      const wasApproved = application?.status === "APPROVED";
       setApplication(result.application);
       setDraft(asDraft(result.application));
-      setMessage(wasApproved && result.application?.status === "SUBMITTED"
-        ? "Profile updates submitted for CoachConnect team review."
-        : result.application?.status === "APPROVED" ? "Coach profile updates saved." : "Draft saved.");
+      setMessage(result.application?.status === "APPROVED" ? "Coach profile updates are live." : "Draft saved.");
       return true;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The draft could not be saved.");
@@ -305,7 +302,7 @@ export default function CoachApplicationPage() {
           <legend>Profile image</legend>
           <div className="application-image-upload">
             {imagePreview && <Image className="application-image-preview" src={imagePreview} width={160} height={160} unoptimized alt="New coach profile preview" />}
-            <label>Profile image<input aria-label="Profile image" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProfileImage(file); }} /><span className="application-field-hint">JPEG, PNG or WebP, up to 5 MB. The CoachConnect team reviews profile images before publication.</span></label>
+            <label>Profile image<input aria-label="Profile image" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProfileImage(file); }} /><span className="application-field-hint">JPEG, PNG or WebP, up to 5 MB. New coach profiles require approval once; later profile updates publish immediately.</span></label>
             {draft.profileImagePath && !imagePreview && <p className="application-field-hint">A profile image is saved with this application.</p>}
           </div>
         </fieldset>
@@ -316,14 +313,15 @@ export default function CoachApplicationPage() {
             {coachApplicationOptions.sports.map((sport) => <label key={sport}><input type="checkbox" checked={draft.sports.includes(sport)} onChange={() => toggleList("sports", sport)} />{sport}</label>)}
           </div>
           <div className="application-term-editor">
-            <label>Add another sport<input aria-label="Add another sport" maxLength={60} value={customSport} onChange={(event) => setCustomSport(event.target.value)} placeholder="For example, squash or archery" /></label>
+            <label>Add another sport<input aria-label="Add another sport" maxLength={60} value={customSport} onChange={(event) => setCustomSport(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addCustomSport(); } }} placeholder="For example, squash or archery" /></label>
             <button className="button button-secondary" type="button" onClick={addCustomSport} disabled={!customSport.trim() || draft.sports.length >= 8}>Add sport</button>
           </div>
           {draft.sports.filter((sport) => !coachApplicationOptions.sports.includes(sport as never)).length > 0 && <div className="application-tags" aria-label="Custom sports">{draft.sports.filter((sport) => !coachApplicationOptions.sports.includes(sport as never)).map((sport) => <button type="button" key={sport} onClick={() => update("sports", draft.sports.filter((item) => item !== sport))}>{sport} ×</button>)}</div>}
           <div className="application-term-editor">
-            <label>Profile tags<input aria-label="Profile tags" maxLength={40} value={customTag} onChange={(event) => setCustomTag(event.target.value)} placeholder="For example, beginners or match preparation" /><span className="application-field-hint">Add up to 12 specialties, goals or coaching-style tags. Tags are reviewed before publication.</span></label>
+            <label>Profile tags<input aria-label="Profile tags" maxLength={40} value={customTag} onChange={(event) => setCustomTag(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addCustomTag(); } }} placeholder="For example, beginners or match preparation" /></label>
             <button className="button button-secondary" type="button" onClick={addCustomTag} disabled={!customTag.trim() || draft.tags.length >= 12}>Add tag</button>
           </div>
+          <span className="application-field-hint">Add up to 12 specialties, goals or coaching-style tags.</span>
           {draft.tags.length > 0 && <div className="application-tags" aria-label="Profile tags selected">{draft.tags.map((tag) => <button type="button" key={tag} aria-label={`Remove ${tag} tag`} onClick={() => update("tags", draft.tags.filter((item) => item !== tag))}>{tag} ×</button>)}</div>}
           <div className="application-grid application-experience-grid">
             <label className="application-number-field">Years of coaching experience<input className="application-number-input" inputMode="numeric" type="number" min="0" max="80" value={draft.experienceYears} onChange={(event) => update("experienceYears", event.target.value)} /><span className="application-field-hint">Whole number from 0 to 80</span></label>

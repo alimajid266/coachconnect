@@ -4,6 +4,7 @@ import sharp from "sharp";
 
 const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
+  profile: vi.fn(),
   upload: vi.fn(),
   createSignedUrl: vi.fn(),
   rpc: vi.fn(),
@@ -27,7 +28,10 @@ vi.mock("@supabase/supabase-js", () => ({
 
 vi.mock("@/lib/supabase/route", () => ({
   createSupabaseRouteClient: () => ({
-    supabase: { auth: { getUser: mocks.getUser } },
+    supabase: {
+      auth: { getUser: mocks.getUser },
+      from: () => ({ select: () => ({ eq: () => ({ maybeSingle: mocks.profile }) }) }),
+    },
     applyCookies: mocks.applyCookies,
   }),
 }));
@@ -48,6 +52,7 @@ describe("coach profile image upload", () => {
     vi.stubEnv("SUPABASE_URL", "https://example.supabase.co");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "server-only-service-role-key");
     mocks.getUser.mockResolvedValue({ data: { user: { id: "11111111-1111-4111-8111-111111111111" } }, error: null });
+    mocks.profile.mockResolvedValue({ data: { account_status: "ACTIVE" }, error: null });
     mocks.rpc.mockResolvedValue({ data: true, error: null });
     mocks.application.mockResolvedValue({ data: null, error: null });
     mocks.list.mockResolvedValue({ data: [], error: null });
@@ -151,6 +156,14 @@ describe("coach profile image upload", () => {
     const response = await POST(request);
     expect(response.status).toBe(429);
     expect(getReader).not.toHaveBeenCalled();
+    expect(mocks.upload).not.toHaveBeenCalled();
+  });
+
+  it("denies uploads from a suspended account before reserving or reading bytes", async () => {
+    mocks.profile.mockResolvedValue({ data: null, error: null });
+    const response = await POST(imageRequest(new File(["image"], "portrait.png", { type: "image/png" })));
+    expect(response.status).toBe(403);
+    expect(mocks.rpc).not.toHaveBeenCalled();
     expect(mocks.upload).not.toHaveBeenCalled();
   });
 

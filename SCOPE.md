@@ -4,7 +4,7 @@ The project scope may increase or decrease later. This file keeps changes delibe
 
 ## Current scope version
 
-**Version:** 0.1 — Phase 0 baseline
+**Version:** 0.2 — Marketplace scheduling and visual refresh
 
 The current baseline is defined by:
 
@@ -62,6 +62,10 @@ Estimates are revised from actual project state rather than blindly added to the
 | 2026-08-05 | Show the complete approved coach inventory with sorting and recommendations | Adopt list-first discovery; recommendations rank or highlight but never hide the full list | Medium | Phases 1, 3, and 4 |
 | 2026-08-05 | Let one person act as both athlete and coach | Replace the single-role model with one member identity plus separate capabilities and coach approval state | Large | Phases 2 onward |
 | 2026-08-05 | Identify bottlenecks and edge cases before each build step | Add explicit performance, permission, concurrency, moderation, and free-service checks to requirements and phase gates | Medium | All phases |
+| 2026-08-06 | Airbnb-inspired minimal visual refresh, motion, demo imagery, 3D loading art, resilient typo handling, form spacing, profile-map repair, schedules, and booking | Required now; keep one accent palette, illustrative identity-safe media, reduced-motion support, conflict-safe request/accept booking, and no payment collection | Large | Discovery, profiles, accounts, booking, and release |
+| 2026-08-06 | Approve coach capability only once | New coach capability requires administrator approval; approved coaches may publish later profile, image, and schedule edits without re-approval unless suspended | Large trust-policy replacement | Coach onboarding and profile editing |
+| 2026-08-06 | Cancellation/refund policy without payments | Athlete cancellation at least 24 hours before and every coach cancellation are marked full-refund eligible; CoachConnect records policy but does not collect or refund money | Medium | Booking lifecycle |
+| 2026-08-06 | Reconfirm mandatory core features, at least two meaningful AI features, production quality, responsive UI, Docker, and maintained documentation | Required baseline; retain explainable recommendations plus natural-language search as the two zero-cost AI features, and keep booking, availability management, verified ratings/reviews, architecture, Docker, and documentation as release gates | Large baseline clarification | All remaining phases and release |
 
 ## Current optional backlog
 

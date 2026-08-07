@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Coach } from "@/lib/coaches";
+import { illustrativeImageForSports, type Coach } from "@/lib/coaches";
 
 function stringArray(value: unknown): string[] {
   return Array.isArray(value)
@@ -64,6 +64,8 @@ export function publicCoach(row: Record<string, unknown>, rank: number): Coach |
   const coachingStyle = typeof row.coaching_style === "string" ? row.coaching_style.trim() : "";
   const longitude = typeof row.public_longitude === "number" ? row.public_longitude : null;
   const latitude = typeof row.public_latitude === "number" ? row.public_latitude : null;
+  const isDemo = row.is_demo === true;
+  const demoImage = isDemo ? illustrativeImageForSports(sports) : null;
   const coordinates: Coach["coordinates"] = offersInPerson
     && longitude !== null && latitude !== null
     && longitude >= 60 && longitude <= 78 && latitude >= 23 && latitude <= 38
@@ -87,18 +89,18 @@ export function publicCoach(row: Record<string, unknown>, rank: number): Coach |
     reviewCount: 0,
     price,
     reason: headline,
-    badge: row.is_demo === true ? "Demo profile" : "New coach",
-    isDemo: row.is_demo === true,
+    badge: isDemo ? "Demo profile" : "New coach",
+    isDemo,
     mode,
     offersOnline,
     offersInPerson,
     area: offersInPerson ? (publicArea || city || "Area to be arranged") : "Online",
     coordinates,
     availability: stringArray(row.availability),
-    image: null,
+    image: demoImage,
     rank,
     bio,
-    experience: row.is_demo === true
+    experience: isDemo
       ? "Illustrative coaching background"
       : `${experienceYears} ${experienceYears === 1 ? "year" : "years"} of coaching experience`,
     credentials: qualifications ? [qualifications] : [],

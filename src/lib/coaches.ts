@@ -311,6 +311,24 @@ const trainingAreaByCoach: Record<string, { area: string; coordinates: Coach["co
   "iqra-javed": { area: "I-8", coordinates: [73.0751, 33.6682] },
 };
 
+const illustrativeSportImages: Record<string, string> = {
+  Badminton: "/images/coach-hira.jpg",
+  Basketball: "/images/coach-usman.jpg",
+  Boxing: "/images/coach-mariam.jpg",
+  Cricket: "/images/coach-ayesha.jpg",
+  Football: "/images/coach-danish.jpg",
+  Running: "/images/coach-nadia.jpg",
+  Strength: "/images/coach-sara.jpg",
+  Swimming: "/images/coach-farhan.jpg",
+  "Table Tennis": "/images/coach-iqra.jpg",
+  Tennis: "/images/coach-hamza.jpg",
+  Yoga: "/images/coach-rida.jpg",
+};
+
+export function illustrativeImageForSports(sports: readonly string[]) {
+  return sports.map((sport) => illustrativeSportImages[sport]).find(Boolean) ?? "/images/hero-training.jpg";
+}
+
 export const coaches: Coach[] = baseCoaches.map((coach) => {
   const primarySport = coach.sports[0];
   const isAyesha = coach.id === "ayesha-khan";
@@ -318,7 +336,7 @@ export const coaches: Coach[] = baseCoaches.map((coach) => {
     ...coach,
     tags: ["Beginner friendly", coach.mode === "Online" ? "Remote coaching" : "In-person sessions"],
     badge: "Demo profile",
-    image: null,
+    image: coach.image ?? illustrativeImageForSports(coach.sports),
     rating: null,
     reviewCount: 0,
     lessonCount: 0,

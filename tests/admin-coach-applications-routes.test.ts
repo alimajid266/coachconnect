@@ -69,6 +69,8 @@ describe("administrator coach application routes", () => {
         headline: "Tennis coach for confident match play",
         submittedAt: "2026-08-05T10:30:00Z",
         applicantName: "Ayesha Khan",
+        accountStatus: "ACTIVE",
+        accountSuspensionReason: null,
       }],
     });
   });
@@ -83,6 +85,19 @@ describe("administrator coach application routes", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Explain why this coach profile is being suspended." });
     expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("keeps full-account suspension separate and requires a reason", async () => {
+    const missingReason = await reviewApplication(reviewRequest({ userId: "member-1", accountSuspended: true, note: "" }));
+    expect(missingReason.status).toBe(400);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+
+    mocks.rpc.mockResolvedValue({ data: { account_status: "SUSPENDED", account_suspension_reason: "Safety review" }, error: null });
+    const response = await reviewApplication(reviewRequest({ userId: "member-1", accountSuspended: true, note: "Safety review" }));
+    expect(response.status).toBe(200);
+    expect(mocks.rpc).toHaveBeenCalledWith("set_member_account_suspension", {
+      target_user_id: "member-1", suspend_account: true, requested_reason: "Safety review",
+    });
   });
 
   it("reviews another member through the protected database function", async () => {

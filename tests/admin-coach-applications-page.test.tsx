@@ -39,6 +39,7 @@ describe("coach application review page", () => {
     expect(screen.getByText(/gulberg, lahore/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /approve profile/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /request changes/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /suspend full member account/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "CoachConnect home" })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: "My account" })).toHaveAttribute("href", "/account");
     expect(screen.queryByRole("link", { name: /dashboard/i })).not.toBeInTheDocument();
@@ -68,5 +69,6 @@ describe("coach application review page", () => {
     expect(await screen.findByRole("button", { name: /restore coach profile/i })).toBeInTheDocument();
     expect(screen.getByText(/removed from the public catalog/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /delete member account/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /suspend full member account/i })).toBeInTheDocument();
   });
 });

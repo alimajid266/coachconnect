@@ -23,6 +23,8 @@ type Application = {
   city?: string;
   publicArea?: string;
   submittedAt?: string;
+  accountStatus?: "ACTIVE" | "SUSPENDED";
+  accountSuspensionReason?: string | null;
 };
 
 const reviewableStatuses = new Set<CoachApplicationStatus>(["SUBMITTED", "UNDER_REVIEW"]);
@@ -73,6 +75,24 @@ export default function AdminCoachApplicationsPage() {
     }
   }
 
+  async function setAccountSuspension(application: Application, accountSuspended: boolean) {
+    setError(""); setMessage(""); setBusyId(application.userId);
+    try {
+      const response = await fetch("/api/admin/coach-applications", {
+        method: "PATCH", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: application.userId, accountSuspended, note: notes[application.userId] || "" }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "The member account status could not be updated.");
+      setApplications((current) => current.map((item) => item.userId === application.userId ? {
+        ...item, accountStatus: result.account.status, accountSuspensionReason: result.account.suspensionReason,
+        status: accountSuspended && item.status === "APPROVED" ? "SUSPENDED" : item.status,
+      } : item));
+      setMessage(`${application.applicantName}'s full member account is now ${accountSuspended ? "suspended" : "active"}.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "The member account status could not be updated."); }
+    finally { setBusyId(null); }
+  }
+
   return (
     <main className="admin-review-page">
       <header className="application-header">
@@ -116,6 +136,10 @@ export default function AdminCoachApplicationsPage() {
               </div>}
               {application.status === "APPROVED" && <div className="admin-review-controls"><label>Removal reason<textarea rows={3} value={notes[application.userId] ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [application.userId]: event.target.value }))} placeholder="Required before removing this profile" /></label><div><p>Removing a coach hides the profile from the public catalog without deleting the member account or review history.</p><button className="button button-secondary" disabled={busyId === application.userId} onClick={() => review(application, "SUSPENDED")}>Remove from catalog</button></div></div>}
               {application.status === "SUSPENDED" && <div className="admin-review-controls"><div><p>This coach is removed from the public catalog. Restore only after resolving the recorded concern.</p><button className="button button-accent" disabled={busyId === application.userId} onClick={() => review(application, "APPROVED")}>Restore coach profile</button></div></div>}
+              <div className="admin-review-controls">
+                <label>Full account suspension reason<textarea rows={3} value={notes[application.userId] ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [application.userId]: event.target.value }))} placeholder="Required to suspend account and booking capabilities" /></label>
+                <div><p>This is separate from removing a coach profile. It blocks private account and booking actions and records the reason.</p>{application.accountStatus === "SUSPENDED" ? <button aria-label={`Restore full member account for ${application.applicantName}`} className="button button-accent" disabled={busyId === application.userId} onClick={() => setAccountSuspension(application, false)}>Restore full member account</button> : <button aria-label={`Suspend full member account for ${application.applicantName}`} className="button button-secondary" disabled={busyId === application.userId} onClick={() => setAccountSuspension(application, true)}>Suspend full member account</button>}</div>
+              </div>
             </article>
           );
         })}
