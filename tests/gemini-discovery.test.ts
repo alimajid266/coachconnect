@@ -6,6 +6,16 @@ const coaches = [
 ];
 
 describe("Gemini coach discovery", () => {
+  it("does not show deterministic city-conflict warnings after AI interprets the request", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ modelVersion: "gemini-3.5-flash-lite", candidates: [{ content: { parts: [{ text: JSON.stringify({ sport: "Cricket", city: null, level: null, format: null, affordability: false, maxPrice: null, day: null, tags: [], keywords: [] }) }] } }] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ modelVersion: "gemini-3.5-flash-lite", candidates: [{ content: { parts: [{ text: JSON.stringify({ recommendations: [{ id: "coach-1", reasons: ["Matches cricket coaching"] }] }) }] } }] }), { status: 200 }));
+
+    const result = await runGeminiDiscovery("cricket coach in Lahore or Islamabad", coaches, "secret", fetcher);
+
+    expect(result.interpretation.conflicts).toEqual([]);
+  });
+
   it("uses Gemini 3.5 Flash-Lite for both grounded search and recommendations", async () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ modelVersion: "gemini-3.5-flash-lite", candidates: [{ content: { parts: [{ text: JSON.stringify({ sport: "Cricket", city: "Lahore", level: "Beginner", format: "In person", affordability: true, maxPrice: 3500, day: "Saturday", tags: ["Batting"], keywords: [] }) }] } }] }), { status: 200 }))

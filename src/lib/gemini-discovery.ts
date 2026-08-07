@@ -102,7 +102,7 @@ export async function runGeminiDiscovery(
       tags: strings(search.tags).filter((tag) => tags.has(tag)),
     },
     corrections: baseline.corrections,
-    conflicts: baseline.conflicts,
+    conflicts: [],
     keywords: strings(search.keywords, 6).map((entry) => entry.slice(0, 60)),
   };
 
