@@ -5,9 +5,6 @@ import { FormEvent, useEffect, useState } from "react";
 import SiteHeader, { type SessionUser } from "@/components/site-header";
 import SiteLogo from "@/components/site-logo";
 import SportsLoader from "@/components/sports-loader";
-import ScheduleManager from "@/components/schedule-manager";
-import TrainingPlanBuilder from "@/components/training-plan-builder";
-import RecommendationPreferences from "@/components/recommendation-preferences";
 
 type Mode = "login" | "register";
 type PageState = "loading" | "unavailable" | "anonymous" | "authenticated" | "deleted";
@@ -321,9 +318,26 @@ export default function AccountPage() {
             {statusMessage && <p className="auth-resend-status" role="status">{statusMessage}</p>}
           </section>
 
-          <ScheduleManager userId={String(user.id)} approvedCoach={coachStatus === "APPROVED"} formats={user.capabilities?.coachFormats ?? undefined} />
-          <RecommendationPreferences />
-          <TrainingPlanBuilder />
+          <section className="account-workspace-links" aria-label="Training tools">
+            <article>
+              <span>Sessions</span>
+              <h2>Bookings and calendar</h2>
+              <p>Manage requests, confirmed sessions, history, payment status and coach availability.</p>
+              <Link href="/sessions" aria-label="Open sessions and bookings">Open sessions</Link>
+            </article>
+            <article>
+              <span>Training plans</span>
+              <h2>Your personal plan</h2>
+              <p>Generate and revisit an AI-assisted training plan away from account settings.</p>
+              <Link href="/training-plans" aria-label="Open training plans">Open training plans</Link>
+            </article>
+            <article>
+              <span>Recommendations</span>
+              <h2>Coach match preferences</h2>
+              <p>Save sports, goals, location and budget so recommendations fit you better.</p>
+              <Link href="/recommendations" aria-label="Open recommendation preferences">Open preferences</Link>
+            </article>
+          </section>
 
           <section className="member-account-grid" aria-label="Account details and actions">
             <article className="account-summary-card">

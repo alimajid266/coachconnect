@@ -218,6 +218,12 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
                 setDismissedInterpretations([]);
                 setCurrentPage(1); setAiInterpretation(null); setAiRanking(null); setAiStatus("idle"); setAiError("");
               }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && query.trim().length >= 2 && aiStatus !== "loading") {
+                  event.preventDefault();
+                  void runAiSearch();
+                }
+              }}
             />
           </label>
           <label>
@@ -316,6 +322,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
                         : `${coach.name}, ${coach.sports.join(" and ")} coach`}
                       fill
                       sizes="(max-width: 680px) 100vw, (max-width: 1050px) 50vw, 33vw"
+                      unoptimized={coach.image.startsWith("http")}
                     />
                   ) : (
                     <div className="catalog-coach-placeholder" aria-hidden="true">

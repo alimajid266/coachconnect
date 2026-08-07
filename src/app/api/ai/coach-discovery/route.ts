@@ -16,7 +16,7 @@ function catalog(value: unknown): GeminiCatalogCoach[] {
   return value.flatMap((entry) => {
     if (!entry || typeof entry !== "object") return [];
     const row = entry as Record<string, unknown>;
-    const id = text(row.user_id, 80);
+    const id = text(row.user_id ?? row.profile_id, 80);
     const name = text(row.display_name, 100);
     const sports = textList(row.sports, 8);
     const price = typeof row.session_price_pkr === "number" && Number.isFinite(row.session_price_pkr)
@@ -33,6 +33,7 @@ function catalog(value: unknown): GeminiCatalogCoach[] {
       levels: textList(row.levels, 5),
       availability: textList(row.availability, 7),
       headline: text(row.headline, 140),
+      isDemo: row.is_demo === true,
     }];
   });
 }
@@ -61,12 +62,15 @@ export async function POST(request: NextRequest) {
     const quota = await supabase.rpc("consume_ai_discovery_quota");
     if (quota.error) return applyCookies(NextResponse.json({ error: "AI search is temporarily unavailable. Standard search still works." }, { status: 503 }));
     if (quota.data !== true) return applyCookies(NextResponse.json({ error: "AI search limit reached for this hour. Standard search still works." }, { status: 429 }));
-    const [{ data, error }, { data: profile }] = await Promise.all([
+    const [{ data, error }, { data: demos, error: demoError }, { data: profile }] = await Promise.all([
       supabase.rpc("list_public_coaches"),
+      supabase.rpc("list_demo_coaches"),
       supabase.from("profiles").select("interests, preferred_location, max_budget_pkr, training_goal, experience_level").eq("id", authData.user.id).single(),
     ]);
     if (error) return NextResponse.json({ error: "Approved coaches are temporarily unavailable." }, { status: 503 });
-    const coaches = catalog(data);
+    const approvedRows = Array.isArray(data) ? data.map((row) => ({ ...(row as Record<string, unknown>), is_demo: false })) : [];
+    const demoRows = !demoError && Array.isArray(demos) ? demos.map((row) => ({ ...(row as Record<string, unknown>), is_demo: true })) : [];
+    const coaches = catalog([...approvedRows, ...demoRows]);
     if (coaches.length === 0) return NextResponse.json({ error: "No approved coaches are currently available to rank." }, { status: 400 });
 
     const result = await runGeminiDiscovery(query, coaches, apiKey, fetch, {

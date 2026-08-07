@@ -8,6 +8,14 @@ const approvedCoach = {
   offers_online: false, offers_in_person: true, session_price_pkr: 3000,
   levels: ["Beginner"], availability: ["Saturday"], headline: "Football fundamentals",
 };
+const demoCoach = {
+  profile_id: "demo-tennis",
+  display_name: "Demo Tennis Coach",
+  sports: ["Tennis"], tags: ["Beginners"], city: "Karachi",
+  offers_online: true, offers_in_person: false, session_price_pkr: 2500,
+  levels: ["Beginner"], availability: ["Sunday"], headline: "Illustrative tennis coaching",
+  is_demo: true,
+};
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), run: vi.fn(), getUser: vi.fn(), profileSingle: vi.fn() }));
 vi.mock("@/lib/supabase/route", () => ({
   createSupabaseRouteClient: () => ({
@@ -30,7 +38,9 @@ describe("AI coach discovery route", () => {
     vi.stubEnv("GEMINI_API_KEY", "server-only-test-key");
     mocks.getUser.mockResolvedValue({ data: { user: { id: "member-1" } }, error: null });
     mocks.rpc.mockImplementation(async (name: string) => name === "consume_ai_discovery_quota"
-      ? { data: true, error: null } : { data: [approvedCoach], error: null });
+      ? { data: true, error: null }
+      : name === "list_public_coaches" ? { data: [approvedCoach], error: null }
+        : { data: [demoCoach], error: null });
     mocks.profileSingle.mockResolvedValue({ data: { interests: ["Football"], preferred_location: "Lahore", max_budget_pkr: 3500, training_goal: "Improve control", experience_level: "Beginner" }, error: null });
     mocks.run.mockResolvedValue({ interpretation: { filters: {} }, recommendations: [], model: "test" });
   });
@@ -44,13 +54,14 @@ describe("AI coach discovery route", () => {
     expect(mocks.run).not.toHaveBeenCalled();
   });
 
-  it("uses a shared database quota and authoritative approved catalog", async () => {
+  it("uses a shared database quota and the same real plus demo catalog shown to members", async () => {
     const response = await POST(request({ query: "football coach", coaches: [{ id: "invented", name: "Fake" }] }));
     expect(response.status).toBe(200);
-    expect(mocks.rpc.mock.calls.map((call) => call[0])).toEqual(["consume_ai_discovery_quota", "list_public_coaches"]);
-    expect(mocks.run).toHaveBeenCalledWith("football coach", [expect.objectContaining({
-      id: approvedCoach.user_id, name: approvedCoach.display_name, sports: ["Football"], modes: ["In person"],
-    })], "server-only-test-key", fetch, expect.objectContaining({ interests: ["Football"], location: "Lahore", maxBudgetPkr: 3500 }));
+    expect(mocks.rpc.mock.calls.map((call) => call[0])).toEqual(["consume_ai_discovery_quota", "list_public_coaches", "list_demo_coaches"]);
+    expect(mocks.run).toHaveBeenCalledWith("football coach", [
+      expect.objectContaining({ id: approvedCoach.user_id, name: approvedCoach.display_name, sports: ["Football"], modes: ["In person"], isDemo: false }),
+      expect.objectContaining({ id: demoCoach.profile_id, sports: ["Tennis"], isDemo: true }),
+    ], "server-only-test-key", fetch, expect.objectContaining({ interests: ["Football"], location: "Lahore", maxBudgetPkr: 3500 }));
     expect(JSON.stringify(mocks.run.mock.calls)).not.toContain("invented");
   });
 

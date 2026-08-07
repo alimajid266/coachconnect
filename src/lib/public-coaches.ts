@@ -61,7 +61,7 @@ export async function attachSignedCoachMedia(
     const { data, error } = await supabase.storage.from("coach-profile-images").createSignedUrl(avatarPath, 3600);
     if (!error) avatar = data?.signedUrl ?? null;
   }
-  return { ...coach, image: signedAds[0] ?? coach.image, adImages: signedAds, avatar };
+  return { ...coach, image: signedAds[0] ?? avatar ?? coach.image, adImages: signedAds, avatar };
 }
 
 export function publicCoach(row: Record<string, unknown>, rank: number): Coach | null {

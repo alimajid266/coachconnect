@@ -575,15 +575,17 @@ a { color: inherit; text-decoration: none; }
 /* Homepage video stage */
 .revived-home .hero { min-height: auto; padding: 42px 0 58px; }
 .hero-video-grid { display: grid; grid-template-columns: minmax(0, 2.35fr) minmax(270px, .75fr); gap: 18px; align-items: stretch; }
+.hero-video-grid-single { grid-template-columns: minmax(0, 1fr); }
 .hero-primary-card,
 .hero-secondary-card { position: relative; isolation: isolate; overflow: hidden; border: 1px solid rgba(255,255,255,.14); border-radius: 30px; background-position: center; background-size: cover; box-shadow: 0 30px 80px rgba(2,10,24,.38); }
-.hero-primary-card { min-height: 640px; background-image: url("/images/american-football-training.jpg"); }
+.hero-primary-card { min-height: 640px; background-image: url("/images/football-training-video-poster.jpg"); }
 .hero-secondary-card { min-height: 640px; background-image: url("/images/coach-danish.jpg"); }
 .hero-primary-card video,
 .hero-secondary-card video { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; }
 .video-playback-toggle { position: absolute; z-index: 5; top: 16px; right: 16px; display: inline-flex; align-items: center; gap: 7px; min-height: 40px; border: 1px solid rgba(255,255,255,.5); border-radius: 999px; padding: 7px 12px; color: #fff; background: rgba(7,20,38,.72); font-size: .72rem; font-weight: 850; backdrop-filter: blur(10px); }
 .video-playback-toggle:hover { background: rgba(7,20,38,.92); }
 .video-playback-toggle span { font-size: .8rem; line-height: 1; }
+.hero-video-sequence { position: absolute; right: 18px; bottom: 16px; z-index: 5; padding: 6px 10px; border-radius: 999px; color: #fff; background: rgba(7,20,38,.72); font-size: .7rem; font-weight: 800; backdrop-filter: blur(10px); }
 .hero-primary-card::after,
 .hero-secondary-card::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .hero-primary-card::after { background: linear-gradient(90deg, rgba(3,13,31,.93) 0%, rgba(3,13,31,.77) 43%, rgba(3,13,31,.24) 78%, rgba(3,13,31,.12) 100%), linear-gradient(0deg, rgba(3,13,31,.66), transparent 48%); }
@@ -808,13 +810,13 @@ a { color: inherit; text-decoration: none; }
 .catalog-map-preview > a:hover { background: #10294a; }
 .visually-hidden { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important; }
 .catalog-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px 20px; }
-.catalog-card { min-width: 0; overflow: hidden; border: 1px solid #e2e6e3; border-radius: 18px; background: #fff; box-shadow: rgba(0,0,0,.02) 0 0 0 1px, rgba(0,0,0,.04) 0 2px 6px, rgba(0,0,0,.07) 0 4px 10px; }
+.catalog-card { display: flex; flex-direction: column; height: 100%; min-width: 0; overflow: hidden; border: 1px solid #e2e6e3; border-radius: 18px; background: #fff; box-shadow: rgba(0,0,0,.02) 0 0 0 1px, rgba(0,0,0,.04) 0 2px 6px, rgba(0,0,0,.07) 0 4px 10px; }
 .catalog-card:hover { transform: translateY(-3px); box-shadow: rgba(0,0,0,.03) 0 0 0 1px, rgba(0,0,0,.06) 0 5px 12px, rgba(0,0,0,.1) 0 10px 22px; }
 .catalog-card-image { position: relative; overflow: hidden; aspect-ratio: 4/3; background: #eef1ef; }
 .catalog-card-image img { object-fit: cover; }
 .catalog-coach-placeholder { display: grid; place-items: center; width: 100%; height: 100%; color: #fff; background: linear-gradient(145deg, #2563eb, #5d7c70); font-size: clamp(2rem, 7vw, 5rem); font-weight: 800; letter-spacing: -.05em; }
 .catalog-card-image > span { position: absolute; left: 12px; top: 12px; padding: 6px 9px; border-radius: 999px; color: #222; background: rgba(255,255,255,.94); font-size: .7rem; font-weight: 800; }
-.catalog-card-body { padding: 16px; }
+.catalog-card-body { display: flex; flex-direction: column; flex: 1; padding: 16px; }
 .catalog-card-title { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
 .catalog-card-title h2 { margin: 0; font-size: 1.05rem; line-height: 1.25; letter-spacing: -.02em; }
 .catalog-card-title > span { flex: none; font-size: .82rem; }
@@ -823,7 +825,7 @@ a { color: inherit; text-decoration: none; }
 .catalog-match-summary span { color: #547066; font-size: .71rem; line-height: 1.35; }
 .catalog-card-body > p { margin: 4px 0 6px; color: #666; font-size: .82rem; }
 .catalog-card-body > strong { display: block; font-size: .86rem; }
-.catalog-card-footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 11px; color: #666; font-size: .78rem; }
+.catalog-card-footer { display: flex; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 11px; color: #666; font-size: .78rem; }
 .catalog-card-footer b { color: #222; font-size: .9rem; }
 .catalog-profile-button { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 42px; margin-top: 13px; border: 1px solid #2563eb; border-radius: 10px; color: #fff; background: #2563eb; font-weight: 750; }
 .catalog-profile-button:hover { border-color: #10294a; background: #10294a; }
@@ -1285,6 +1287,32 @@ a { color: inherit; text-decoration: none; }
   .schedule-review-form button, .schedule-payment-form > strong, .schedule-payment-form > p { grid-column: auto; }
   .coach-availability-manager { margin: 20px 16px; }
   .schedule-policy { margin: 0 16px 20px; }
+}
+
+.account-workspace-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-bottom: 28px; }
+.account-workspace-links article { display: flex; flex-direction: column; min-height: 230px; padding: 24px; border: 1px solid #dce5f0; border-radius: 20px; background: #fff; box-shadow: 0 12px 32px rgba(15,39,68,.07); }
+.account-workspace-links article > span { color: #2563eb; font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.account-workspace-links h2 { margin: 9px 0 8px; color: #10294a; font-size: 1.35rem; }
+.account-workspace-links p { margin: 0 0 20px; color: #5b6b7f; line-height: 1.55; }
+.account-workspace-links a { align-self: flex-start; margin-top: auto; padding: 10px 15px; border-radius: 999px; color: #fff; background: #2563eb; font-weight: 800; }
+.workspace-main { padding-bottom: 80px; }
+.workspace-nav { display: flex; flex-wrap: wrap; gap: 7px; padding: 26px 0 8px; }
+.workspace-nav a { padding: 9px 13px; border-radius: 999px; color: #4f6076; background: #fff; font-size: .78rem; font-weight: 800; }
+.workspace-nav a[aria-current="page"] { color: #fff; background: #2563eb; }
+.workspace-intro { padding-top: 34px; }
+.coach-earnings-summary { grid-column: 1/-1; display: grid; grid-template-columns: 1.5fr repeat(3, minmax(120px, .7fr)); gap: 12px; padding: 18px; border: 1px solid #cfe0f7; border-radius: 17px; background: #f5f9ff; }
+.coach-earnings-summary header { display: grid; align-content: center; gap: 5px; }
+.coach-earnings-summary header span { color: #10294a; font-size: 1rem; font-weight: 900; }
+.coach-earnings-summary header small { color: #617189; line-height: 1.4; }
+.coach-earnings-summary article { display: grid; gap: 5px; padding: 14px; border-radius: 12px; background: #fff; }
+.coach-earnings-summary article span { color: #65758b; font-size: .72rem; font-weight: 750; }
+.coach-earnings-summary article strong { color: #10294a; font-size: 1.25rem; }
+.schedule-payment-confirmation { padding: 10px 12px; border-radius: 10px; color: #205b3d !important; background: #edf8f1; }
+
+@media (max-width: 820px) {
+  .account-workspace-links { grid-template-columns: 1fr; }
+  .account-workspace-links article { min-height: 0; }
+  .coach-earnings-summary { grid-template-columns: 1fr; }
 }
 
 /* Recommendation profile */

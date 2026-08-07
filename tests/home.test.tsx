@@ -10,15 +10,18 @@ describe("CoachConnect home page", () => {
 
     expect(screen.getByRole("heading", { level: 1, name: /train smarter.*play bolder/i })).toBeInTheDocument();
     const videos = Array.from(document.querySelectorAll("video"));
-    expect(videos).toHaveLength(2);
-    expect(screen.getByRole("button", { name: /pause american football training video/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /pause football coaching video/i })).toBeInTheDocument();
-    videos.forEach((video) => {
-      expect(video).toHaveAttribute("autoplay");
-      expect(video).toHaveAttribute("loop");
-      expect(video.muted).toBe(true);
-      expect(video).toHaveAttribute("playsinline");
-    });
+    expect(videos).toHaveLength(1);
+    expect(screen.getByRole("button", { name: /play homepage sports video/i })).toBeInTheDocument();
+    expect(videos[0]).toHaveAttribute("autoplay");
+    expect(videos[0]).not.toHaveAttribute("loop");
+    expect(videos[0].muted).toBe(true);
+    expect(videos[0]).toHaveAttribute("playsinline");
+    expect(videos[0].querySelector("source")).toHaveAttribute("src", "/videos/football-training-night.mp4");
+    fireEvent.play(videos[0]);
+    expect(screen.getByRole("button", { name: /pause homepage sports video/i })).toBeInTheDocument();
+    fireEvent.ended(videos[0]);
+    expect(document.querySelector("video source")).toHaveAttribute("src", "/videos/football-training-aerial.mp4");
+    expect(screen.getByRole("button", { name: /play homepage sports video/i })).toBeInTheDocument();
     expect(document.querySelector(".hero-primary-card h1")).toHaveTextContent(/train smarter.*play bolder/i);
     expect(document.body.textContent).not.toMatch(/12 sports|view all 12/i);
     expect(screen.queryByRole("region", { name: /coach results/i })).not.toBeInTheDocument();

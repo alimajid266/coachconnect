@@ -45,6 +45,11 @@ describe("account page", () => {
     );
     expect(screen.getByRole("button", { name: "Log out" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete account" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /open sessions and bookings/i })).toHaveAttribute("href", "/sessions");
+    expect(screen.getByRole("link", { name: /open training plans/i })).toHaveAttribute("href", "/training-plans");
+    expect(screen.getByRole("link", { name: /open recommendation preferences/i })).toHaveAttribute("href", "/recommendations");
+    expect(screen.queryByRole("heading", { name: /training hub/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /build a training plan/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^sign in$/i })).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith("/api/auth/session", {
       credentials: "same-origin",

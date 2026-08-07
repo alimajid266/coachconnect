@@ -38,7 +38,9 @@ describe("site header", () => {
     expect(menuButton).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("menu")).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "My account" })).toHaveAttribute("href", "/account");
-    expect(screen.getByRole("menuitem", { name: "Bookings and schedule" })).toHaveAttribute("href", "/account#schedule-heading");
+    expect(screen.getByRole("menuitem", { name: "Sessions and bookings" })).toHaveAttribute("href", "/sessions");
+    expect(screen.getByRole("menuitem", { name: "Training plans" })).toHaveAttribute("href", "/training-plans");
+    expect(screen.getByRole("menuitem", { name: "Recommendations" })).toHaveAttribute("href", "/recommendations");
     expect(screen.getByRole("menuitem", { name: "Become a coach" })).toHaveAttribute("href", "/coach/apply");
     expect(screen.getByRole("menuitem", { name: "Log out" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /dashboard/i })).not.toBeInTheDocument();

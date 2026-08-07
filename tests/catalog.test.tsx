@@ -319,6 +319,30 @@ describe("coach catalog", () => {
     await waitFor(() => expect(screen.queryByText(/checking account/i)).not.toBeInTheDocument());
   });
 
+  it("runs natural-language AI search when the member presses Enter", async () => {
+    const tennisCoach = coaches.find((coach) => coach.sports.includes("Tennis")) ?? coaches[0];
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const path = String(input);
+      if (path === "/api/coaches") return { ok: true, json: async () => ({ coaches: [], demos: coaches, demosAvailable: true }) };
+      if (path === "/api/auth/session") return { ok: true, json: async () => ({ user: { id: "1", displayName: "Ali", email: "ali@example.com", role: "ATHLETE" } }) };
+      if (path === "/api/ai/coach-discovery") return { ok: true, json: async () => ({
+        interpretation: { original: "tennis coach", filters: { sport: "Tennis", tags: [] }, corrections: [], conflicts: [], keywords: [] },
+        recommendations: [{ id: tennisCoach.id, reasons: ["Offers Tennis coaching"] }],
+        model: "Gemini 3.5 Flash-Lite",
+      }) };
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
+
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    fireEvent.change(search, { target: { value: "tennis coach" } });
+    fireEvent.keyDown(search, { key: "Enter" });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/ai/coach-discovery", expect.objectContaining({ method: "POST" })));
+    expect(await screen.findByText(/generated with gemini 3.5 flash-lite/i)).toBeInTheDocument();
+  });
+
   it("does not claim a member is signed out when session status is unavailable", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("session unavailable")));
     render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);

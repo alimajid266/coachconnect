@@ -137,7 +137,9 @@ export default function SiteHeader({ initialSession, onSessionResolved, hideCoac
                   <span>{session.user.email}</span>
                 </div>
                 <Link role="menuitem" href="/account" onClick={() => setMenuOpen(false)}>My account</Link>
-                <Link role="menuitem" href="/account#schedule-heading" onClick={() => setMenuOpen(false)}>Bookings and schedule</Link>
+                <Link href="/sessions" role="menuitem" onClick={() => setMenuOpen(false)}>Sessions and bookings</Link>
+                <Link href="/training-plans" role="menuitem" onClick={() => setMenuOpen(false)}>Training plans</Link>
+                <Link href="/recommendations" role="menuitem" onClick={() => setMenuOpen(false)}>Recommendations</Link>
                 <Link role="menuitem" href={coachHref} onClick={() => setMenuOpen(false)}>{coachLabel}</Link>
                 {isAdministrator && <Link role="menuitem" href="/admin/coaches" onClick={() => setMenuOpen(false)}>Coach administration</Link>}
                 <button role="menuitem" type="button" onClick={logOut} disabled={loggingOut}>{loggingOut ? "Logging out…" : "Log out"}</button>

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import SiteHeader from "@/components/site-header";
-import VideoPlaybackToggle from "@/components/video-playback-toggle";
+import HomeVideoPlayer from "@/components/home-video-player";
 
 const featuredSports = [
   { number: "01", name: "Cricket", detail: "Batting, bowling and fielding", image: "/images/coach-zainab.jpg", imageAlt: "Cricket stadium" },
@@ -28,12 +28,9 @@ export default function HomePage() {
         <section className="hero" id="top">
           <div className="hero-glow hero-glow-one" aria-hidden="true" />
           <div className="hero-glow hero-glow-two" aria-hidden="true" />
-          <div className="container hero-video-grid">
+          <div className="container hero-video-grid hero-video-grid-single">
             <article className="hero-primary-card">
-              <video id="american-football-video" aria-label="American football training in motion" autoPlay muted loop playsInline preload="metadata" poster="/images/american-football-training.jpg">
-                <source src="/videos/american-football-motion.mp4" type="video/mp4" />
-              </video>
-              <VideoPlaybackToggle targetId="american-football-video" label="American football training video" />
+              <HomeVideoPlayer />
               <div className="hero-video-overlay">
                 <p className="eyebrow light">Pakistan&apos;s coaching marketplace</p>
                 <h1><span>Train smarter.</span><span>Play bolder.</span></h1>
@@ -57,13 +54,6 @@ export default function HomePage() {
                 </form>
                 <p className="search-example">Search by sport, coach name, specialty or city.</p>
               </div>
-            </article>
-            <article className="hero-secondary-card">
-              <video id="football-coaching-video" aria-label="Football coaching session in motion" autoPlay muted loop playsInline preload="metadata" poster="/images/coach-danish.jpg">
-                <source src="/videos/football-pitch-motion.mp4" type="video/mp4" />
-              </video>
-              <VideoPlaybackToggle targetId="football-coaching-video" label="football coaching video" />
-              <div className="hero-secondary-copy"><span>More ways to move</span><strong>Every sport belongs here.</strong><small>Coaches can add other sports they are qualified to teach.</small></div>
             </article>
           </div>
         </section>

@@ -88,6 +88,31 @@ describe("public coaches route", () => {
     expect(body).not.toMatch(/email|reviewNote|reviewedBy/i);
   });
 
+  it("uses the member avatar when a coach has no gallery or cover image", async () => {
+    mocks.rpc.mockImplementation((name: string) => Promise.resolve(name === "list_public_coaches" ? {
+      data: [{
+        user_id: "coach-avatar",
+        display_name: "Avatar Coach",
+        headline: "Football coaching",
+        bio: "Structured coaching sessions for developing football players.",
+        sports: ["Football"],
+        session_price_pkr: 3000,
+        offers_online: true,
+        offers_in_person: false,
+        avatar_path: "11111111-1111-4111-8111-111111111111/33333333-3333-4333-8333-333333333333.webp",
+      }],
+      error: null,
+    } : { data: [], error: null }));
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(body.coaches[0]).toMatchObject({
+      avatar: "https://example.supabase.co/storage/v1/object/sign/coach-profile-images/signed-image",
+      image: "https://example.supabase.co/storage/v1/object/sign/coach-profile-images/signed-image",
+    });
+  });
+
   it("maps durable demo languages, coaching style, and pipe-delimited lesson steps", async () => {
     mocks.rpc.mockImplementation((name: string) => Promise.resolve(name === "list_public_coaches"
       ? { data: [], error: null }

@@ -20,7 +20,7 @@ const booking = {
   cancellationNote: null,
 };
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe("account schedule manager", () => {
   it("shows athlete and coach schedules with acceptance controls", async () => {
@@ -145,6 +145,33 @@ describe("account schedule manager", () => {
     fireEvent.change(screen.getByLabelText("Ends"), { target: { value: localTime(end) } });
     fireEvent.click(screen.getByRole("button", { name: "Add sessions" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/schedule/slots", expect.objectContaining({ body: expect.stringContaining('"mode":"ONLINE"') })));
+  });
+
+  it("shows payment confirmation to both participants and coach demo earnings totals", async () => {
+    const paid = {
+      ...booking,
+      status: "COMPLETED",
+      paymentStatus: "DEMO_PAID",
+      startsAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      endsAt: new Date(Date.now()).toISOString(),
+      pricePkr: 3000,
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ userId, bookings: [paid], slots: [] }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { unmount } = render(<ScheduleManager userId={userId} approvedCoach />);
+    expect(await screen.findByTestId("earnings-week")).toHaveTextContent("Rs 3,000");
+    expect(screen.getByTestId("earnings-month")).toHaveTextContent("Rs 3,000");
+    expect(screen.getByTestId("earnings-lifetime")).toHaveTextContent("Rs 3,000");
+    fireEvent.click(screen.getByRole("button", { name: /^history & reviews/i }));
+    expect(screen.getByText(/payment confirmed on coachconnect/i)).toBeInTheDocument();
+    unmount();
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ userId: booking.athleteId, bookings: [paid], slots: [] }) }));
+    render(<ScheduleManager userId={booking.athleteId} approvedCoach={false} />);
+    fireEvent.click(await screen.findByRole("button", { name: /^history & reviews/i }));
+    expect(screen.getByText(/payment confirmed on coachconnect/i)).toBeInTheDocument();
+    vi.useRealTimers();
   });
 
   it("gives repeated actions contextual names and announces progress", async () => {

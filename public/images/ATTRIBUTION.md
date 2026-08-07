@@ -29,10 +29,11 @@ Source image URLs:
 - License: CC0 1.0 Universal — https://creativecommons.org/publicdomain/zero/1.0/
 - Local treatment: resized and JPEG-optimized for the CoachConnect homepage.
 
-## Homepage motion treatments
+## Homepage training videos
 
-- `american-football-motion.mp4` is a silent, looping motion treatment derived locally from the CC0 `american-football-training.jpg` image documented above.
-- `football-pitch-motion.mp4` is a silent, looping motion treatment derived locally from the Unsplash `coach-danish.jpg` football image documented above.
-- Both MP4 files contain no added third-party audio, logos, or footage.
+- `football-training-night.mp4` was supplied by Ali as `15089925_2304_1080_30fps.mp4` and optimized locally for web playback.
+- `football-training-aerial.mp4` was supplied by Ali as `15811293_3840_2160_30fps.mp4` and optimized locally for web playback.
+- Both local web files are silent H.264 video and play sequentially in one homepage player.
+- Ali supplied both source files and explicitly authorized their use on the CoachConnect production website on 7 August 2026. Keep the original files and this authorization record with the project.
 
-The Unsplash photographs are used under the Unsplash License as illustrative sport/training imagery. The American-football hero is used under CC0. Demo-profile UI labels and alternative text explicitly describe all sport photographs as illustrative; the people shown are not represented as the fictional Demo coaches.
+The Unsplash photographs are used under the Unsplash License as illustrative sport/training imagery. Demo-profile UI labels and alternative text explicitly describe all sport photographs as illustrative; the people shown are not represented as the fictional Demo coaches.
