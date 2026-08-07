@@ -319,6 +319,60 @@ describe("coach catalog", () => {
     await waitFor(() => expect(screen.queryByText(/checking account/i)).not.toBeInTheDocument());
   });
 
+  it("ignores an AI response after the member changes the query", async () => {
+    let resolveAi!: (value: { ok: boolean; json: () => Promise<object> }) => void;
+    const pendingAi = new Promise<{ ok: boolean; json: () => Promise<object> }>((resolve) => { resolveAi = resolve; });
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const path = String(input);
+      if (path === "/api/coaches") return Promise.resolve({ ok: true, json: async () => ({ coaches: [], demos: coaches, demosAvailable: true }) });
+      if (path === "/api/auth/session") return Promise.resolve({ ok: true, json: async () => ({ user: null }) });
+      if (path === "/api/ai/coach-discovery") return pendingAi;
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
+
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    fireEvent.change(search, { target: { value: "tennis coach" } });
+    fireEvent.keyDown(search, { key: "Enter" });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/ai/coach-discovery", expect.anything()));
+    fireEvent.change(search, { target: { value: "yoga coach" } });
+    resolveAi({ ok: true, json: async () => ({
+      interpretation: { original: "tennis coach", filters: { sport: "Tennis", tags: [] }, corrections: [], conflicts: [], keywords: [] },
+      recommendations: [], model: "Gemini 3.5 Flash-Lite",
+    }) });
+
+    await waitFor(() => expect(screen.getByText(/standard search and filters stay authoritative/i)).toBeInTheDocument());
+    expect(screen.queryByText(/coach suggestions generated with gemini/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps deterministic search filters authoritative when AI suggests something else", async () => {
+    const tennisCoach = coaches.find((coach) => coach.sports.includes("Tennis") && !coach.sports.includes("Badminton")) ?? coaches.find((coach) => coach.sports.includes("Tennis")) ?? coaches[0];
+    const badmintonCoach = coaches.find((coach) => coach.sports.includes("Badminton") && !coach.sports.includes("Tennis")) ?? coaches.find((coach) => !coach.sports.includes("Tennis")) ?? coaches[1];
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const path = String(input);
+      if (path === "/api/coaches") return { ok: true, json: async () => ({ coaches: [], demos: coaches, demosAvailable: true }) };
+      if (path === "/api/auth/session") return { ok: true, json: async () => ({ user: { id: "1", displayName: "Ali", email: "ali@example.com", role: "ATHLETE" } }) };
+      if (path === "/api/ai/coach-discovery") return { ok: true, json: async () => ({
+        interpretation: { original: "tennis coach", filters: { sport: "Badminton", tags: [] }, corrections: [], conflicts: [], keywords: [] },
+        recommendations: [{ id: badmintonCoach.id, reasons: ["AI suggested this profile"] }],
+        model: "Gemini 3.5 Flash-Lite",
+      }) };
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
+
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    fireEvent.change(search, { target: { value: "tennis coach" } });
+    fireEvent.keyDown(search, { key: "Enter" });
+
+    expect(await screen.findByText(/generated with gemini 3.5 flash-lite/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: tennisCoach.name })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: badmintonCoach.name })).not.toBeInTheDocument();
+    expect(screen.getByText(/ai suggestions only provide a small ranking nudge/i)).toBeInTheDocument();
+  });
+
   it("runs natural-language AI search when the member presses Enter", async () => {
     const tennisCoach = coaches.find((coach) => coach.sports.includes("Tennis")) ?? coaches[0];
     const fetchMock = vi.fn(async (input: string | URL | Request) => {

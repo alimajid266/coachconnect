@@ -6,8 +6,10 @@ import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import CoachLocationPreview from "@/app/coaches/coach-location-preview";
 import CoachBookingPanel from "@/components/coach-booking-panel";
+import CoachReviewList from "@/components/coach-review-list";
 import SiteHeader from "@/components/site-header";
 import { attachSignedCoachMedia, publicCoach } from "@/lib/public-coaches";
+import { loadPublicCoachReviews, reconcilePublicReviewStats, type PublicCoachReviewState } from "@/lib/public-reviews";
 import { coaches, formatCoachPrice, type Coach } from "@/lib/coaches";
 
 type ProfileProps = {
@@ -52,6 +54,17 @@ async function loadCoach(id: string): Promise<Coach | null> {
     : coach;
 }
 
+async function loadCoachReviews(id: string): Promise<PublicCoachReviewState> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return { status: "ready", reviews: [] };
+  const url = process.env.SUPABASE_INTERNAL_URL ?? process.env.SUPABASE_URL;
+  const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !publishableKey) return { status: "unavailable", reviews: [] };
+  const supabase = createClient(url, publishableKey, {
+    auth: { autoRefreshToken: false, persistSession: false, storageKey: `coach-reviews-${randomUUID()}` },
+  });
+  return loadPublicCoachReviews(supabase, id);
+}
+
 export async function generateMetadata({ params }: Pick<ProfileProps, "params">): Promise<Metadata> {
   const { id } = await params;
   const coach = await loadCoach(id);
@@ -64,8 +77,14 @@ export async function generateMetadata({ params }: Pick<ProfileProps, "params">)
 
 export default async function CoachProfilePage({ params, searchParams }: ProfileProps) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const coach = await loadCoach(id);
-  if (!coach) notFound();
+  const [loadedCoach, reviewState] = await Promise.all([loadCoach(id), loadCoachReviews(id)]);
+  if (!loadedCoach) notFound();
+  const reviews = reviewState.reviews;
+  const reviewStats = reconcilePublicReviewStats(loadedCoach.reviewCount, loadedCoach.rating, reviewState);
+  const reviewsAvailable = reviewStats.available;
+  const coach = reviewStats.reviewCount !== loadedCoach.reviewCount || reviewStats.rating !== loadedCoach.rating
+    ? { ...loadedCoach, reviewCount: reviewStats.reviewCount, rating: reviewStats.rating }
+    : loadedCoach;
   const firstName = coach.name.split(" ")[0];
   const returnTo = safeReturnTo(query.returnTo);
 
@@ -86,13 +105,15 @@ export default async function CoachProfilePage({ params, searchParams }: Profile
               {coach.isDemo && <span className="catalog-demo-label">Demo profile</span>}
               <p>{coach.area !== "Online" && coach.area !== coach.location ? `${coach.area}, ` : ""}{coach.location} · {coach.mode}</p>
               <h1>{coach.name}</h1>
-              <strong>{coach.specialty}</strong>
+              <strong className="coach-profile-specialty">{coach.specialty}</strong>
               <div className="catalog-profile-sports" aria-label="Sports coached">{coach.sports.map((sport) => <span key={sport}>{sport}</span>)}</div>
               {coach.tags.length > 0 && <div className="catalog-profile-sports coach-profile-tags" aria-label="Coach tags">{coach.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
               <div className="catalog-profile-summary">
                 {coach.isDemo
                   ? <span><b>Demo</b>Reviews do not apply to demo profiles</span>
-                  : coach.rating === null
+                  : !reviewsAvailable
+                    ? <span><b>Reviews</b>Temporarily unavailable</span>
+                    : coach.rating === null || coach.reviewCount === 0
                     ? <span><b>New coach</b>No verified reviews yet</span>
                     : <span><b>★ {coach.rating}</b>{coach.reviewCount} verified reviews</span>}
                 {coach.lessonCount > 0 && <span aria-label={`${coach.lessonCount} lessons taught`}><b>{coach.lessonCount}</b>lessons taught</span>}
@@ -117,6 +138,7 @@ export default async function CoachProfilePage({ params, searchParams }: Profile
             {coach.availability.length > 0 && <section className="catalog-profile-availability"><h2>{coach.isDemo ? "Example availability" : "Weekly availability"}</h2><div>{coach.availability.map((day) => <span key={day}>{day}</span>)}</div></section>}
             <CoachLocationPreview coach={coach} />
             {coach.faqs.length > 0 && <section className="catalog-profile-faq"><h2>Frequently asked questions</h2><div>{coach.faqs.map((faq) => <details key={faq.question}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</div></section>}
+            {!coach.isDemo && <CoachReviewList coachName={coach.name} available={reviewsAvailable} reviewCount={coach.reviewCount} reviews={reviews} />}
           </div>
         </article>
       </main>

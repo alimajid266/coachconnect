@@ -25,7 +25,18 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  cursor: default;
 }
+input:not([type]),
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="url"],
+input[type="tel"],
+input[type="number"],
+textarea,
+[contenteditable="true"] { cursor: text; }
 button, input, select { font: inherit; }
 button, a, input, select {
   transition:
@@ -35,7 +46,7 @@ button, a, input, select {
     box-shadow var(--motion-standard) var(--motion-ease-out),
     color var(--motion-fast) ease;
 }
-button { cursor: pointer; }
+button, a { cursor: pointer; }
 button:active:not(:disabled), .button:active { transform: scale(.98); }
 a { color: inherit; text-decoration: none; }
 .container { width: min(1200px, calc(100% - 40px)); margin-inline: auto; }
@@ -62,6 +73,10 @@ a { color: inherit; text-decoration: none; }
 .nav-coach-action:hover { transform: translateY(-1px); color: #fff; background: #1d4ed8; }
 .nav-account { color: var(--ink); }
 .nav-account:hover { color: var(--sport-blue); }
+.nav-workspace-shortcuts { display: flex; align-items: center; gap: 14px; padding-right: 2px; }
+.nav-workspace-shortcuts a { color: #4f5b57; font-size: .78rem; font-weight: 800; white-space: nowrap; }
+.nav-workspace-shortcuts a:hover { color: var(--sport-blue); }
+@media (max-width: 900px) { .nav-workspace-shortcuts { display: none; } }
 .nav-account-menu { position: relative; }
 .nav-account-trigger { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #ddd; border-radius: 50%; color: #fff; background: var(--coral); font-size: .76rem; font-weight: 950; letter-spacing: .02em; cursor: pointer; }
 .nav-account-trigger img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
@@ -581,7 +596,8 @@ a { color: inherit; text-decoration: none; }
 .hero-primary-card { min-height: 640px; background-image: url("/images/football-training-video-poster.jpg"); }
 .hero-secondary-card { min-height: 640px; background-image: url("/images/coach-danish.jpg"); }
 .hero-primary-card video,
-.hero-secondary-card video { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; }
+.hero-secondary-card video { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; opacity: 1; transition: opacity 520ms ease; }
+.hero-primary-card video.is-transitioning { opacity: 0; }
 .video-playback-toggle { position: absolute; z-index: 5; top: 16px; right: 16px; display: inline-flex; align-items: center; gap: 7px; min-height: 40px; border: 1px solid rgba(255,255,255,.5); border-radius: 999px; padding: 7px 12px; color: #fff; background: rgba(7,20,38,.72); font-size: .72rem; font-weight: 850; backdrop-filter: blur(10px); }
 .video-playback-toggle:hover { background: rgba(7,20,38,.92); }
 .video-playback-toggle span { font-size: .8rem; line-height: 1; }
@@ -905,14 +921,29 @@ a { color: inherit; text-decoration: none; }
 .coach-profile-ad-gallery > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 14px; }
 .coach-profile-ad-gallery img { width: 100%; height: 180px; border-radius: 14px; object-fit: cover; }
 .coach-profile-heading > p { margin: 0; color: #66706c; font-size: .82rem; }
-.coach-profile-heading h1 { margin: 7px 0 5px; font-size: clamp(2.5rem, 5vw, 4.4rem); line-height: .94; letter-spacing: -.065em; }
+.coach-profile-heading h1 { margin: 7px 0 0; font-size: clamp(2.5rem, 5vw, 4.4rem); line-height: .94; letter-spacing: -.065em; }
 .coach-profile-heading > strong { font-size: 1rem; }
+.coach-profile-specialty { display: block; margin-top: 14px; line-height: 1.4; }
 .coach-profile-tags span { color: #59645f; background: #f1f3f2; }
 .coach-profile-content { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(290px, .75fr); align-items: start; gap: 22px 34px; padding: 38px 44px 48px; border-top: 1px solid #e2e8e4; }
 .coach-profile-content > :not(.coach-booking-panel) { grid-column: 1; }
 .coach-profile-content > .coach-booking-panel { position: sticky; top: 104px; grid-column: 2; grid-row: 1 / span 4; }
 .coach-profile-content > section > h2, .coach-profile-content .catalog-profile-fit h2, .coach-profile-content .catalog-profile-details h2 { margin: 0 0 9px; font-size: 1.08rem; }
 .coach-profile-content > section > p { margin: 0; color: #56615d; line-height: 1.65; }
+.coach-profile-reviews { margin-top: 18px; padding-top: 24px; border-top: 1px solid #e2e8e4; }
+.coach-profile-reviews > header { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
+.coach-profile-reviews > header span { color: var(--sport-blue); font-size: .68rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.coach-profile-reviews > header h2 { margin: 3px 0 0; font-size: 1.25rem; }
+.coach-profile-reviews > header > strong { color: #66706c; font-size: .76rem; }
+.coach-review-disclosure { margin: -5px 0 12px !important; color: #6a7685 !important; font-size: .73rem; }
+.coach-review-list { display: grid; gap: 12px; }
+.coach-review-list article { padding: 18px; border: 1px solid #dce5f0; border-radius: 16px; background: #f8faff; }
+.coach-review-list article > div { display: flex; justify-content: space-between; gap: 14px; }
+.coach-review-stars { color: #2563eb; letter-spacing: .08em; }
+.coach-review-list time, .coach-review-list small { color: #6a7685; font-size: .72rem; }
+.coach-review-list p { margin: 12px 0 10px; color: #293c55; line-height: 1.6; }
+.coach-review-list small { font-weight: 800; }
+.coach-review-empty { margin: 0; padding: 18px; border: 1px dashed #cfd9e6; border-radius: 14px; color: #68778a; background: #fafcff; }
 .coach-profile-booking { padding: 24px; border-radius: 18px; color: #fff; background: #10294a; }
 .coach-profile-booking p { color: #d9e5e1 !important; }
 .coach-profile-booking .button { display: inline-flex; margin-top: 16px; color: #10294a; background: var(--sport-blue); }
@@ -929,6 +960,8 @@ a { color: inherit; text-decoration: none; }
 .catalog-policy-points p { margin: 0; padding: 13px 15px; border-radius: 13px; background: rgba(255,255,255,.78); line-height: 1.55; }
 .catalog-policy-points strong { color: #1e40af; }
 .catalog-ai-status { display: flex; justify-content: space-between; gap: 14px; margin: 10px 4px 0; color: #66706c; font-size: .76rem; }
+.catalog-ai-status > div { display: grid; gap: 4px; }
+.catalog-ai-status small { color: #7b8782; font-size: .7rem; }
 .catalog-ai-status p { margin: 0; color: #9a1e1e; }
 
 @media (max-width: 1100px) {

@@ -17,10 +17,25 @@ describe("CoachConnect home page", () => {
     expect(videos[0].muted).toBe(true);
     expect(videos[0]).toHaveAttribute("playsinline");
     expect(videos[0].querySelector("source")).toHaveAttribute("src", "/videos/football-training-night.mp4");
+    expect(screen.queryByText(/video 1 of 2/i)).not.toBeInTheDocument();
+    expect(videos[0]).toHaveAccessibleName("Homepage sports training video");
     fireEvent.play(videos[0]);
     expect(screen.getByRole("button", { name: /pause homepage sports video/i })).toBeInTheDocument();
+    Object.defineProperties(videos[0], {
+      currentTime: { configurable: true, value: 9.6 },
+      duration: { configurable: true, value: 10 },
+    });
+    fireEvent.timeUpdate(videos[0]);
+    expect(videos[0]).toHaveClass("is-transitioning");
+    fireEvent.pause(videos[0]);
+    expect(videos[0]).not.toHaveClass("is-transitioning");
+    fireEvent.play(videos[0]);
+    fireEvent.timeUpdate(videos[0]);
     fireEvent.ended(videos[0]);
-    expect(document.querySelector("video source")).toHaveAttribute("src", "/videos/football-training-aerial.mp4");
+    const secondVideo = document.querySelector("video") as HTMLVideoElement;
+    expect(secondVideo.querySelector("source")).toHaveAttribute("src", "/videos/football-training-aerial.mp4");
+    fireEvent.loadedData(secondVideo);
+    expect(secondVideo).not.toHaveClass("is-transitioning");
     expect(screen.getByRole("button", { name: /play homepage sports video/i })).toBeInTheDocument();
     expect(document.querySelector(".hero-primary-card h1")).toHaveTextContent(/train smarter.*play bolder/i);
     expect(document.body.textContent).not.toMatch(/12 sports|view all 12/i);

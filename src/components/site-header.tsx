@@ -112,7 +112,13 @@ export default function SiteHeader({ initialSession, onSessionResolved, hideCoac
           ) : session.status === "unavailable" ? (
             <Link className="nav-account" href="/account">My account</Link>
           ) : session.user ? (
-            <div className="nav-account-menu" ref={accountMenuRef}>
+            <>
+              <nav className="nav-workspace-shortcuts" aria-label="Workspace shortcuts">
+                <Link href="/sessions">Sessions</Link>
+                <Link href="/training-plans">Plans</Link>
+                <Link href="/recommendations">Recommendation settings</Link>
+              </nav>
+              <div className="nav-account-menu" ref={accountMenuRef}>
               <button
                 className="nav-account-trigger"
                 type="button"
@@ -145,7 +151,8 @@ export default function SiteHeader({ initialSession, onSessionResolved, hideCoac
                 <button role="menuitem" type="button" onClick={logOut} disabled={loggingOut}>{loggingOut ? "Logging out…" : "Log out"}</button>
                 {menuError && <span className="nav-account-error" role="alert">{menuError}</span>}
               </div>
-            </div>
+              </div>
+            </>
           ) : (
             <>
               <Link className="nav-coach-action" href={coachHref}>{coachLabel}</Link>

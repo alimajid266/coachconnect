@@ -31,6 +31,10 @@ describe("site header", () => {
     render(<SiteHeader />);
 
     expect(screen.getByRole("link", { name: "CoachConnect home" })).toHaveAttribute("href", "/");
+    expect(await screen.findByRole("navigation", { name: "Workspace shortcuts" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute("href", "/sessions");
+    expect(screen.getByRole("link", { name: "Plans" })).toHaveAttribute("href", "/training-plans");
+    expect(screen.getByRole("link", { name: "Recommendation settings" })).toHaveAttribute("href", "/recommendations");
     const menuButton = await screen.findByRole("button", { name: /open account menu for ali member/i });
     expect(menuButton).toHaveTextContent("AM");
     expect(menuButton).toHaveAttribute("aria-expanded", "false");

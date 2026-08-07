@@ -52,7 +52,7 @@ export default function MemberWorkspace({ section }: { section: Section }) {
     return () => { active = false; };
   }, []);
 
-  if (state === "loading") return <SportsLoader message="Opening your workspace" />;
+  if (state === "loading") return <main className="route-loading-screen"><SportsLoader message="Opening your workspace" /></main>;
   if (state !== "ready" || !user) {
     return (
       <div className="member-account-page">
