@@ -2,8 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { rejectCrossOriginRequest } from "@/lib/auth-http";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
-const sports = new Set(["Football", "Cricket", "Tennis", "Strength", "Swimming", "Badminton", "Boxing", "Yoga", "Running"]);
 const levels = new Set(["Beginner", "Intermediate", "Advanced"]);
+
+function normalizeInterests(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const interests: string[] = [];
+  for (const item of value) {
+    if (typeof item !== "string") continue;
+    const normalized = item.trim().replace(/\s+/g, " ");
+    const key = normalized.toLocaleLowerCase("en");
+    if (normalized.length < 2 || normalized.length > 40 || seen.has(key)) continue;
+    seen.add(key);
+    interests.push(normalized);
+    if (interests.length === 12) break;
+  }
+  return interests;
+}
 
 async function member(request: NextRequest) {
   const client = createSupabaseRouteClient(request);
@@ -28,7 +43,7 @@ export async function PATCH(request: NextRequest) {
     const { supabase, user, applyCookies } = await member(request);
     if (!user) return NextResponse.json({ error: "Sign in to manage preferences." }, { status: 401 });
     const body = await request.json();
-    const interests = Array.isArray(body.interests) ? [...new Set(body.interests.filter((item: unknown): item is string => typeof item === "string" && sports.has(item)))].slice(0, 8) : [];
+    const interests = normalizeInterests(body.interests);
     const preferredLocation = typeof body.preferredLocation === "string" ? body.preferredLocation.trim().slice(0, 80) : "";
     const maxBudgetPkr = Number(body.maxBudgetPkr);
     const trainingGoal = typeof body.trainingGoal === "string" ? body.trainingGoal.trim().slice(0, 240) : "";

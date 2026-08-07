@@ -29,7 +29,7 @@ export default function TrainingPlanBuilder() {
   }
 
   return <section className="training-plan-studio" aria-labelledby="training-plan-heading">
-    <div className="training-plan-intro"><span>AI training studio</span><h2 id="training-plan-heading">Build a four-week starter plan</h2><p>Choose a sport, goal and realistic schedule. CoachConnect creates a practical outline—not medical or rehabilitation advice.</p></div>
+    <div className="training-plan-intro"><span>AI training studio</span><h2 id="training-plan-heading">Build a four-week starter plan</h2><p>Choose a sport, goal and realistic schedule. CoachConnect creates a practical outline. It is not medical or rehabilitation advice.</p></div>
     <form className="training-plan-form" onSubmit={submit}>
       <label>Sport<select value={sport} onChange={(e) => setSport(e.target.value)}>{["Football", "Cricket", "Tennis", "Strength", "Running", "Swimming"].map((item) => <option key={item}>{item}</option>)}</select></label>
       <label>Experience<select value={level} onChange={(e) => setLevel(e.target.value)}>{["Beginner", "Intermediate", "Advanced"].map((item) => <option key={item}>{item}</option>)}</select></label>

@@ -223,6 +223,31 @@ describe("account page", () => {
     expect(fetchMock.mock.calls.filter(([path]) => path !== "/api/auth/session")).toHaveLength(0);
   });
 
+  it("lets a member register with a sport that is not in the suggested list", async () => {
+    let submitted: Record<string, unknown> | null = null;
+    anonymousSessionMock((path, init) => {
+      if (path === "/api/auth/register") {
+        submitted = JSON.parse(String(init?.body));
+        return response({ pendingEmailConfirmation: true });
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    render(<AccountPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /create account/i }));
+    fireEvent.change(screen.getByLabelText(/display name/i), { target: { value: "Ali Member" } });
+    fireEvent.change(screen.getByLabelText(/add another sport or activity/i), { target: { value: "Archery" } });
+    fireEvent.click(screen.getByRole("button", { name: /add sport or activity/i }));
+    fireEvent.change(screen.getByLabelText(/main training goal/i), { target: { value: "Improve archery consistency" } });
+    fireEvent.change(screen.getByLabelText(/^email/i), { target: { value: "ali@example.com" } });
+    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "Private-Test-Passphrase-42" } });
+    fireEvent.change(screen.getByLabelText(/re-enter your password/i), { target: { value: "Private-Test-Passphrase-42" } });
+    fireEvent.click(screen.getByRole("button", { name: /create my account/i }));
+
+    await screen.findByRole("heading", { name: /check your email/i });
+    expect(submitted).toMatchObject({ interests: ["Archery"] });
+  });
+
   it("asks the member to confirm their email when required", async () => {
     anonymousSessionMock((path) => {
       if (path === "/api/auth/register") return response({ pendingEmailConfirmation: true });

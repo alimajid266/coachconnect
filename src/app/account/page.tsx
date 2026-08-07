@@ -49,6 +49,7 @@ export default function AccountPage() {
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
+  const [customInterest, setCustomInterest] = useState("");
   const [preferredLocation, setPreferredLocation] = useState("Islamabad");
   const [maxBudgetPkr, setMaxBudgetPkr] = useState("3000");
   const [trainingGoal, setTrainingGoal] = useState("");
@@ -152,6 +153,13 @@ export default function AccountPage() {
     } finally {
       setAvatarBusy(false);
     }
+  }
+
+  function addCustomInterest() {
+    const value = customInterest.trim().replace(/\s+/g, " ");
+    if (value.length < 2 || value.length > 40 || interests.length >= 12) return;
+    setInterests((current) => current.some((item) => item.toLowerCase() === value.toLowerCase()) ? current : [...current, value]);
+    setCustomInterest("");
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -442,6 +450,12 @@ export default function AccountPage() {
                     <legend>Your coaching interests</legend>
                     <p>These help AI search recommend relevant coaches and plans. You can change them later.</p>
                     <div>{onboardingSports.map((sport) => <label key={sport}><input type="checkbox" checked={interests.includes(sport)} onChange={(event) => setInterests((current) => event.target.checked ? [...current, sport] : current.filter((item) => item !== sport))} />{sport}</label>)}</div>
+                    <div className="auth-custom-interest">
+                      <label htmlFor="custom-interest">Add another sport or activity</label>
+                      <input id="custom-interest" maxLength={40} value={customInterest} onChange={(event) => setCustomInterest(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addCustomInterest(); } }} placeholder="For example, archery or squash" />
+                      <button type="button" onClick={addCustomInterest} disabled={customInterest.trim().length < 2 || interests.length >= 12}>Add sport or activity</button>
+                    </div>
+                    {interests.some((interest) => !onboardingSports.includes(interest)) && <div className="auth-custom-interest-list" aria-label="Your added sports">{interests.filter((interest) => !onboardingSports.includes(interest)).map((interest) => <button type="button" key={interest} aria-label={`Remove ${interest}`} onClick={() => setInterests((current) => current.filter((item) => item !== interest))}>{interest} ×</button>)}</div>}
                   </fieldset>
                   <div className="auth-preference-grid">
                     <label htmlFor="preferred-location">Preferred location<select id="preferred-location" value={preferredLocation} onChange={(event) => setPreferredLocation(event.target.value)}><option>Islamabad</option><option>Karachi</option><option>Lahore</option><option>Rawalpindi</option><option>Online</option></select></label>

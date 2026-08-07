@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import SiteHeader from "@/components/site-header";
+import VideoPlaybackToggle from "@/components/video-playback-toggle";
 
 const featuredSports = [
   { number: "01", name: "Cricket", detail: "Batting, bowling and fielding", image: "/images/coach-zainab.jpg", imageAlt: "Cricket stadium" },
@@ -27,46 +28,49 @@ export default function HomePage() {
         <section className="hero" id="top">
           <div className="hero-glow hero-glow-one" aria-hidden="true" />
           <div className="hero-glow hero-glow-two" aria-hidden="true" />
-          <div className="container hero-grid">
-            <div className="hero-copy">
-              <p className="eyebrow light">Pakistan&apos;s coaching marketplace</p>
-              <h1><span>Train smarter.</span><span className="headline-accent">Play bolder.</span></h1>
-              <p className="hero-lead">Explore focused coaching across team sports, racquet sports, fitness, swimming and more—built around your goals.</p>
-              <form className="search-console" action="/coaches" method="get" aria-label="Find a coach">
-                <div className="search-field search-main">
-                  <label htmlFor="home-coach-search">Sport, coach or specialty</label>
-                  <input id="home-coach-search" type="search" name="query" placeholder="Try football, swimming or yoga" />
-                </div>
-                <div className="search-field">
-                  <label htmlFor="home-search-city">City</label>
-                  <select id="home-search-city" name="city" defaultValue="any">
-                    <option value="any">Any city</option>
-                    <option value="Islamabad">Islamabad</option>
-                    <option value="Karachi">Karachi</option>
-                    <option value="Lahore">Lahore</option>
-                    <option value="Rawalpindi">Rawalpindi</option>
-                  </select>
-                </div>
-                <button className="button button-accent" type="submit">Browse coaches <span aria-hidden="true">→</span></button>
-              </form>
-              <p className="search-example">Search by sport, coach name, specialty or city.</p>
-            </div>
-            <div className="hero-stage">
-              <div className="hero-orbit" aria-hidden="true" />
-              <div className="hero-photo">
-                <Image src="/images/american-football-training.jpg" alt="American football training session on the field" fill priority sizes="(max-width: 980px) 90vw, 42vw" />
+          <div className="container hero-video-grid">
+            <article className="hero-primary-card">
+              <video id="american-football-video" aria-label="American football training in motion" autoPlay muted loop playsInline preload="metadata" poster="/images/american-football-training.jpg">
+                <source src="/videos/american-football-motion.mp4" type="video/mp4" />
+              </video>
+              <VideoPlaybackToggle targetId="american-football-video" label="American football training video" />
+              <div className="hero-video-overlay">
+                <p className="eyebrow light">Pakistan&apos;s coaching marketplace</p>
+                <h1><span>Train smarter.</span><span>Play bolder.</span></h1>
+                <p className="hero-lead">Focused coaching across team sports, racquet sports, fitness, swimming and more, built around your goals.</p>
+                <form className="search-console" action="/coaches" method="get" aria-label="Find a coach">
+                  <div className="search-field search-main">
+                    <label htmlFor="home-coach-search">Sport, coach or specialty</label>
+                    <input id="home-coach-search" type="search" name="query" placeholder="Search for any sport" />
+                  </div>
+                  <div className="search-field">
+                    <label htmlFor="home-search-city">City</label>
+                    <select id="home-search-city" name="city" defaultValue="any">
+                      <option value="any">Any city</option>
+                      <option value="Islamabad">Islamabad</option>
+                      <option value="Karachi">Karachi</option>
+                      <option value="Lahore">Lahore</option>
+                      <option value="Rawalpindi">Rawalpindi</option>
+                    </select>
+                  </div>
+                  <button className="button button-accent" type="submit">Browse coaches <span aria-hidden="true">→</span></button>
+                </form>
+                <p className="search-example">Search by sport, coach name, specialty or city.</p>
               </div>
-              <div className="hero-sport-inset" aria-hidden="true"><Image src="/images/coach-ayesha.jpg" alt="" fill sizes="180px" /></div>
-              <div className="hero-chip hero-chip-top"><span aria-hidden="true">01</span><strong>One-to-one coaching</strong><small>Built around you</small></div>
-              <div className="hero-chip hero-chip-bottom"><span className="pulse-dot" /><strong>More ways to train</strong><small>Multiple sports per coach</small></div>
-              <div className="hero-wordmark" aria-hidden="true">MOVE</div>
-            </div>
+            </article>
+            <article className="hero-secondary-card">
+              <video id="football-coaching-video" aria-label="Football coaching session in motion" autoPlay muted loop playsInline preload="metadata" poster="/images/coach-danish.jpg">
+                <source src="/videos/football-pitch-motion.mp4" type="video/mp4" />
+              </video>
+              <VideoPlaybackToggle targetId="football-coaching-video" label="football coaching video" />
+              <div className="hero-secondary-copy"><span>More ways to move</span><strong>Every sport belongs here.</strong><small>Coaches can add other sports they are qualified to teach.</small></div>
+            </article>
           </div>
         </section>
 
         <section className="momentum-strip" aria-label="CoachConnect marketplace range">
           <div className="container momentum-grid">
-            <div><span>Explore widely</span><strong>12 sports</strong></div>
+            <div><span>Explore widely</span><strong>Any sport, any goal</strong></div>
             <p>Team-reviewed coach profiles</p>
             <div className="momentum-promise"><span>One coach, more possibilities</span><strong>Multi-sport profiles →</strong></div>
           </div>
@@ -76,7 +80,7 @@ export default function HomePage() {
           <div className="container">
             <div className="section-heading">
               <div><p className="eyebrow">More ways to move</p><h2 id="sports-heading">Start with a sport</h2></div>
-              <p>Browse a broader mix of coaching. Coaches can list every sport they are qualified to teach.</p>
+              <p>These are popular starting points. Search for any sport, and coaches can add other sports they are qualified to teach.</p>
             </div>
             <div className="sport-grid" aria-label="Featured sport categories">
               {featuredSports.map((sport) => (
@@ -86,7 +90,7 @@ export default function HomePage() {
                 </Link>
               ))}
             </div>
-            <div className="home-all-sports"><Link className="button button-primary" href="/coaches">View all 12 sports</Link></div>
+            <div className="home-all-sports"><Link className="button button-primary" href="/coaches">Explore all coaching</Link></div>
           </div>
         </section>
 
@@ -113,7 +117,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="footer"><div className="container footer-row"><strong>CoachConnect Pakistan</strong><span>12 sports · 4 cities · Online and in-person</span><span>Find your next coach</span></div></footer>
+      <footer className="footer"><div className="container footer-row"><strong>CoachConnect Pakistan</strong><span>Any sport · 4 cities · Online and in-person</span><span>Find your next coach</span></div></footer>
     </div>
   );
 }

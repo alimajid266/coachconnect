@@ -9,8 +9,18 @@ describe("CoachConnect home page", () => {
     render(<HomePage />);
 
     expect(screen.getByRole("heading", { level: 1, name: /train smarter.*play bolder/i })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /american football training session/i })).toBeInTheDocument();
-    expect(screen.getAllByText(/12 sports/i).length).toBeGreaterThan(0);
+    const videos = Array.from(document.querySelectorAll("video"));
+    expect(videos).toHaveLength(2);
+    expect(screen.getByRole("button", { name: /pause american football training video/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /pause football coaching video/i })).toBeInTheDocument();
+    videos.forEach((video) => {
+      expect(video).toHaveAttribute("autoplay");
+      expect(video).toHaveAttribute("loop");
+      expect(video.muted).toBe(true);
+      expect(video).toHaveAttribute("playsinline");
+    });
+    expect(document.querySelector(".hero-primary-card h1")).toHaveTextContent(/train smarter.*play bolder/i);
+    expect(document.body.textContent).not.toMatch(/12 sports|view all 12/i);
     expect(screen.queryByRole("region", { name: /coach results/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /view .*profile/i })).not.toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/sample|prototype|fictional|private by default|sample marketplace data/i);
@@ -19,7 +29,6 @@ describe("CoachConnect home page", () => {
   it("uses Ali's supplied sports photography without presenting athletes as coaches", () => {
     render(<HomePage />);
 
-    expect(screen.getByRole("img", { name: /american football training session/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /cricket stadium/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /tennis serve practice/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /football training on the pitch/i })).toBeInTheDocument();
@@ -36,6 +45,14 @@ describe("CoachConnect home page", () => {
       expect.stringContaining("Table Tennis"),
       expect.stringContaining("Basketball"),
     ]));
+  });
+
+  it("welcomes custom sports instead of presenting a closed catalog", () => {
+    render(<HomePage />);
+
+    expect(screen.getByText(/search for any sport/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/coaches can add other sports/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /explore all coaching/i })).toHaveAttribute("href", "/coaches");
   });
 
   it("uses the dedicated coach catalog for every discovery link", () => {
