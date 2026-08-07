@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rejectCrossOriginRequest, requestIsHttps } from "@/lib/auth-http";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
+import { createClient } from "@supabase/supabase-js";
+
+async function removeMemberMedia(userId: string) {
+  const url = process.env.SUPABASE_INTERNAL_URL ?? process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Storage cleanup unavailable");
+  const admin = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+  const bucket = admin.storage.from("coach-profile-images");
+  for (let page = 0; page < 20; page += 1) {
+    const listed = await bucket.list(userId, { limit: 100, offset: 0 });
+    if (listed.error) throw listed.error;
+    const paths = (listed.data ?? []).filter((item) => item.name).map((item) => `${userId}/${item.name}`);
+    if (paths.length === 0) return;
+    const removed = await bucket.remove(paths);
+    if (removed.error) throw removed.error;
+  }
+  throw new Error("Storage cleanup did not finish");
+}
 
 function expireSupabaseAuthCookies(request: NextRequest, response: NextResponse) {
   for (const { name } of request.cookies.getAll()) {
@@ -44,18 +62,32 @@ export async function DELETE(request: NextRequest) {
       return applyCookies(NextResponse.json({ error: "Your current password is incorrect." }, { status: 403 }));
     }
 
-    const { data, error } = await supabase.rpc("delete_my_account");
-    if (error?.message?.includes("Resolve future active sessions")) {
+    const prepared = await supabase.rpc("begin_my_account_deletion");
+    if (prepared.error?.message?.includes("Booking history must be retained")) {
       return applyCookies(NextResponse.json(
-        { error: "Cancel or decline your future sessions before deleting your account." },
+        { error: "Accounts with booking history cannot be self-deleted because the other participant's session record must be retained. Contact support for anonymization." },
         { status: 409 },
       ));
     }
-    if (error || data !== true) {
+    if (prepared.error || prepared.data !== true) {
       return applyCookies(NextResponse.json(
         { error: "Unable to delete your account." },
         { status: 503 },
       ));
+    }
+    try {
+      await removeMemberMedia(authData.user.id);
+    } catch {
+      await supabase.rpc("cancel_my_account_deletion");
+      return applyCookies(NextResponse.json(
+        { error: "Unable to remove your profile images, so your account was kept." },
+        { status: 503 },
+      ));
+    }
+    const { data, error } = await supabase.rpc("delete_my_account");
+    if (error || data !== true) {
+      await supabase.rpc("cancel_my_account_deletion");
+      return applyCookies(NextResponse.json({ error: "Unable to delete your account." }, { status: 503 }));
     }
 
     try {

@@ -7,6 +7,12 @@ const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   signOut: vi.fn(),
   applyCookies: vi.fn(<T>(response: T) => response),
+  listMedia: vi.fn(),
+  removeMedia: vi.fn(),
+}));
+
+vi.mock("@supabase/supabase-js", () => ({
+  createClient: () => ({ storage: { from: () => ({ list: mocks.listMedia, remove: mocks.removeMedia }) } }),
 }));
 
 vi.mock("@/lib/supabase/route", () => ({
@@ -46,6 +52,10 @@ describe("account deletion route", () => {
       data: { user: { id: "member-1" } },
       error: null,
     });
+    vi.stubEnv("SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-test-key");
+    mocks.listMedia.mockResolvedValue({ data: [], error: null });
+    mocks.removeMedia.mockResolvedValue({ data: [], error: null });
   });
 
   it("rejects cross-origin deletion before touching the session", async () => {
@@ -96,6 +106,9 @@ describe("account deletion route", () => {
       error: null,
     });
     mocks.rpc.mockResolvedValue({ data: true, error: null });
+    mocks.listMedia
+      .mockResolvedValueOnce({ data: [{ name: "avatar.webp" }], error: null })
+      .mockResolvedValueOnce({ data: [], error: null });
 
     const result = await DELETE(request());
 
@@ -105,7 +118,7 @@ describe("account deletion route", () => {
       email: "member@example.com",
       password: "Current-Password-42",
     });
-    expect(mocks.rpc).toHaveBeenCalledWith("delete_my_account");
+    expect(mocks.rpc.mock.calls.map((call) => call[0])).toEqual(["begin_my_account_deletion", "delete_my_account"]);
     expect(mocks.signOut).toHaveBeenCalledOnce();
     expect(mocks.applyCookies).toHaveBeenCalledOnce();
   });
@@ -124,17 +137,17 @@ describe("account deletion route", () => {
     expect(mocks.signOut).not.toHaveBeenCalled();
   });
 
-  it("explains that future active sessions must be resolved before deletion", async () => {
+  it("preserves the other participant's record when booking history exists", async () => {
     mocks.getUser.mockResolvedValue({
       data: { user: { id: "member-1", email: "member@example.com" } },
       error: null,
     });
-    mocks.rpc.mockResolvedValue({ data: null, error: { message: "Resolve future active sessions before deleting your account" } });
+    mocks.rpc.mockResolvedValue({ data: null, error: { message: "Booking history must be retained" } });
 
     const result = await DELETE(request());
 
     expect(result.status).toBe(409);
-    expect(await result.json()).toEqual({ error: "Cancel or decline your future sessions before deleting your account." });
+    expect(await result.json()).toEqual({ error: "Accounts with booking history cannot be self-deleted because the other participant's session record must be retained. Contact support for anonymization." });
     expect(mocks.signOut).not.toHaveBeenCalled();
   });
 

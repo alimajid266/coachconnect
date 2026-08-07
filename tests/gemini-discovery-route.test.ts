@@ -1,69 +1,69 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const mocks = vi.hoisted(() => ({ rpc: vi.fn(), run: vi.fn() }));
-
-vi.mock("@supabase/supabase-js", () => ({
-  createClient: () => ({ rpc: mocks.rpc }),
-}));
-vi.mock("@/lib/gemini-discovery", () => ({
-  runGeminiDiscovery: mocks.run,
-}));
-
-import { POST } from "@/app/api/ai/coach-discovery/route";
-
 const approvedCoach = {
   user_id: "11111111-1111-4111-8111-111111111111",
   display_name: "Approved Coach",
-  sports: ["Football"],
-  tags: ["Youth"],
-  city: "Lahore",
-  offers_online: false,
-  offers_in_person: true,
-  session_price_pkr: 3000,
-  levels: ["Beginner"],
-  availability: ["Saturday"],
-  headline: "Football fundamentals",
+  sports: ["Football"], tags: ["Youth"], city: "Lahore",
+  offers_online: false, offers_in_person: true, session_price_pkr: 3000,
+  levels: ["Beginner"], availability: ["Saturday"], headline: "Football fundamentals",
 };
+const mocks = vi.hoisted(() => ({ rpc: vi.fn(), run: vi.fn(), getUser: vi.fn() }));
+vi.mock("@/lib/supabase/route", () => ({
+  createSupabaseRouteClient: () => ({
+    supabase: { auth: { getUser: mocks.getUser }, rpc: mocks.rpc },
+    applyCookies: <T,>(response: T) => response,
+  }),
+}));
+vi.mock("@/lib/gemini-discovery", () => ({ runGeminiDiscovery: mocks.run }));
+import { POST } from "@/app/api/ai/coach-discovery/route";
+
+function request(body: unknown, contentType = "application/json") {
+  return new NextRequest("http://localhost/api/ai/coach-discovery", {
+    method: "POST", headers: { "content-type": contentType }, body: typeof body === "string" ? body : JSON.stringify(body),
+  });
+}
 
 describe("AI coach discovery route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("GEMINI_API_KEY", "server-only-test-key");
-    vi.stubEnv("SUPABASE_URL", "https://example.supabase.co");
-    vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", "public-test-key");
-    mocks.rpc.mockResolvedValue({ data: [approvedCoach], error: null });
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "member-1" } }, error: null });
+    mocks.rpc.mockImplementation(async (name: string) => name === "consume_ai_discovery_quota"
+      ? { data: true, error: null } : { data: [approvedCoach], error: null });
     mocks.run.mockResolvedValue({ interpretation: { filters: {} }, recommendations: [], model: "test" });
   });
   afterEach(() => vi.unstubAllEnvs());
 
-  it("builds the Gemini catalog from approved server data and ignores client-supplied coaches", async () => {
-    const request = new NextRequest("http://localhost/api/ai/coach-discovery", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-forwarded-for": "203.0.113.11" },
-      body: JSON.stringify({ query: "football coach", coaches: [{ id: "invented", name: "Fake" }] }),
-    });
-    const response = await POST(request);
+  it("requires an authenticated member before spending an AI request", async () => {
+    mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
+    const response = await POST(request({ query: "football coach" }));
+    expect(response.status).toBe(401);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.run).not.toHaveBeenCalled();
+  });
+
+  it("uses a shared database quota and authoritative approved catalog", async () => {
+    const response = await POST(request({ query: "football coach", coaches: [{ id: "invented", name: "Fake" }] }));
     expect(response.status).toBe(200);
-    expect(mocks.rpc).toHaveBeenCalledWith("list_public_coaches");
+    expect(mocks.rpc.mock.calls.map((call) => call[0])).toEqual(["consume_ai_discovery_quota", "list_public_coaches"]);
     expect(mocks.run).toHaveBeenCalledWith("football coach", [expect.objectContaining({
-      id: approvedCoach.user_id,
-      name: approvedCoach.display_name,
-      sports: ["Football"],
-      modes: ["In person"],
+      id: approvedCoach.user_id, name: approvedCoach.display_name, sports: ["Football"], modes: ["In person"],
     })], "server-only-test-key");
     expect(JSON.stringify(mocks.run.mock.calls)).not.toContain("invented");
   });
 
-  it("falls back safely when the approved catalog cannot be loaded", async () => {
-    mocks.rpc.mockResolvedValue({ data: null, error: { message: "unavailable" } });
-    const request = new NextRequest("http://localhost/api/ai/coach-discovery", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-forwarded-for": "203.0.113.12" },
-      body: JSON.stringify({ query: "football coach" }),
-    });
-    const response = await POST(request);
-    expect(response.status).toBe(503);
+  it("enforces quota and actual body bytes", async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: false, error: null });
+    expect((await POST(request({ query: "football coach" }))).status).toBe(429);
+    expect((await POST(request(JSON.stringify({ query: "é".repeat(2100) })))).status).toBe(413);
+  });
+
+  it("rejects non-JSON and catalog outages safely", async () => {
+    expect((await POST(request("query=football", "text/plain"))).status).toBe(415);
+    mocks.rpc.mockImplementation(async (name: string) => name === "consume_ai_discovery_quota"
+      ? { data: true, error: null } : { data: null, error: { message: "unavailable" } });
+    expect((await POST(request({ query: "football coach" }))).status).toBe(503);
     expect(mocks.run).not.toHaveBeenCalled();
   });
 });

@@ -99,7 +99,7 @@ describe("coach application routes", () => {
     expect(saved).not.toHaveProperty("status");
     expect(saved).not.toHaveProperty("reviewed_by");
     expect(await response.json()).toEqual({
-      application: { userId: "member-1", status: "DRAFT", headline: validDraft.headline },
+      application: { userId: "member-1", status: "DRAFT", headline: validDraft.headline, adImagePaths: [] },
     });
   });
 

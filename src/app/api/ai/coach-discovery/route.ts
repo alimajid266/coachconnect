@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "node:crypto";
-import { createClient } from "@supabase/supabase-js";
 import { rejectCrossOriginRequest } from "@/lib/auth-http";
+import { createSupabaseRouteClient } from "@/lib/supabase/route";
 import { runGeminiDiscovery, type GeminiCatalogCoach } from "@/lib/gemini-discovery";
 
 function text(value: unknown, limit: number) {
@@ -38,47 +37,30 @@ function catalog(value: unknown): GeminiCatalogCoach[] {
   });
 }
 
-const limits = new Map<string, { count: number; resetAt: number }>();
-
-function rateLimited(request: NextRequest) {
-  const identity = request.headers.get("x-forwarded-for")?.split(",", 1)[0]?.trim()
-    || request.headers.get("x-real-ip")
-    || "unknown";
-  const key = createHash("sha256").update(identity).digest("hex").slice(0, 20);
-  const now = Date.now();
-  const current = limits.get(key);
-  if (!current || current.resetAt <= now) {
-    limits.set(key, { count: 1, resetAt: now + 60_000 });
-    if (limits.size > 1000) {
-      for (const [entry, value] of limits) if (value.resetAt <= now) limits.delete(entry);
-    }
-    return false;
-  }
-  current.count += 1;
-  return current.count > 10;
-}
-
 export async function POST(request: NextRequest) {
   const originRejection = rejectCrossOriginRequest(request);
   if (originRejection) return originRejection;
-  if (rateLimited(request)) {
-    return NextResponse.json({ error: "Too many AI searches. Standard search still works." }, { status: 429 });
+  if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
+    return NextResponse.json({ error: "Send AI searches as JSON." }, { status: 415 });
   }
-  const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength > 4_000) return NextResponse.json({ error: "The AI search request is too large." }, { status: 413 });
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "AI search is not configured yet." }, { status: 503 });
   try {
-    const body = await request.json() as Record<string, unknown>;
+    const { supabase, applyCookies } = createSupabaseRouteClient(request);
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      return applyCookies(NextResponse.json({ error: "Sign in to use AI search. Standard search still works." }, { status: 401 }));
+    }
+    const rawBody = await request.text();
+    if (new TextEncoder().encode(rawBody).byteLength > 4_000) {
+      return applyCookies(NextResponse.json({ error: "The AI search request is too large." }, { status: 413 }));
+    }
+    const body = JSON.parse(rawBody) as Record<string, unknown>;
     const query = text(body.query, 500);
     if (query.length < 2) return NextResponse.json({ error: "Describe what you need from a coach." }, { status: 400 });
-
-    const url = process.env.SUPABASE_INTERNAL_URL ?? process.env.SUPABASE_URL;
-    const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
-    if (!url || !publishableKey) {
-      return NextResponse.json({ error: "Approved coaches are temporarily unavailable." }, { status: 503 });
-    }
-    const supabase = createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } });
+    const quota = await supabase.rpc("consume_ai_discovery_quota");
+    if (quota.error) return applyCookies(NextResponse.json({ error: "AI search is temporarily unavailable. Standard search still works." }, { status: 503 }));
+    if (quota.data !== true) return applyCookies(NextResponse.json({ error: "AI search limit reached for this hour. Standard search still works." }, { status: 429 }));
     const { data, error } = await supabase.rpc("list_public_coaches");
     if (error) return NextResponse.json({ error: "Approved coaches are temporarily unavailable." }, { status: 503 });
     const coaches = catalog(data);

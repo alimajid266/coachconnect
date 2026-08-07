@@ -154,6 +154,49 @@ $$;
 revoke all on function public.reserve_coach_profile_image_upload(uuid) from public, anon, authenticated;
 grant execute on function public.reserve_coach_profile_image_upload(uuid) to service_role;
 
+create table if not exists public.ai_discovery_request_quotas (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  window_started_at timestamptz not null default clock_timestamp(),
+  request_count integer not null default 0 check (request_count between 0 and 10)
+);
+
+alter table public.ai_discovery_request_quotas enable row level security;
+revoke all on table public.ai_discovery_request_quotas from public, anon, authenticated;
+
+create or replace function public.consume_ai_discovery_quota()
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  actor_id uuid := (select auth.uid());
+  allowed boolean;
+begin
+  if actor_id is null then return false; end if;
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(actor_id::text, 0));
+  perform public.assert_active_member(actor_id);
+  insert into public.ai_discovery_request_quotas as quota (user_id, window_started_at, request_count)
+  values (actor_id, clock_timestamp(), 1)
+  on conflict (user_id) do update set
+    request_count = case
+      when quota.window_started_at <= clock_timestamp() - interval '1 hour' then 1
+      else quota.request_count + 1
+    end,
+    window_started_at = case
+      when quota.window_started_at <= clock_timestamp() - interval '1 hour' then clock_timestamp()
+      else quota.window_started_at
+    end
+  where quota.window_started_at <= clock_timestamp() - interval '1 hour'
+     or quota.request_count < 10
+  returning true into allowed;
+  return coalesce(allowed, false);
+end;
+$$;
+
+revoke all on function public.consume_ai_discovery_quota() from public, anon;
+grant execute on function public.consume_ai_discovery_quota() to authenticated;
+
 drop function if exists public.get_public_coach(uuid);
 drop function if exists public.list_public_coaches();
 

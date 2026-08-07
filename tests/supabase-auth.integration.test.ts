@@ -233,8 +233,8 @@ runIntegration("Supabase account and coach capability policies", () => {
     const unrelatedSchedule = await (winner.userId === athleteOne.userId ? athleteTwo : athleteOne).client.rpc("list_my_coach_schedule");
     expect(unrelatedSchedule.data).not.toContainEqual(expect.objectContaining({ booking_id: bookingId }));
 
-    const blockedDeletion = await winner.client.rpc("delete_my_account");
-    expect(blockedDeletion.error?.message).toMatch(/future active sessions/i);
+    const blockedDeletion = await winner.client.rpc("begin_my_account_deletion");
+    expect(blockedDeletion.error?.message).toMatch(/booking history must be retained/i);
 
     const cancelled = await winner.client.rpc("cancel_coach_booking", { target_booking_id: bookingId, requested_reason: "Plans changed" });
     expect(cancelled.error).toBeNull();
@@ -347,9 +347,10 @@ runIntegration("Supabase account and coach capability policies", () => {
     const application = await member.from("coach_applications").insert({ user_id: memberId });
     expect(application.error).toBeNull();
 
-    const anonymousDeletion = await publicClient().rpc("delete_my_account");
+    const anonymousDeletion = await publicClient().rpc("begin_my_account_deletion");
     expect(anonymousDeletion.error).not.toBeNull();
 
+    expect((await member.rpc("begin_my_account_deletion")).error).toBeNull();
     const deletion = await member.rpc("delete_my_account");
     expect(deletion.error).toBeNull();
     expect(deletion.data).toBe(true);
@@ -398,6 +399,7 @@ runIntegration("Supabase account and coach capability policies", () => {
       note: "Application reviewed before account deletion.",
     })).error).toBeNull();
 
+    expect((await reviewer.rpc("begin_my_account_deletion")).error).toBeNull();
     const deletion = await reviewer.rpc("delete_my_account");
     expect(deletion.error).toBeNull();
     expect(deletion.data).toBe(true);

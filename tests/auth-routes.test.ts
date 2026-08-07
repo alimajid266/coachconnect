@@ -161,7 +161,7 @@ describe("Supabase authentication routes", () => {
         email: "coach@example.com",
         role: "COACH",
         avatarUrl: "https://images.example/avatar.webp",
-        capabilities: { administrator: false, coachStatus: "APPROVED" },
+        capabilities: { administrator: false, coachStatus: "APPROVED", coachFormats: { online: true, inPerson: true } },
       },
     });
   });

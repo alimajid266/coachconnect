@@ -71,6 +71,7 @@ describe("administrator coach application routes", () => {
         applicantName: "Ayesha Khan",
         accountStatus: "ACTIVE",
         accountSuspensionReason: null,
+        adImagePaths: [],
       }],
     });
   });
