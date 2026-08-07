@@ -6,6 +6,8 @@ import SiteHeader, { type SessionUser } from "@/components/site-header";
 import SiteLogo from "@/components/site-logo";
 import SportsLoader from "@/components/sports-loader";
 import ScheduleManager from "@/components/schedule-manager";
+import TrainingPlanBuilder from "@/components/training-plan-builder";
+import RecommendationPreferences from "@/components/recommendation-preferences";
 
 type Mode = "login" | "register";
 type PageState = "loading" | "unavailable" | "anonymous" | "authenticated" | "deleted";
@@ -27,6 +29,8 @@ const coachStatusCopy = {
   SUSPENDED: ["Coach profile suspended", "View profile status"],
 } as const;
 
+const onboardingSports = ["Football", "Cricket", "Tennis", "Strength", "Swimming", "Badminton", "Boxing", "Yoga"];
+
 function requestedDestination() {
   if (typeof window === "undefined") return "/account";
   const candidate = new URLSearchParams(window.location.search).get("next");
@@ -44,6 +48,11 @@ export default function AccountPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [interests, setInterests] = useState<string[]>([]);
+  const [preferredLocation, setPreferredLocation] = useState("Islamabad");
+  const [maxBudgetPkr, setMaxBudgetPkr] = useState("3000");
+  const [trainingGoal, setTrainingGoal] = useState("");
+  const [experienceLevel, setExperienceLevel] = useState("Beginner");
   const [message, setMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [complete, setComplete] = useState(false);
@@ -154,11 +163,15 @@ export default function AccountPage() {
       setMessage("Passwords do not match.");
       return;
     }
+    if (mode === "register" && interests.length === 0) {
+      setMessage("Choose at least one sport or training interest.");
+      return;
+    }
 
     setBusy(true);
     try {
       const endpoint = mode === "register" ? "/api/auth/register" : "/api/auth/login";
-      const payload = mode === "register" ? { displayName, email, password } : { email, password };
+      const payload = mode === "register" ? { displayName, email, password, interests, preferredLocation, maxBudgetPkr: Number(maxBudgetPkr), trainingGoal, experienceLevel } : { email, password };
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -301,6 +314,8 @@ export default function AccountPage() {
           </section>
 
           <ScheduleManager userId={String(user.id)} approvedCoach={coachStatus === "APPROVED"} formats={user.capabilities?.coachFormats ?? undefined} />
+          <RecommendationPreferences />
+          <TrainingPlanBuilder />
 
           <section className="member-account-grid" aria-label="Account details and actions">
             <article className="account-summary-card">
@@ -423,6 +438,18 @@ export default function AccountPage() {
                 <>
                   <label htmlFor="display-name">Display name</label>
                   <input id="display-name" autoComplete="name" minLength={2} maxLength={60} required value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+                  <fieldset className="auth-preferences">
+                    <legend>Your coaching interests</legend>
+                    <p>These help AI search recommend relevant coaches and plans. You can change them later.</p>
+                    <div>{onboardingSports.map((sport) => <label key={sport}><input type="checkbox" checked={interests.includes(sport)} onChange={(event) => setInterests((current) => event.target.checked ? [...current, sport] : current.filter((item) => item !== sport))} />{sport}</label>)}</div>
+                  </fieldset>
+                  <div className="auth-preference-grid">
+                    <label htmlFor="preferred-location">Preferred location<select id="preferred-location" value={preferredLocation} onChange={(event) => setPreferredLocation(event.target.value)}><option>Islamabad</option><option>Karachi</option><option>Lahore</option><option>Rawalpindi</option><option>Online</option></select></label>
+                    <label htmlFor="max-budget">Maximum per-session budget (PKR)<input id="max-budget" type="number" min="500" max="1000000" step="100" required value={maxBudgetPkr} onChange={(event) => setMaxBudgetPkr(event.target.value)} /></label>
+                    <label htmlFor="experience-level">Current level<select id="experience-level" value={experienceLevel} onChange={(event) => setExperienceLevel(event.target.value)}><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></label>
+                  </div>
+                  <label htmlFor="training-goal">Main training goal</label>
+                  <input id="training-goal" minLength={2} maxLength={240} required placeholder="Example: improve football stamina and first touch" value={trainingGoal} onChange={(event) => setTrainingGoal(event.target.value)} />
                   <p className="auth-account-note">One account lets you find coaching and apply to coach. You can do both at any time.</p>
                 </>
               )}

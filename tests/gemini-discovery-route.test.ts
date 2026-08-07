@@ -8,10 +8,10 @@ const approvedCoach = {
   offers_online: false, offers_in_person: true, session_price_pkr: 3000,
   levels: ["Beginner"], availability: ["Saturday"], headline: "Football fundamentals",
 };
-const mocks = vi.hoisted(() => ({ rpc: vi.fn(), run: vi.fn(), getUser: vi.fn() }));
+const mocks = vi.hoisted(() => ({ rpc: vi.fn(), run: vi.fn(), getUser: vi.fn(), profileSingle: vi.fn() }));
 vi.mock("@/lib/supabase/route", () => ({
   createSupabaseRouteClient: () => ({
-    supabase: { auth: { getUser: mocks.getUser }, rpc: mocks.rpc },
+    supabase: { auth: { getUser: mocks.getUser }, rpc: mocks.rpc, from: () => ({ select: () => ({ eq: () => ({ single: mocks.profileSingle }) }) }) },
     applyCookies: <T,>(response: T) => response,
   }),
 }));
@@ -27,10 +27,11 @@ function request(body: unknown, contentType = "application/json") {
 describe("AI coach discovery route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("GEMINI_API_KEY", "server-only-test-key");
+    vi.stubEnv("OPENROUTER_API_KEY", "server-only-test-key");
     mocks.getUser.mockResolvedValue({ data: { user: { id: "member-1" } }, error: null });
     mocks.rpc.mockImplementation(async (name: string) => name === "consume_ai_discovery_quota"
       ? { data: true, error: null } : { data: [approvedCoach], error: null });
+    mocks.profileSingle.mockResolvedValue({ data: { interests: ["Football"], preferred_location: "Lahore", max_budget_pkr: 3500, training_goal: "Improve control", experience_level: "Beginner" }, error: null });
     mocks.run.mockResolvedValue({ interpretation: { filters: {} }, recommendations: [], model: "test" });
   });
   afterEach(() => vi.unstubAllEnvs());
@@ -49,7 +50,7 @@ describe("AI coach discovery route", () => {
     expect(mocks.rpc.mock.calls.map((call) => call[0])).toEqual(["consume_ai_discovery_quota", "list_public_coaches"]);
     expect(mocks.run).toHaveBeenCalledWith("football coach", [expect.objectContaining({
       id: approvedCoach.user_id, name: approvedCoach.display_name, sports: ["Football"], modes: ["In person"],
-    })], "server-only-test-key");
+    })], "server-only-test-key", fetch, expect.objectContaining({ interests: ["Football"], location: "Lahore", maxBudgetPkr: 3500 }));
     expect(JSON.stringify(mocks.run.mock.calls)).not.toContain("invented");
   });
 

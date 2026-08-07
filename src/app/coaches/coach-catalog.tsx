@@ -256,7 +256,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
         </section>
 
         <div className="catalog-ai-status">
-          <span>{aiStatus === "ready" ? "AI search and recommendations generated with Gemini 3.5 Flash-Lite." : "Standard search works instantly. Use AI search for natural-language interpretation and grounded recommendations."}</span>
+          <span>{aiStatus === "ready" ? "AI recommendations generated through OpenRouter's free model pool." : "Standard search works instantly. Use AI search for natural-language interpretation and grounded recommendations through free models."}</span>
           {aiError && <p role="alert">{aiError} Showing standard search results instead.</p>}
         </div>
 

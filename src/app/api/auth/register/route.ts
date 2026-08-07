@@ -11,11 +11,20 @@ export async function POST(request: NextRequest) {
     const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const password = typeof body.password === "string" ? body.password : "";
+    const interests = Array.isArray(body.interests) ? body.interests.filter((value): value is string => typeof value === "string").map((value) => value.trim()).filter((value) => value.length >= 2 && value.length <= 40).slice(0, 12) : [];
+    const preferredLocation = typeof body.preferredLocation === "string" ? body.preferredLocation.trim().slice(0, 80) : "";
+    const trainingGoal = typeof body.trainingGoal === "string" ? body.trainingGoal.trim().slice(0, 240) : "";
+    const experienceLevel = ["Beginner", "Intermediate", "Advanced"].includes(String(body.experienceLevel)) ? String(body.experienceLevel) : "Beginner";
+    const maxBudgetPkr = Number(body.maxBudgetPkr);
     const role = "ATHLETE" as const;
 
     if (displayName.length < 2 || displayName.length > 60) throw new Error("Display name must be 2 to 60 characters.");
     if (!email || !email.includes("@")) throw new Error("Enter a valid email address.");
     if (password.length < 12) throw new Error("Password must be at least 12 characters.");
+    if (interests.length === 0) throw new Error("Choose at least one sport or training interest.");
+    if (!preferredLocation) throw new Error("Choose your preferred location.");
+    if (!Number.isInteger(maxBudgetPkr) || maxBudgetPkr < 500 || maxBudgetPkr > 1_000_000) throw new Error("Enter a session budget between Rs 500 and Rs 1,000,000.");
+    if (trainingGoal.length < 2) throw new Error("Describe your main training goal.");
 
 
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
@@ -23,7 +32,7 @@ export async function POST(request: NextRequest) {
       email,
       password,
       options: {
-        data: { display_name: displayName, role },
+        data: { display_name: displayName, role, interests, preferred_location: preferredLocation, max_budget_pkr: maxBudgetPkr, training_goal: trainingGoal, experience_level: experienceLevel },
         emailRedirectTo: new URL("/account", request.url).toString(),
       },
     });

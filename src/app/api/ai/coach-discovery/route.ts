@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     return NextResponse.json({ error: "Send AI searches as JSON." }, { status: 415 });
   }
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "AI search is not configured yet." }, { status: 503 });
   try {
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
@@ -61,16 +61,26 @@ export async function POST(request: NextRequest) {
     const quota = await supabase.rpc("consume_ai_discovery_quota");
     if (quota.error) return applyCookies(NextResponse.json({ error: "AI search is temporarily unavailable. Standard search still works." }, { status: 503 }));
     if (quota.data !== true) return applyCookies(NextResponse.json({ error: "AI search limit reached for this hour. Standard search still works." }, { status: 429 }));
-    const { data, error } = await supabase.rpc("list_public_coaches");
+    const [{ data, error }, { data: profile }] = await Promise.all([
+      supabase.rpc("list_public_coaches"),
+      supabase.from("profiles").select("interests, preferred_location, max_budget_pkr, training_goal, experience_level").eq("id", authData.user.id).single(),
+    ]);
     if (error) return NextResponse.json({ error: "Approved coaches are temporarily unavailable." }, { status: 503 });
     const coaches = catalog(data);
     if (coaches.length === 0) return NextResponse.json({ error: "No approved coaches are currently available to rank." }, { status: 400 });
 
-    const result = await runGeminiDiscovery(query, coaches, apiKey);
+    const result = await runGeminiDiscovery(query, coaches, apiKey, fetch, {
+      interests: Array.isArray(profile?.interests) ? profile.interests : [],
+      location: profile?.preferred_location ?? undefined,
+      maxBudgetPkr: typeof profile?.max_budget_pkr === "number" ? profile.max_budget_pkr : undefined,
+      goal: profile?.training_goal ?? undefined,
+      level: profile?.experience_level ?? undefined,
+    });
     const response = NextResponse.json(result);
     response.headers.set("Cache-Control", "no-store, max-age=0");
     return response;
-  } catch {
+  } catch (error) {
+    console.error("OpenRouter coach discovery failed:", error instanceof Error ? error.message : "unknown error");
     return NextResponse.json({ error: "AI search is temporarily unavailable. Standard search still works." }, { status: 502 });
   }
 }

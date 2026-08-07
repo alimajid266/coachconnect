@@ -13,9 +13,9 @@ const slot = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("coach booking panel", () => {
-  it("provides visible keyboard focus for hidden time radios and an AA coral text accent", () => {
+  it("provides visible keyboard focus for hidden time radios and an AA blue accent", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
-    expect(css).toMatch(/--coral:\s*#d61f4b/i);
+    expect(css).toMatch(/--coral:\s*#2563eb/i);
     expect(css).toMatch(/\.coach-slot-picker label:focus-within\s*\{[^}]+(?:outline|box-shadow)/i);
   });
   it("keeps Demo profiles visibly non-bookable", () => {

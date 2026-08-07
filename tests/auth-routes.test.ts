@@ -68,6 +68,7 @@ describe("Supabase authentication routes", () => {
 
     const response = await register(request("/api/auth/register", {
       displayName: "Ali Athlete",
+      interests: ["Cricket"], preferredLocation: "Lahore", maxBudgetPkr: 3500, trainingGoal: "Improve batting", experienceLevel: "Beginner",
       email: "athlete@example.com",
       password: "Private-Test-Passphrase-42",
     }));
@@ -80,7 +81,7 @@ describe("Supabase authentication routes", () => {
       email: "athlete@example.com",
       password: "Private-Test-Passphrase-42",
       options: {
-        data: { display_name: "Ali Athlete", role: "ATHLETE" },
+        data: { display_name: "Ali Athlete", role: "ATHLETE", interests: ["Cricket"], preferred_location: "Lahore", max_budget_pkr: 3500, training_goal: "Improve batting", experience_level: "Beginner" },
         emailRedirectTo: "http://localhost:3000/account",
       },
     });
@@ -98,6 +99,7 @@ describe("Supabase authentication routes", () => {
 
     const response = await register(request("/api/auth/register", {
       displayName: "Ali Athlete",
+      interests: ["Cricket"], preferredLocation: "Lahore", maxBudgetPkr: 3500, trainingGoal: "Improve batting", experienceLevel: "Beginner",
       email: "athlete@example.com",
       password: "Private-Test-Passphrase-42",
       role: "ATHLETE",
@@ -117,6 +119,7 @@ describe("Supabase authentication routes", () => {
 
     const response = await register(request("/api/auth/register", {
       displayName: "Ali Athlete",
+      interests: ["Cricket"], preferredLocation: "Lahore", maxBudgetPkr: 3500, trainingGoal: "Improve batting", experienceLevel: "Beginner",
       email: "athlete@example.com",
       password: "Private-Test-Passphrase-42",
       role: "ATHLETE",

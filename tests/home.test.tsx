@@ -9,7 +9,7 @@ describe("CoachConnect home page", () => {
     render(<HomePage />);
 
     expect(screen.getByRole("heading", { level: 1, name: /train smarter.*play bolder/i })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /athlete training in a gym/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /football coaching session/i })).toBeInTheDocument();
     expect(screen.getAllByText(/12 sports/i).length).toBeGreaterThan(0);
     expect(screen.queryByRole("region", { name: /coach results/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /view .*profile/i })).not.toBeInTheDocument();
@@ -19,7 +19,7 @@ describe("CoachConnect home page", () => {
   it("uses Ali's supplied sports photography without presenting athletes as coaches", () => {
     render(<HomePage />);
 
-    expect(screen.getByRole("img", { name: /athlete training in a gym/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /football coaching session/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /cricket stadium/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /tennis serve practice/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /football training on the pitch/i })).toBeInTheDocument();

@@ -50,7 +50,10 @@ export default function HomePage() {
             <div className="hero-stage">
               <div className="hero-orbit" aria-hidden="true" />
               <div className="hero-photo">
-                <Image src="/images/hero-training.jpg" alt="Athlete training in a gym" fill priority sizes="(max-width: 980px) 90vw, 42vw" />
+                <Image src="/images/football-training-poster.jpg" alt="Football coaching session under the floodlights" fill priority sizes="(max-width: 980px) 90vw, 42vw" />
+                <video className="hero-training-video" aria-label="Football coaching session" autoPlay muted loop playsInline preload="metadata" poster="/images/football-training-poster.jpg">
+                  <source src="/videos/football-training-loop.mp4" type="video/mp4" />
+                </video>
               </div>
               <div className="hero-sport-inset" aria-hidden="true"><Image src="/images/coach-ayesha.jpg" alt="" fill sizes="180px" /></div>
               <div className="hero-chip hero-chip-top"><span aria-hidden="true">01</span><strong>One-to-one coaching</strong><small>Built around you</small></div>

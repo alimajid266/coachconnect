@@ -31,10 +31,11 @@ describe("account schedule manager", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     render(<ScheduleManager userId={userId} approvedCoach />);
+    fireEvent.click(await screen.findByRole("button", { name: /sessions \(1\)/i }));
 
     expect(await screen.findByText("Training Member")).toBeInTheDocument();
     expect(screen.getByText("Requested")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /add working hours/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /availability/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /accept training member/i }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/api\/bookings\//), expect.objectContaining({ method: "PATCH" })));
@@ -51,6 +52,7 @@ describe("account schedule manager", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     render(<ScheduleManager userId={userId} approvedCoach />);
+    fireEvent.click(await screen.findByRole("button", { name: /sessions \(1\)/i }));
 
     const details = await screen.findByRole("textbox", { name: /meeting details for training member/i });
     fireEvent.change(details, { target: { value: "Meet beside the F-7 community court gate." } });
@@ -68,6 +70,7 @@ describe("account schedule manager", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ userId: athleteId, bookings: [confirmed], slots: [] }) }));
 
     render(<ScheduleManager userId={athleteId} approvedCoach={false} />);
+    fireEvent.click(await screen.findByRole("button", { name: /sessions \(1\)/i }));
 
     const link = await screen.findByRole("link", { name: "https://meet.example/session" });
     expect(link).toHaveAttribute("href", "https://meet.example/session");
@@ -88,6 +91,7 @@ describe("account schedule manager", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ userId, bookings: [ended], slots: [] }) }));
 
     render(<ScheduleManager userId={userId} approvedCoach />);
+    fireEvent.click(await screen.findByRole("button", { name: /sessions \(1\)/i }));
 
     expect(await screen.findByRole("button", { name: /mark session with training member completed/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /cancel/i })).not.toBeInTheDocument();
@@ -98,6 +102,7 @@ describe("account schedule manager", () => {
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<ScheduleManager userId={userId} approvedCoach />);
+    fireEvent.click(await screen.findByRole("button", { name: /sessions \(1\)/i }));
 
     fireEvent.click(await screen.findByRole("button", { name: /decline training member/i }));
     expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/decline this booking request/i));
@@ -112,6 +117,7 @@ describe("account schedule manager", () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ userId, bookings: [], slots: [] }) });
     vi.stubGlobal("fetch", fetchMock);
     render(<ScheduleManager userId={userId} approvedCoach />);
+    fireEvent.click(await screen.findByRole("button", { name: /availability/i }));
     await screen.findByRole("heading", { name: /add working hours/i });
 
     fireEvent.change(screen.getByLabelText("Date"), { target: { value: localDate(start) } });
@@ -131,6 +137,7 @@ describe("account schedule manager", () => {
     const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve({ ok: true, json: async () => String(input) === "/api/schedule" ? { userId, bookings: [], slots: [] } : { slot: {} } }));
     vi.stubGlobal("fetch", fetchMock);
     render(<ScheduleManager userId={userId} approvedCoach formats={{ online: true, inPerson: false }} />);
+    fireEvent.click(await screen.findByRole("button", { name: /availability/i }));
     await screen.findByRole("heading", { name: /add working hours/i });
     expect(screen.queryByRole("option", { name: "In person" })).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Date"), { target: { value: localDate(start) } });
@@ -149,6 +156,7 @@ describe("account schedule manager", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     render(<ScheduleManager userId={userId} approvedCoach />);
+    fireEvent.click(await screen.findByRole("button", { name: /sessions \(1\)/i }));
 
     const accept = await screen.findByRole("button", { name: /accept training member.*aug 14/i });
     fireEvent.click(accept);

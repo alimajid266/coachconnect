@@ -141,6 +141,8 @@ describe("account page", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /create account/i }));
     fireEvent.change(screen.getByLabelText(/display name/i), { target: { value: "Ali Member" } });
+    fireEvent.change(screen.getByLabelText(/main training goal/i), { target: { value: "Improve football fitness" } });
+    fireEvent.click(screen.getByLabelText("Football"));
     fireEvent.change(screen.getByLabelText(/^email/i), { target: { value: "ali@example.com" } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "Private-Test-Passphrase-42" } });
     fireEvent.change(screen.getByLabelText(/re-enter your password/i), { target: { value: "Private-Test-Passphrase-42" } });
@@ -211,6 +213,7 @@ describe("account page", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /create account/i }));
     fireEvent.change(screen.getByLabelText(/display name/i), { target: { value: "Ali Member" } });
+    fireEvent.change(screen.getByLabelText(/main training goal/i), { target: { value: "Improve football fitness" } });
     fireEvent.change(screen.getByLabelText(/^email/i), { target: { value: "ali@example.com" } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "Private-Test-Passphrase-42" } });
     fireEvent.change(screen.getByLabelText(/re-enter your password/i), { target: { value: "Different-Test-Passphrase-42" } });
@@ -229,6 +232,8 @@ describe("account page", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /create account/i }));
     fireEvent.change(screen.getByLabelText(/display name/i), { target: { value: "Ali Member" } });
+    fireEvent.change(screen.getByLabelText(/main training goal/i), { target: { value: "Improve football fitness" } });
+    fireEvent.click(screen.getByLabelText("Football"));
     fireEvent.change(screen.getByLabelText(/^email/i), { target: { value: "ali@example.com" } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "Private-Test-Passphrase-42" } });
     fireEvent.change(screen.getByLabelText(/re-enter your password/i), { target: { value: "Private-Test-Passphrase-42" } });

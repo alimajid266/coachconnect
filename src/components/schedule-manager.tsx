@@ -29,6 +29,7 @@ function linkedMeetingDetails(value: string) {
 }
 
 export default function ScheduleManager({ userId, approvedCoach, formats }: Props) {
+  const [activePanel, setActivePanel] = useState<"overview" | "sessions" | "schedule" | "history">("overview");
   const [data, setData] = useState<SchedulePayload>({ userId, bookings: [], slots: [] });
   const [state, setState] = useState<"loading" | "ready" | "unavailable">("loading");
   const [busyId, setBusyId] = useState("");
@@ -200,7 +201,14 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
 
   return (
     <section className="account-schedule" aria-labelledby="schedule-heading">
-      <header className="account-section-heading"><div><span>Schedule</span><h2 id="schedule-heading">Your sessions</h2></div><p>Times appear in {Intl.DateTimeFormat().resolvedOptions().timeZone.replaceAll("_", " ")}.</p></header>
+      <header className="account-section-heading"><div><span>Member dashboard</span><h2 id="schedule-heading">Training hub</h2></div><p>Times appear in {Intl.DateTimeFormat().resolvedOptions().timeZone.replaceAll("_", " ")}.</p></header>
+      <nav className="dashboard-tabs" aria-label="Training dashboard">
+        {(["overview", "sessions", ...(approvedCoach ? ["schedule"] : []), "history"] as Array<"overview" | "sessions" | "schedule" | "history">).map((panel) => (
+          <button key={panel} type="button" className={activePanel === panel ? "is-active" : ""} aria-current={activePanel === panel ? "page" : undefined} onClick={() => setActivePanel(panel)}>
+            {panel === "overview" ? "Overview" : panel === "sessions" ? `Sessions (${upcoming.length})` : panel === "schedule" ? `Availability (${futureSlots.length})` : `History & reviews (${history.length})`}
+          </button>
+        ))}
+      </nav>
       {state === "loading" && <p role="status">Loading your schedule…</p>}
       {state === "unavailable" && <p role="alert">Your schedule is temporarily unavailable.</p>}
       {error && <p ref={errorRef} tabIndex={-1} className="booking-message error" role="alert">{error}</p>}
@@ -209,9 +217,13 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
 
       {state === "ready" && (
         <>
-          <div className="schedule-column-grid">
-            <div>
-              <h3>Upcoming</h3>
+          {activePanel === "overview" && <div className="dashboard-overview">
+            <button type="button" onClick={() => setActivePanel("sessions")}><span>Upcoming sessions</span><strong>{upcoming.length}</strong><small>Requests, confirmed sessions and meeting details</small></button>
+            {approvedCoach && <button type="button" onClick={() => setActivePanel("schedule")}><span>Open bookable times</span><strong>{futureSlots.length}</strong><small>Manage your working hours and generated slots</small></button>}
+            <button type="button" onClick={() => setActivePanel("history")}><span>Session history</span><strong>{history.length}</strong><small>Completed sessions, cancellations and verified reviews</small></button>
+          </div>}
+          {activePanel === "sessions" && <div className="dashboard-panel">
+              <div className="dashboard-panel-heading"><div><span>Active bookings</span><h3>Upcoming sessions</h3></div><p>Accept requests, share meeting details, complete sessions and test the payment placeholder.</p></div>
               {upcoming.length === 0 ? <p className="schedule-empty">No upcoming sessions yet.</p> : upcoming.map((booking) => {
                 const isCoach = booking.coachId === userId;
                 const detailsId = `meeting-details-${booking.bookingId}`;
@@ -235,18 +247,17 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
                   {!isCoach && booking.status === "CONFIRMED" && (booking.paymentStatus === "DEMO_PAID" ? <p><strong>Demo payment recorded</strong> — no real charge was made.</p> : paymentForm.bookingId === booking.bookingId ? <form className="schedule-payment-form" onSubmit={(event) => submitDemoPayment(event, booking.bookingId)}><strong>Demo card payment</strong><p>Placeholder only. Do not enter real card information. Nothing from these fields is sent or stored.</p><label>Name on card<input required autoComplete="off" value={paymentForm.name} onChange={(event) => setPaymentForm((current) => ({ ...current, name: event.target.value }))} /></label><label>Test card number<input required inputMode="numeric" autoComplete="off" placeholder="4242 4242 4242 4242" value={paymentForm.card} onChange={(event) => setPaymentForm((current) => ({ ...current, card: event.target.value }))} /></label><label>Expiry<input required autoComplete="off" placeholder="12/30" value={paymentForm.expiry} onChange={(event) => setPaymentForm((current) => ({ ...current, expiry: event.target.value }))} /></label><label>CVC<input required inputMode="numeric" autoComplete="off" placeholder="123" value={paymentForm.cvc} onChange={(event) => setPaymentForm((current) => ({ ...current, cvc: event.target.value }))} /></label><button type="submit" disabled={!!busyId}>Record demo payment</button><button type="button" className="is-subtle" onClick={() => setPaymentForm({ bookingId: "", name: "", card: "", expiry: "", cvc: "" })}>Cancel</button></form> : <button type="button" className="is-subtle" onClick={() => setPaymentForm({ bookingId: booking.bookingId, name: "", card: "", expiry: "", cvc: "" })}>Open demo payment</button>)}
                 </article>;
               })}
-            </div>
-            <div>
-              <h3>History</h3>
+          </div>}
+          {activePanel === "history" && <div className="dashboard-panel">
+              <div className="dashboard-panel-heading"><div><span>Past activity</span><h3>History & reviews</h3></div><p>Completed and cancelled sessions are kept separate from active bookings.</p></div>
               {history.length === 0 ? <p className="schedule-empty">Completed and cancelled sessions will appear here.</p> : history.slice(-8).reverse().map((booking) => {
                 const isAthlete = booking.athleteId === userId;
                 const draft = reviewDrafts[booking.bookingId] ?? { rating: 5, body: "" };
                 return <article className="schedule-booking compact" key={booking.bookingId}><div><span className={`schedule-status status-${booking.status.toLowerCase()}`}>{statusLabel(booking.status)}</span><h4>{booking.coachId === userId ? booking.athleteName : booking.coachName}</h4><p>{when(booking.startsAt, booking.endsAt)}</p>{booking.refundPolicyOutcome !== "NOT_APPLICABLE" && <p>{booking.refundPolicyOutcome === "FULL_REFUND_DUE" ? "Refund policy: eligible for a full refund from the coach." : "Refund policy: outside the full-refund window."}</p>}{booking.reviewRating ? <p><strong>Your verified review:</strong> {"★".repeat(booking.reviewRating)} — {booking.reviewBody}</p> : isAthlete && booking.status === "COMPLETED" ? <div className="schedule-review-form"><label>Rating<select aria-label={`Rating for ${booking.coachName}`} value={draft.rating} onChange={(event) => setReviewDrafts((current) => ({ ...current, [booking.bookingId]: { ...draft, rating: Number(event.target.value) } }))}>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} stars</option>)}</select></label><label>Review<textarea aria-label={`Review for ${booking.coachName}`} minLength={10} maxLength={1000} value={draft.body} onChange={(event) => setReviewDrafts((current) => ({ ...current, [booking.bookingId]: { ...draft, body: event.target.value } }))} /></label><button type="button" disabled={!!busyId || draft.body.trim().length < 10} onClick={() => submitReview(booking.bookingId)}>Submit review</button></div> : null}</div></article>;
               })}
-            </div>
-          </div>
+          </div>}
 
-          {approvedCoach && <div className="coach-availability-manager">
+          {approvedCoach && activePanel === "schedule" && <div className="coach-availability-manager">
             <div><span>Coach tools</span><h3>Add working hours</h3><p>Choose a broad window such as 8:00 AM–5:00 PM. It will be split into separate bookable sessions.</p></div>
             <form onSubmit={createSlot}>
               <label>Date<input type="date" min={localDateInput(new Date(now))} required value={date} onChange={(event) => setDate(event.target.value)} /></label>
