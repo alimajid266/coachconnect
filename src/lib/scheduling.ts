@@ -16,7 +16,7 @@ export type ScheduleBooking = PublicCoachSlot & {
   athleteName: string;
   status: BookingStatus;
   pricePkr: number;
-  paymentStatus: "NOT_COLLECTED";
+  paymentStatus: "NOT_COLLECTED" | "DEMO_PAID";
   athleteNote: string | null;
   cancellationNote: string | null;
   meetingDetails: string | null;
@@ -62,7 +62,7 @@ export function scheduleBooking(row: Record<string, unknown>): ScheduleBooking |
     athleteName: text(row.athlete_name) || "Athlete",
     status: status as BookingStatus,
     pricePkr: typeof row.price_pkr === "number" ? row.price_pkr : 0,
-    paymentStatus: "NOT_COLLECTED",
+    paymentStatus: row.payment_status === "DEMO_PAID" ? "DEMO_PAID" : "NOT_COLLECTED",
     athleteNote: typeof row.athlete_note === "string" ? row.athlete_note : null,
     cancellationNote: typeof row.cancellation_note === "string" ? row.cancellation_note : null,
     meetingDetails: typeof row.meeting_details === "string" ? row.meeting_details : null,

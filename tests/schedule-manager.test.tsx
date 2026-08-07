@@ -39,7 +39,7 @@ describe("account schedule manager", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/api\/bookings\//), expect.objectContaining({ method: "PATCH" })));
     expect(await screen.findByText("Session confirmed.")).toBeInTheDocument();
-    expect(screen.getByText(/no payments are collected by coachconnect yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/payment is currently a demonstration only/i)).toBeInTheDocument();
   });
 
   it("lets a coach share participant-only details after confirmation", async () => {
@@ -72,6 +72,9 @@ describe("account schedule manager", () => {
     const link = await screen.findByRole("link", { name: "https://meet.example/session" });
     expect(link).toHaveAttribute("href", "https://meet.example/session");
     expect(link).toHaveAttribute("target", "_blank");
+    fireEvent.click(screen.getByRole("button", { name: /open demo payment/i }));
+    expect(screen.getByText(/do not enter real card information/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("4242 4242 4242 4242")).toBeInTheDocument();
   });
 
   it("keeps an ended confirmed session actionable for its coach", async () => {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isMissingAuthSessionError, rejectCrossOriginRequest } from "@/lib/auth-http";
 import { createSupabaseRouteClient } from "@/lib/supabase/route";
 
-const actions = ["accept", "decline", "cancel", "complete", "meeting-details", "review"] as const;
+const actions = ["accept", "decline", "cancel", "complete", "meeting-details", "review", "demo-payment"] as const;
 type Action = typeof actions[number];
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -35,7 +35,9 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
           ? supabase.rpc("complete_coach_booking", { target_booking_id: id })
           : action === "review"
             ? supabase.rpc("submit_coach_review", { target_booking_id: id, requested_rating: rating, requested_review: review })
-            : supabase.rpc("set_coach_booking_meeting_details", { target_booking_id: id, requested_details: meetingDetails });
+            : action === "demo-payment"
+              ? supabase.rpc("record_demo_booking_payment", { target_booking_id: id })
+              : supabase.rpc("set_coach_booking_meeting_details", { target_booking_id: id, requested_details: meetingDetails });
     const { data, error } = await call;
     if (error) return applyCookies(NextResponse.json({ error: "This booking can no longer be changed." }, { status: 409 }));
     return applyCookies(NextResponse.json({ booking: data }));

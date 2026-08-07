@@ -104,4 +104,10 @@ describe("booking mutation routes", () => {
       requested_details: details,
     });
   });
+
+  it("records only a demo-payment action and never accepts card data", async () => {
+    const response = await patch({ action: "demo-payment" });
+    expect(response.status).toBe(200);
+    expect(mocks.rpc).toHaveBeenCalledWith("record_demo_booking_payment", { target_booking_id: bookingId });
+  });
 });

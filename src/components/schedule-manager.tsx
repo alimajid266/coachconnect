@@ -41,6 +41,7 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
   const [mode, setMode] = useState<SessionMode>(() => formats?.inPerson === false && formats.online ? "ONLINE" : "IN_PERSON");
   const [meetingDrafts, setMeetingDrafts] = useState<Record<string, string>>({});
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: number; body: string }>>({});
+  const [paymentForm, setPaymentForm] = useState({ bookingId: "", name: "", card: "", expiry: "", cvc: "" });
   const [now, setNow] = useState(() => Date.now());
   const messageRef = useRef<HTMLParagraphElement>(null);
 
@@ -154,6 +155,21 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
     finally { setBusyId(""); }
   }
 
+  async function submitDemoPayment(event: FormEvent, bookingId: string) {
+    event.preventDefault();
+    if (!paymentForm.name.trim() || paymentForm.card.replaceAll(" ", "") !== "4242424242424242" || !/^\d{2}\/\d{2}$/.test(paymentForm.expiry) || !/^\d{3}$/.test(paymentForm.cvc)) {
+      setError("For this demo, use test card 4242 4242 4242 4242, any MM/YY expiry and any 3-digit CVC."); return;
+    }
+    setError(""); setMessage(""); setBusyId(`${bookingId}:demo-payment`);
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "demo-payment" }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Demo payment could not be recorded.");
+      setPaymentForm({ bookingId: "", name: "", card: "", expiry: "", cvc: "" }); setMessage("Demo payment recorded. No real charge was made."); await load();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Demo payment could not be recorded."); }
+    finally { setBusyId(""); }
+  }
+
   async function removeSlot(slotId: string) {
     if (!window.confirm("Remove this availability? This cannot be undone.")) return;
     setBusyId(slotId); setError(""); setMessage("");
@@ -216,6 +232,7 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
                   ) : (
                     <div className="schedule-meeting-details"><strong>Meeting details</strong><p>{booking.meetingDetails ? linkedMeetingDetails(booking.meetingDetails) : "The coach has not shared the final meeting details yet."}</p></div>
                   ))}
+                  {!isCoach && booking.status === "CONFIRMED" && (booking.paymentStatus === "DEMO_PAID" ? <p><strong>Demo payment recorded</strong> — no real charge was made.</p> : paymentForm.bookingId === booking.bookingId ? <form className="schedule-payment-form" onSubmit={(event) => submitDemoPayment(event, booking.bookingId)}><strong>Demo card payment</strong><p>Placeholder only. Do not enter real card information. Nothing from these fields is sent or stored.</p><label>Name on card<input required autoComplete="off" value={paymentForm.name} onChange={(event) => setPaymentForm((current) => ({ ...current, name: event.target.value }))} /></label><label>Test card number<input required inputMode="numeric" autoComplete="off" placeholder="4242 4242 4242 4242" value={paymentForm.card} onChange={(event) => setPaymentForm((current) => ({ ...current, card: event.target.value }))} /></label><label>Expiry<input required autoComplete="off" placeholder="12/30" value={paymentForm.expiry} onChange={(event) => setPaymentForm((current) => ({ ...current, expiry: event.target.value }))} /></label><label>CVC<input required inputMode="numeric" autoComplete="off" placeholder="123" value={paymentForm.cvc} onChange={(event) => setPaymentForm((current) => ({ ...current, cvc: event.target.value }))} /></label><button type="submit" disabled={!!busyId}>Record demo payment</button><button type="button" className="is-subtle" onClick={() => setPaymentForm({ bookingId: "", name: "", card: "", expiry: "", cvc: "" })}>Cancel</button></form> : <button type="button" className="is-subtle" onClick={() => setPaymentForm({ bookingId: booking.bookingId, name: "", card: "", expiry: "", cvc: "" })}>Open demo payment</button>)}
                 </article>;
               })}
             </div>
@@ -245,7 +262,7 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
             </div>
           </div>}
 
-          <p className="schedule-policy"><strong>No payments are collected by CoachConnect yet.</strong> For direct payments, athlete cancellations qualify for the full-refund policy until 24 hours before the session; the coach is responsible for issuing any eligible refund.</p>
+          <p className="schedule-policy"><strong>Payment is currently a demonstration only; no real money is charged.</strong> Never enter real card information. For direct off-platform payments, athlete cancellations qualify for the full-refund policy until 24 hours before the session; the coach is responsible for issuing any eligible refund.</p>
         </>
       )}
     </section>
