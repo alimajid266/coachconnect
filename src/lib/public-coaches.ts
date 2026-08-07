@@ -86,6 +86,9 @@ export function publicCoach(row: Record<string, unknown>, rank: number): Coach |
   const longitude = typeof row.public_longitude === "number" ? row.public_longitude : null;
   const latitude = typeof row.public_latitude === "number" ? row.public_latitude : null;
   const isDemo = row.is_demo === true;
+  const ratingValue = typeof row.rating === "number" ? row.rating : Number(row.rating);
+  const reviewCount = Number(row.review_count ?? 0);
+  const lessonCount = Number(row.lesson_count ?? 0);
   const demoImage = isDemo ? illustrativeImageForSports(sports) : null;
   const coordinates: Coach["coordinates"] = offersInPerson
     && longitude !== null && latitude !== null
@@ -106,11 +109,11 @@ export function publicCoach(row: Record<string, unknown>, rank: number): Coach |
     sports,
     tags,
     specialty: headline,
-    rating: null,
-    reviewCount: 0,
+    rating: Number.isFinite(ratingValue) && reviewCount > 0 ? ratingValue : null,
+    reviewCount: Number.isFinite(reviewCount) ? reviewCount : 0,
     price,
     reason: headline,
-    badge: isDemo ? "Demo profile" : "New coach",
+    badge: isDemo ? "Demo profile" : reviewCount > 0 ? "Reviewed coach" : "New coach",
     isDemo,
     mode,
     offersOnline,
@@ -127,7 +130,7 @@ export function publicCoach(row: Record<string, unknown>, rank: number): Coach |
     credentials: qualifications ? [qualifications] : [],
     coachingStyle,
     languages,
-    lessonCount: 0,
+    lessonCount: Number.isFinite(lessonCount) ? lessonCount : 0,
     audiences: stringArray(row.audiences),
     levels: stringArray(row.levels),
     lessonPlan: lessonPlan.map((description, index) => ({ title: `Step ${index + 1}`, description })),

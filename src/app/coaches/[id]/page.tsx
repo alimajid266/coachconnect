@@ -37,9 +37,14 @@ async function loadCoach(id: string): Promise<Coach | null> {
     : await supabase.rpc("get_public_demo_coach", { target_profile_id: id });
   if (error) return fallbackDemo;
   if (!Array.isArray(data) || data.length !== 1) return null;
-  const record = isUuid
+  const baseRecord = isUuid
     ? data[0] as Record<string, unknown>
     : { ...(data[0] as Record<string, unknown>), is_demo: true };
+  const statsResult = isUuid ? await supabase.rpc("get_public_coach_stats", { target_user_id: id }) : null;
+  const stats = statsResult && !statsResult.error && Array.isArray(statsResult.data) && statsResult.data[0]
+    ? statsResult.data[0] as Record<string, unknown>
+    : {};
+  const record = { ...baseRecord, ...stats };
   const coach = publicCoach(record, 1000);
   if (!coach) return fallbackDemo;
   return isUuid

@@ -85,6 +85,7 @@ describe("booking mutation routes", () => {
         startsAt: "2099-08-14T10:00:00.000Z",
         endsAt: "2099-08-14T11:00:00.000Z",
         mode: "IN_PERSON",
+        sessionMinutes: 60,
       }),
     }));
 

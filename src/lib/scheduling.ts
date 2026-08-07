@@ -21,6 +21,8 @@ export type ScheduleBooking = PublicCoachSlot & {
   cancellationNote: string | null;
   meetingDetails: string | null;
   refundPolicyOutcome: "NOT_APPLICABLE" | "FULL_REFUND_DUE" | "OUTSIDE_FULL_REFUND_WINDOW";
+  reviewRating: number | null;
+  reviewBody: string | null;
 };
 
 export type CoachOwnedSlot = PublicCoachSlot & {
@@ -67,6 +69,8 @@ export function scheduleBooking(row: Record<string, unknown>): ScheduleBooking |
     refundPolicyOutcome: refundOutcomes.includes(refundPolicyOutcome as ScheduleBooking["refundPolicyOutcome"])
       ? refundPolicyOutcome as ScheduleBooking["refundPolicyOutcome"]
       : "NOT_APPLICABLE",
+    reviewRating: typeof row.review_rating === "number" ? row.review_rating : null,
+    reviewBody: typeof row.review_body === "string" ? row.review_body : null,
   };
 }
 

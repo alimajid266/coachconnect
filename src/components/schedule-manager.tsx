@@ -37,8 +37,10 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [sessionMinutes, setSessionMinutes] = useState(60);
   const [mode, setMode] = useState<SessionMode>(() => formats?.inPerson === false && formats.online ? "ONLINE" : "IN_PERSON");
   const [meetingDrafts, setMeetingDrafts] = useState<Record<string, string>>({});
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: number; body: string }>>({});
   const [now, setNow] = useState(() => Date.now());
   const messageRef = useRef<HTMLParagraphElement>(null);
 
@@ -110,14 +112,14 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
     }
     const leadTime = startsAt.getTime() - Date.now();
     const duration = endsAt.getTime() - startsAt.getTime();
-    if (leadTime < 30 * 60 * 1000 || leadTime > 180 * 24 * 60 * 60 * 1000 || duration < 30 * 60 * 1000 || duration > 3 * 60 * 60 * 1000) {
-      setError("Choose a future start time at least 30 minutes from now, lasting 30 minutes to 3 hours."); setBusyId(""); return;
+    if (leadTime < 30 * 60 * 1000 || leadTime > 180 * 24 * 60 * 60 * 1000 || duration < sessionMinutes * 60 * 1000 || duration > 12 * 60 * 60 * 1000) {
+      setError("Choose a future working-hours window at least 30 minutes from now and up to 12 hours long."); setBusyId(""); return;
     }
     try {
-      const response = await fetch("/api/schedule/slots", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), mode }) });
+      const response = await fetch("/api/schedule/slots", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), mode, sessionMinutes }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "The slot could not be saved.");
-      setDate(""); setStartTime(""); setEndTime(""); setMessage("Availability added to your public coach profile.");
+      setDate(""); setStartTime(""); setEndTime(""); setMessage("Bookable sessions added to your public coach profile.");
       await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "The slot could not be saved."); }
     finally { setBusyId(""); }
@@ -137,6 +139,18 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
       setMessage(action === "accept" ? "Session confirmed." : action === "decline" ? "Request declined and the slot is open again." : action === "complete" ? "Session marked complete." : "Booking cancelled.");
       await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "The booking could not be changed."); }
+    finally { setBusyId(""); }
+  }
+
+  async function submitReview(bookingId: string) {
+    const draft = reviewDrafts[bookingId] ?? { rating: 5, body: "" };
+    setMessage(""); setError(""); setBusyId(`${bookingId}:review`);
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "review", rating: draft.rating, review: draft.body }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "The review could not be submitted.");
+      setMessage("Review submitted."); await load();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "The review could not be submitted."); }
     finally { setBusyId(""); }
   }
 
@@ -191,7 +205,7 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
                   <div className="schedule-actions">
                     {isCoach && booking.status === "REQUESTED" && <>{new Date(booking.startsAt).getTime() > now && <button aria-label={`Accept ${booking.athleteName}, ${when(booking.startsAt, booking.endsAt)}`} type="button" disabled={!!busyId} onClick={() => bookingAction(booking.bookingId, "accept")}>Accept</button>}<button aria-label={`Decline ${booking.athleteName}, ${when(booking.startsAt, booking.endsAt)}`} type="button" disabled={!!busyId} onClick={() => bookingAction(booking.bookingId, "decline")}>Decline</button></>}
                     {["REQUESTED", "CONFIRMED"].includes(booking.status) && new Date(booking.endsAt).getTime() > now && <button aria-label={`Cancel session with ${isCoach ? booking.athleteName : booking.coachName}, ${when(booking.startsAt, booking.endsAt)}`} className="is-subtle" type="button" disabled={!!busyId} onClick={() => bookingAction(booking.bookingId, "cancel")}>Cancel</button>}
-                    {isCoach && booking.status === "CONFIRMED" && new Date(booking.endsAt).getTime() <= now && <button aria-label={`Complete session with ${booking.athleteName}, ${when(booking.startsAt, booking.endsAt)}`} type="button" disabled={!!busyId} onClick={() => bookingAction(booking.bookingId, "complete")}>Complete</button>}
+                    {isCoach && booking.status === "CONFIRMED" && <button aria-label={`Mark session with ${booking.athleteName} completed, ${when(booking.startsAt, booking.endsAt)}`} type="button" disabled={!!busyId} onClick={() => bookingAction(booking.bookingId, "complete")}>Mark completed</button>}
                   </div>
                   {booking.status === "CONFIRMED" && (isCoach ? (
                     <div className="schedule-meeting-details">
@@ -207,20 +221,25 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
             </div>
             <div>
               <h3>History</h3>
-              {history.length === 0 ? <p className="schedule-empty">Completed and cancelled sessions will appear here.</p> : history.slice(-8).reverse().map((booking) => <article className="schedule-booking compact" key={booking.bookingId}><div><span className={`schedule-status status-${booking.status.toLowerCase()}`}>{statusLabel(booking.status)}</span><h4>{booking.coachId === userId ? booking.athleteName : booking.coachName}</h4><p>{when(booking.startsAt, booking.endsAt)}</p>{booking.refundPolicyOutcome !== "NOT_APPLICABLE" && <p>{booking.refundPolicyOutcome === "FULL_REFUND_DUE" ? "Refund policy: eligible for a full refund from the coach." : "Refund policy: outside the full-refund window."}</p>}</div></article>)}
+              {history.length === 0 ? <p className="schedule-empty">Completed and cancelled sessions will appear here.</p> : history.slice(-8).reverse().map((booking) => {
+                const isAthlete = booking.athleteId === userId;
+                const draft = reviewDrafts[booking.bookingId] ?? { rating: 5, body: "" };
+                return <article className="schedule-booking compact" key={booking.bookingId}><div><span className={`schedule-status status-${booking.status.toLowerCase()}`}>{statusLabel(booking.status)}</span><h4>{booking.coachId === userId ? booking.athleteName : booking.coachName}</h4><p>{when(booking.startsAt, booking.endsAt)}</p>{booking.refundPolicyOutcome !== "NOT_APPLICABLE" && <p>{booking.refundPolicyOutcome === "FULL_REFUND_DUE" ? "Refund policy: eligible for a full refund from the coach." : "Refund policy: outside the full-refund window."}</p>}{booking.reviewRating ? <p><strong>Your verified review:</strong> {"★".repeat(booking.reviewRating)} — {booking.reviewBody}</p> : isAthlete && booking.status === "COMPLETED" ? <div className="schedule-review-form"><label>Rating<select aria-label={`Rating for ${booking.coachName}`} value={draft.rating} onChange={(event) => setReviewDrafts((current) => ({ ...current, [booking.bookingId]: { ...draft, rating: Number(event.target.value) } }))}>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} stars</option>)}</select></label><label>Review<textarea aria-label={`Review for ${booking.coachName}`} minLength={10} maxLength={1000} value={draft.body} onChange={(event) => setReviewDrafts((current) => ({ ...current, [booking.bookingId]: { ...draft, body: event.target.value } }))} /></label><button type="button" disabled={!!busyId || draft.body.trim().length < 10} onClick={() => submitReview(booking.bookingId)}>Submit review</button></div> : null}</div></article>;
+              })}
             </div>
           </div>
 
           {approvedCoach && <div className="coach-availability-manager">
-            <div><span>Coach tools</span><h3>Add availability</h3><p>Members can request these times. You still decide whether to accept.</p></div>
+            <div><span>Coach tools</span><h3>Add working hours</h3><p>Choose a broad window such as 8:00 AM–5:00 PM. It will be split into separate bookable sessions.</p></div>
             <form onSubmit={createSlot}>
               <label>Date<input type="date" min={localDateInput(new Date(now))} required value={date} onChange={(event) => setDate(event.target.value)} /></label>
               <label>Starts<input type="time" required value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>
               <label>Ends<input type="time" required value={endTime} onChange={(event) => setEndTime(event.target.value)} /></label>
+              <label>Session length<select aria-label="Session length" value={sessionMinutes} onChange={(event) => setSessionMinutes(Number(event.target.value))}><option value={30}>30 minutes</option><option value={60}>60 minutes</option><option value={90}>90 minutes</option><option value={120}>2 hours</option><option value={180}>3 hours</option></select></label>
               <label>Format<select value={mode} onChange={(event) => setMode(event.target.value as SessionMode)}>{formats?.inPerson !== false && <option value="IN_PERSON">In person</option>}{formats?.online !== false && <option value="ONLINE">Online</option>}</select></label>
-              <button className="button button-accent" disabled={busyId === "new-slot"} type="submit">{busyId === "new-slot" ? "Adding…" : "Add time"}</button>
+              <button className="button button-accent" disabled={busyId === "new-slot"} type="submit">{busyId === "new-slot" ? "Adding…" : "Add sessions"}</button>
             </form>
-            <p className="application-field-hint">Choose a start at least 30 minutes ahead. Each available time can last from 30 minutes to 3 hours.</p>
+            <p className="application-field-hint">Choose a start at least 30 minutes ahead. Windows can last up to 12 hours; athletes book one generated session at a time.</p>
             <div className="coach-slot-list">
               {futureSlots.length === 0 ? <p className="schedule-empty">No future availability added.</p> : futureSlots.map((slot) => <article key={slot.id}><div><strong>{when(slot.startsAt, slot.endsAt)}</strong><span>{slot.mode === "ONLINE" ? "Online" : "In person"}{slot.bookingStatus ? ` · ${slot.bookingStatus.toLowerCase()}` : " · Open"}</span></div><button aria-label={`Remove availability, ${when(slot.startsAt, slot.endsAt)}`} type="button" disabled={!!slot.bookingStatus || busyId === slot.id} onClick={() => removeSlot(slot.id)}>Remove</button></article>)}
             </div>

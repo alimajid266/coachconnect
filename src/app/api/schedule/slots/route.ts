@@ -5,6 +5,7 @@ import { createSupabaseRouteClient } from "@/lib/supabase/route";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function message(error: string) {
+  if (/valid availability window|shorter than the selected session length/i.test(error)) return "Choose a working-hours window up to 12 hours that fits at least one session.";
   if (/valid future slot/i.test(error)) return "Choose a future start time at least 30 minutes from now, lasting 30 minutes to 3 hours.";
   if (/overlap.*booking/i.test(error)) return "That time overlaps an active booking in your schedule.";
   if (/overlap/i.test(error)) return "That time overlaps an existing slot.";
@@ -28,17 +29,20 @@ export async function POST(request: NextRequest) {
     const startsAt = typeof body.startsAt === "string" ? body.startsAt : "";
     const endsAt = typeof body.endsAt === "string" ? body.endsAt : "";
     const mode = body.mode;
-    if (!startsAt || !endsAt || (mode !== "ONLINE" && mode !== "IN_PERSON") || Number.isNaN(Date.parse(startsAt)) || Number.isNaN(Date.parse(endsAt))) {
+    const sessionMinutes = body.sessionMinutes;
+    if (!startsAt || !endsAt || (mode !== "ONLINE" && mode !== "IN_PERSON")
+      || ![30, 60, 90, 120, 180].includes(sessionMinutes as number)
+      || Number.isNaN(Date.parse(startsAt)) || Number.isNaN(Date.parse(endsAt))) {
       return NextResponse.json({ error: "Choose a valid date, time and format." }, { status: 400 });
     }
     const { supabase, applyCookies, user, authError } = await authenticated(request);
     if (authError && !isMissingAuthSessionError(authError)) return applyCookies(NextResponse.json({ error: "Account status is unavailable." }, { status: 503 }));
     if (!user) return applyCookies(NextResponse.json({ error: "Sign in as an approved coach." }, { status: 401 }));
-    const { data, error } = await supabase.rpc("create_coach_availability_slot", {
-      requested_start: startsAt, requested_end: endsAt, requested_mode: mode,
+    const { data, error } = await supabase.rpc("create_coach_availability_window", {
+      requested_start: startsAt, requested_end: endsAt, requested_mode: mode, session_minutes: sessionMinutes,
     });
     if (error) return applyCookies(NextResponse.json({ error: message(error.message) }, { status: 400 }));
-    return applyCookies(NextResponse.json({ slot: data }, { status: 201 }));
+    return applyCookies(NextResponse.json({ slots: data }, { status: 201 }));
   } catch {
     return NextResponse.json({ error: "The availability slot could not be saved." }, { status: 400 });
   }

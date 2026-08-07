@@ -13,16 +13,22 @@ export async function GET() {
   const supabase = createClient(url, publishableKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const [approvedResult, demoResult] = await Promise.all([
+  const [approvedResult, demoResult, statsResult] = await Promise.all([
     supabase.rpc("list_public_coaches"),
     supabase.rpc("list_demo_coaches"),
+    supabase.rpc("list_public_coach_stats"),
   ]);
   if (approvedResult.error || !Array.isArray(approvedResult.data)) {
     return NextResponse.json({ error: "Approved coaches are temporarily unavailable." }, { status: 503 });
   }
 
-  const approvedRows = await Promise.all(approvedResult.data.map(async (row, index) => {
+  const stats = new Map((Array.isArray(statsResult.data) ? statsResult.data : []).map((row) => {
     const record = row as Record<string, unknown>;
+    return [String(record.coach_user_id), record];
+  }));
+  const approvedRows = await Promise.all(approvedResult.data.map(async (row, index) => {
+    const original = row as Record<string, unknown>;
+    const record = { ...original, ...(stats.get(String(original.user_id)) ?? {}) };
     const coach = publicCoach(record, 1000 + index);
     return coach ? attachSignedCoachMedia(supabase, coach, record) : null;
   }));
