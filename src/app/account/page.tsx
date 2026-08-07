@@ -54,6 +54,8 @@ export default function AccountPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
   const resendCoolingDown = resendCooldown > 0;
 
   useEffect(() => {
@@ -114,6 +116,32 @@ export default function AccountPage() {
       setMessage("The account service could not be reached. Please try again.");
     } finally {
       setEmailActionBusy(false);
+    }
+  }
+
+  async function uploadAvatar(file: File | undefined) {
+    if (!file || !user) return;
+    setAvatarBusy(true);
+    setMessage("");
+    setStatusMessage("");
+    try {
+      const response = await fetch("/api/coach-application/image?purpose=avatar", {
+        method: "POST",
+        headers: { "content-type": file.type },
+        body: file,
+      });
+      const result = (await response.json()) as { url?: string; error?: string };
+      if (!response.ok || !result.url) {
+        setMessage(result.error ?? "The profile picture could not be uploaded.");
+        return;
+      }
+      setAvatarUrl(result.url);
+      setUser({ ...user, avatarUrl: result.url });
+      setStatusMessage("Profile picture updated.");
+    } catch {
+      setMessage("The profile picture could not be uploaded. Please try again.");
+    } finally {
+      setAvatarBusy(false);
     }
   }
 
@@ -268,15 +296,22 @@ export default function AccountPage() {
             <p className="eyebrow">Member account</p>
             <h1>My account</h1>
             <p>Manage your CoachConnect access and coaching activity.</p>
+            {message && <p className="auth-error" role="alert">{message}</p>}
+            {statusMessage && <p className="auth-resend-status" role="status">{statusMessage}</p>}
           </section>
 
-          <ScheduleManager userId={String(user.id)} approvedCoach={coachStatus === "APPROVED"} />
+          <ScheduleManager userId={String(user.id)} approvedCoach={coachStatus === "APPROVED"} formats={user.capabilities?.coachFormats ?? undefined} />
 
           <section className="member-account-grid" aria-label="Account details and actions">
             <article className="account-summary-card">
               <span>Signed in as</span>
+              {(avatarUrl ?? user.avatarUrl) && <img className="account-avatar" src={(avatarUrl ?? user.avatarUrl) as string} alt={`${user.displayName} profile picture`} />}
               <h2>{user.displayName}</h2>
               <p>{user.email}</p>
+              <label className="account-avatar-upload">Account profile picture
+                <input aria-label="Account profile picture" type="file" accept="image/jpeg,image/png,image/webp" disabled={avatarBusy} onChange={(event) => uploadAvatar(event.target.files?.[0])} />
+                <span>{avatarBusy ? "Uploading…" : "JPEG, PNG or WebP, up to 5 MB."}</span>
+              </label>
             </article>
             <article>
               <span>Coaching</span>

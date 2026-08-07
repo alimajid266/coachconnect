@@ -1,0 +1,117 @@
+flowchart TB
+  %% CoachConnect four-day migration architecture
+  classDef built fill:#0f3d2e,stroke:#34d399,color:#ecfdf5,stroke-width:2px
+  classDef pending fill:#4a3412,stroke:#fbbf24,color:#fffbeb,stroke-width:2px
+  classDef planned fill:#102a43,stroke:#60a5fa,color:#eff6ff,stroke-width:2px
+  classDef deferred fill:#252a34,stroke:#7c8799,color:#d1d5db,stroke-width:1px,stroke-dasharray:5 5
+  classDef external fill:#2c1d46,stroke:#c084fc,color:#faf5ff,stroke-width:2px
+
+  subgraph PEOPLE["People"]
+    direction LR
+    ATH["Athlete / visitor"]
+    COACH["Member applying as coach"]
+    ADMIN["Administrator"]
+  end
+
+  subgraph BROWSER["Browser — visible CoachConnect pages"]
+    direction LR
+    MARKET["Marketplace, profiles, filters and map<br/><b>BUILT LOCALLY</b>"]:::built
+    ACCOUNT["Account, recovery and deletion<br/><b>BUILT LOCALLY</b>"]:::built
+    APPROVAL_UI["Coach application and admin review<br/><b>BUILT LOCALLY</b>"]:::built
+    BOOK_UI["Book, view and cancel session<br/><b>DAY 3 PLANNED</b>"]:::planned
+  end
+
+  subgraph VERCEL["Vercel — public Next.js application"]
+    direction TB
+    PAGES["Frontend pages<br/>what people see"]:::built
+    LIVE_API["Existing internal APIs<br/>auth · account · coach application · admin · health"]:::built
+    SEARCH_API["Search + recommendation API<br/><b>DAY 2 PLANNED</b>"]:::planned
+    BOOK_API["Availability + booking API<br/><b>DAY 3 PLANNED</b>"]:::planned
+    VALIDATE["Input validation · origin checks · sessions<br/>server-only secrets"]:::built
+  end
+
+  subgraph SUPABASE["Supabase — permanent records and security"]
+    direction TB
+    AUTH["Authentication<br/>accounts · passwords · sessions · recovery<br/><b>CODE BUILT; PRODUCTION E2E PENDING</b>"]:::pending
+    PROFILE_DB["Profiles + coach applications<br/><b>LOCAL INTEGRATION PASSES; CLOUD MIGRATION PENDING</b>"]:::pending
+    CATALOG_DB["Approved public coach catalog<br/><b>DAY 1 CONNECTION PLANNED</b>"]:::planned
+    BOOK_DB["Slots + bookings + cancellations<br/><b>DAY 3 PLANNED</b>"]:::planned
+    RLS["Row-Level Security (RLS)<br/>database decides which records each person may access"]:::pending
+    TX["Database transaction + unique slot rule<br/>prevents double booking"]:::planned
+  end
+
+  subgraph AI["Hybrid AI — interpretation only, never authority"]
+    direction LR
+    AIGATE["Privacy filter + rate/cost limit"]:::planned
+    PROVIDER["Replaceable provider adapter<br/>recommended: Groq GPT-OSS 20B"]:::planned
+    RULES["Local parser + deterministic ranking<br/>always-available fallback"]:::planned
+    EXPLAIN["Editable filters + truthful reasons"]:::planned
+  end
+
+  subgraph OUTSIDE["External services"]
+    direction LR
+    MAPBOX["Mapbox<br/>approximate map tiles<br/><b>BUILT LOCALLY</b>"]:::external
+    GROQ["Groq AI API<br/>server-to-server only<br/><b>OPTIONAL DAY 2 PROVIDER</b>"]:::external
+    EMAIL["Supabase account email<br/>confirmation + recovery"]:::external
+  end
+
+  subgraph DELIVERY["Build, verification and release"]
+    direction LR
+    LOCAL["Local release candidate<br/>82 tests + lint + types + build pass<br/><b>UNCOMMITTED CHANGES</b>"]:::pending
+    DOCKER["Docker<br/>repeatable local verification"]:::built
+    PROD["Vercel production URL<br/><b>OLDER RELEASE IS LIVE</b>"]:::pending
+    RELEASE["Day 4 release gates<br/>hosted E2E · security · mobile · browser · demo"]:::planned
+  end
+
+  subgraph LATER["Explicitly deferred beyond four days"]
+    direction LR
+    REVIEWS["Verified reviews"]:::deferred
+    TRAINING["AI training plans"]:::deferred
+    PAY["Payments / payouts"]:::deferred
+    CHAT["Chat / WhatsApp / SMS"]:::deferred
+    ADV["Advanced scheduling · distance search · analytics"]:::deferred
+  end
+
+  ATH --> MARKET
+  ATH --> ACCOUNT
+  COACH --> ACCOUNT
+  COACH --> APPROVAL_UI
+  ADMIN --> APPROVAL_UI
+  ATH --> BOOK_UI
+
+  MARKET --> PAGES
+  ACCOUNT --> PAGES
+  APPROVAL_UI --> PAGES
+  BOOK_UI --> PAGES
+  PAGES --> VALIDATE
+  VALIDATE --> LIVE_API
+  VALIDATE --> SEARCH_API
+  VALIDATE --> BOOK_API
+
+  MARKET -. "public map only" .-> MAPBOX
+  LIVE_API --> AUTH
+  LIVE_API --> PROFILE_DB
+  AUTH -. "email" .-> EMAIL
+  PROFILE_DB --> RLS
+  SEARCH_API --> AIGATE
+  AIGATE --> PROVIDER
+  PROVIDER -. "sanitized text only" .-> GROQ
+  PROVIDER --> RULES
+  GROQ -. "strict JSON or timeout" .-> RULES
+  RULES --> CATALOG_DB
+  CATALOG_DB --> RLS
+  RULES --> EXPLAIN
+  EXPLAIN --> MARKET
+
+  BOOK_API --> TX
+  TX --> BOOK_DB
+  BOOK_DB --> RLS
+  TX -. "slot conflict" .-> BOOK_UI
+
+  LOCAL --> DOCKER
+  LOCAL --> RELEASE
+  RELEASE -->|"deploy only after all gates pass"| PROD
+
+  %% Trust rules shown as labeled links
+  RLS -. "draft/rejected/suspended coaches stay private" .-> CATALOG_DB
+  RLS -. "owner/admin permissions" .-> PROFILE_DB

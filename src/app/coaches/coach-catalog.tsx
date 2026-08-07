@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import CoachMap from "@/app/coaches/coach-map";
 import SiteHeader from "@/components/site-header";
-import { interpretCoachQuery, recommendCoaches, type DiscoveryFilters } from "@/lib/coach-discovery";
+import { interpretCoachQuery, recommendCoaches, type CoachQueryInterpretation, type DiscoveryFilters } from "@/lib/coach-discovery";
 import { coaches as demoCoaches, formatCoachPrice, type Coach } from "@/lib/coaches";
 
 type Props = {
@@ -15,6 +15,7 @@ type Props = {
 };
 
 type SortOption = "recommended" | "rating" | "price-low" | "price-high";
+const PAGE_SIZE = 20;
 
 export default function CoachCatalog({ initialQuery, initialCity, initialCoaches = [] }: Props) {
   const [query, setQuery] = useState(initialQuery);
@@ -28,6 +29,11 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
   const [databaseDemoCoaches, setDatabaseDemoCoaches] = useState<Coach[]>(() => initialCoaches.filter((coach) => coach.isDemo));
   const [demoCatalogStatus, setDemoCatalogStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [catalogStatus, setCatalogStatus] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [aiInterpretation, setAiInterpretation] = useState<CoachQueryInterpretation | null>(null);
+  const [aiRanking, setAiRanking] = useState<Array<{ id: string; reasons: string[] }> | null>(null);
+  const [aiStatus, setAiStatus] = useState<"idle" | "loading" | "ready">("idle");
+  const [aiError, setAiError] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   function profileHref(coach: Coach) {
     const params = new URLSearchParams();
@@ -82,7 +88,8 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
     ? "any"
     : city;
 
-  const interpretation = useMemo(() => interpretCoachQuery(query), [query]);
+  const deterministicInterpretation = useMemo(() => interpretCoachQuery(query), [query]);
+  const interpretation = aiInterpretation ?? deterministicInterpretation;
   const effectiveFilters: DiscoveryFilters = useMemo(() => ({
     sport: dismissedInterpretations.includes("sport") ? undefined : interpretation.filters.sport,
     city: dismissedInterpretations.includes("city") ? undefined : interpretation.filters.city,
@@ -94,15 +101,32 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
     tags: interpretation.filters.tags.filter((tag) => !dismissedInterpretations.includes(`tag:${tag}`)),
   }), [dismissedInterpretations, interpretation]);
 
-  const recommendations = useMemo(() => recommendCoaches(catalogCoaches, {
+  const deterministicRecommendations = useMemo(() => recommendCoaches(catalogCoaches, {
     ...interpretation,
     filters: effectiveFilters,
   }), [catalogCoaches, effectiveFilters, interpretation]);
+  const recommendations = useMemo(() => {
+    if (!aiRanking) return deterministicRecommendations;
+    const ranked = new Map(aiRanking.map((entry, index) => [entry.id, { ...entry, index }]));
+    return deterministicRecommendations.map((entry) => {
+      const ai = ranked.get(entry.coach.id);
+      return ai ? { ...entry, reasons: ai.reasons, label: "Strong match" as const } : entry;
+    }).sort((first, second) => (ranked.get(first.coach.id)?.index ?? 10_000) - (ranked.get(second.coach.id)?.index ?? 10_000));
+  }, [aiRanking, deterministicRecommendations]);
 
   const visibleRecommendations = useMemo(() => {
     const matches = recommendations.filter(({ coach }) => (
       (activeCity === "any" || coach.location === activeCity)
       && (sport === "any" || coach.sports.includes(sport))
+      && (!effectiveFilters.sport || coach.sports.includes(effectiveFilters.sport))
+      && (!effectiveFilters.city || coach.location === effectiveFilters.city)
+      && (!effectiveFilters.level || coach.levels.includes(effectiveFilters.level))
+      && (!effectiveFilters.maxPrice || coach.price <= effectiveFilters.maxPrice)
+      && (!effectiveFilters.day || coach.availability.includes(effectiveFilters.day))
+      && effectiveFilters.tags.every((tag) => coach.tags.includes(tag))
+      && (!effectiveFilters.format
+        || (effectiveFilters.format === "Online" && coach.offersOnline)
+        || (effectiveFilters.format === "In person" && coach.offersInPerson))
       && (mode === "any"
         || (mode === "Online" && coach.offersOnline)
         || (mode === "In person" && coach.offersInPerson))
@@ -115,10 +139,13 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
       else comparison = second.coach.price - first.coach.price;
       return comparison || String(first.coach.id).localeCompare(String(second.coach.id));
     });
-  }, [activeCity, mode, recommendations, sort, sport]);
+  }, [activeCity, effectiveFilters, mode, recommendations, sort, sport]);
 
-  const visibleCoaches = useMemo(() => visibleRecommendations.map((entry) => entry.coach), [visibleRecommendations]);
-  const recommendationById = useMemo(() => new Map(visibleRecommendations.map((entry) => [entry.coach.id, entry])), [visibleRecommendations]);
+  const pageCount = Math.max(1, Math.ceil(visibleRecommendations.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, pageCount);
+  const pagedRecommendations = useMemo(() => visibleRecommendations.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE), [safePage, visibleRecommendations]);
+  const visibleCoaches = useMemo(() => pagedRecommendations.map((entry) => entry.coach), [pagedRecommendations]);
+  const recommendationById = useMemo(() => new Map(pagedRecommendations.map((entry) => [entry.coach.id, entry])), [pagedRecommendations]);
   const correctionLabel = (value: string, fallback: string) => {
     const correction = interpretation.corrections.find((entry) => entry.target === value);
     return correction ? `${correction.source} → ${value}` : fallback;
@@ -141,7 +168,30 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
     setSport("any");
     setMode("any");
     setSort("recommended");
+    setCurrentPage(1);
+    setAiInterpretation(null);
+    setAiRanking(null);
+    setAiStatus("idle");
+    setAiError("");
   };
+
+  async function runAiSearch() {
+    if (query.trim().length < 2 || catalogCoaches.length === 0) return;
+    setAiStatus("loading"); setAiError("");
+    try {
+      const response = await fetch("/api/ai/coach-discovery", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query: query.trim() }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "AI search is temporarily unavailable.");
+      setAiInterpretation(body.interpretation); setAiRanking(body.recommendations);
+      setDismissedInterpretations([]); setSort("recommended"); setCurrentPage(1); setAiStatus("ready");
+    } catch (reason) {
+      setAiError(reason instanceof Error ? reason.message : "AI search is temporarily unavailable.");
+      setAiStatus("idle");
+    }
+  }
 
   return (
     <div className="catalog-page">
@@ -151,8 +201,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
       <main className="catalog-main" id="catalog-results">
         <section className="catalog-intro">
           <div>
-            <p>Coach catalog</p>
-            <h1>Find a coach</h1>
+            <h1>Coach catalog</h1>
             <span>Browse approved coaches and interactive demo profiles across every sport, city and training format.</span>
           </div>
         </section>
@@ -167,6 +216,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
               onChange={(event) => {
                 setQuery(event.target.value);
                 setDismissedInterpretations([]);
+                setCurrentPage(1); setAiInterpretation(null); setAiRanking(null); setAiStatus("idle"); setAiError("");
               }}
             />
           </label>
@@ -202,7 +252,13 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
             </select>
           </label>
           <button type="button" onClick={clearFilters}>Clear filters</button>
+          <button className="catalog-ai-button" type="button" disabled={aiStatus === "loading" || query.trim().length < 2 || catalogCoaches.length === 0} onClick={() => void runAiSearch()}>{aiStatus === "loading" ? "Asking Gemini…" : "Use AI search"}</button>
         </section>
+
+        <div className="catalog-ai-status">
+          <span>{aiStatus === "ready" ? "AI search and recommendations generated with Gemini 3.5 Flash-Lite." : "Standard search works instantly. Use AI search for natural-language interpretation and grounded recommendations."}</span>
+          {aiError && <p role="alert">{aiError} Showing standard search results instead.</p>}
+        </div>
 
         {(interpretationChips.length > 0 || interpretation.conflicts.length > 0) && (
           <section className="catalog-interpretation" aria-label="Search interpretation">
@@ -230,7 +286,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
         <div className="catalog-results-heading">
           <p role="status">{catalogStatus === "loading" && catalogCoaches.length === 0
             ? "Loading coaches"
-            : `${visibleCoaches.length} ${visibleCoaches.length === 1 ? "coach" : "coaches"}`}</p>
+            : `${visibleRecommendations.length} ${visibleRecommendations.length === 1 ? "coach" : "coaches"}`}</p>
           <div>
             <span>Available coaches</span>
             <button type="button" onClick={() => setShowMap((current) => !current)}>
@@ -323,6 +379,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
           </section>
           )}
         </div>
+        {visibleRecommendations.length > PAGE_SIZE && <nav className="catalog-pagination" aria-label="Coach result pages"><button type="button" disabled={safePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Previous page</button><span>Page {safePage} of {pageCount}</span><button type="button" disabled={safePage === pageCount} onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}>Next page</button></nav>}
       </main>
     </div>
   );

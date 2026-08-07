@@ -22,7 +22,8 @@ describe("coach catalog", () => {
   it("renders rich demo profiles with clear labels", async () => {
     renderCatalog();
 
-    expect(screen.getByRole("heading", { level: 1, name: /find a coach/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /coach catalog/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /find a coach/i })).not.toBeInTheDocument();
     const resultCount = Number(screen.getByRole("status").textContent?.match(/\d+/)?.[0]);
     expect(resultCount).toBeGreaterThan(10);
     expect(screen.getAllByRole("article").length).toBeGreaterThan(10);
@@ -228,8 +229,37 @@ describe("coach catalog", () => {
     fireEvent.change(screen.getByRole("searchbox", { name: /search/i }), { target: { value: "tennis coach" } });
     fireEvent.change(screen.getByRole("combobox", { name: /city/i }), { target: { value: "Karachi" } });
 
-    expect(screen.getByRole("status")).toHaveTextContent("5 coaches");
+    expect(screen.getByRole("status")).toHaveTextContent(/coach/);
     expect(screen.getByRole("heading", { name: "Hamza Siddiqui" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Mariam Iqbal" })).not.toBeInTheDocument();
+  });
+
+  it("shows only football coaches for a football search", () => {
+    renderCatalog();
+    fireEvent.change(screen.getByRole("searchbox", { name: /search/i }), { target: { value: "football" } });
+    const cards = screen.getAllByRole("article");
+    expect(cards.length).toBeGreaterThan(0);
+    cards.forEach((card) => expect(card).toHaveTextContent(/Football/));
+    expect(screen.queryByRole("heading", { name: "Ayesha Khan" })).not.toBeInTheDocument();
+  });
+
+  it("paginates more than twenty matching coaches", async () => {
+    const many = Array.from({ length: 25 }, (_, index) => ({ ...coaches[0], id: `coach-${index}`, name: `Coach ${index + 1}` }));
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve({
+      ok: true, json: async () => String(input).includes("/api/coaches") ? { coaches: many, demos: [], demosAvailable: true } : { user: null },
+    })));
+    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={many} />);
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("25 coaches"));
+    expect(screen.getAllByRole("article")).toHaveLength(20);
+    fireEvent.click(screen.getByRole("button", { name: /next page/i }));
+    expect(screen.getAllByRole("article")).toHaveLength(5);
+  });
+
+  it("shows a signed-in member's avatar in the catalog header", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ user: { id: "1", displayName: "Ali", email: "ali@example.com", role: "ATHLETE", avatarUrl: "https://example.com/avatar.jpg" } }) }));
+    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
+    const button = await screen.findByRole("button", { name: /open account menu for ali/i });
+    expect(button.querySelector("img")).toHaveAttribute("src", "https://example.com/avatar.jpg");
   });
 
   it("sorts visible coaches by price", () => {

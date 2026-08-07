@@ -14,6 +14,7 @@ type Draft = {
   sports: string[];
   tags: string[];
   profileImagePath: string;
+  adImagePaths: string[];
   experienceYears: string;
   qualifications: string;
   audiences: string[];
@@ -40,6 +41,7 @@ const emptyDraft: Draft = {
   sports: [],
   tags: [],
   profileImagePath: "",
+  adImagePaths: [],
   experienceYears: "",
   qualifications: "",
   audiences: [],
@@ -71,6 +73,7 @@ function asDraft(application: Application | null): Draft {
     sports: application.sports ?? [],
     tags: application.tags ?? [],
     profileImagePath: application.profileImagePath ?? "",
+    adImagePaths: application.adImagePaths ?? (application.profileImagePath ? [application.profileImagePath] : []),
     experienceYears: application.experienceYears == null ? "" : String(application.experienceYears),
     qualifications: application.qualifications ?? "",
     audiences: application.audiences ?? [],
@@ -123,7 +126,7 @@ export default function CoachApplicationPage() {
   const [error, setError] = useState("");
   const [customSport, setCustomSport] = useState("");
   const [customTag, setCustomTag] = useState("");
-  const [imagePreview, setImagePreview] = useState("");
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -179,23 +182,39 @@ export default function CoachApplicationPage() {
     setCustomTag("");
   }
 
-  async function uploadProfileImage(file: File) {
+  async function uploadAdImages(files: File[]) {
+    const remaining = 5 - draft.adImagePaths.length;
+    if (files.length === 0) return;
+    if (remaining <= 0 || files.length > remaining) {
+      setError("A coach ad can include up to five images. Remove one before adding another.");
+      return;
+    }
     setBusy(true);
     setMessage("");
     setError("");
     try {
-      const response = await fetch("/api/coach-application/image", {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "The profile image could not be uploaded.");
-      update("profileImagePath", result.path);
-      if (typeof URL.createObjectURL === "function") setImagePreview(URL.createObjectURL(file));
-      setMessage("Profile image uploaded. Save the draft to keep it with your profile.");
+      const paths: string[] = [];
+      const previews: string[] = [];
+      for (const file of files) {
+        const response = await fetch("/api/coach-application/image?purpose=coach-ad", {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "A coach ad image could not be uploaded.");
+        paths.push(result.path);
+        if (typeof URL.createObjectURL === "function") previews.push(URL.createObjectURL(file));
+      }
+      setDraft((current) => ({
+        ...current,
+        profileImagePath: current.profileImagePath || paths[0],
+        adImagePaths: [...current.adImagePaths, ...paths],
+      }));
+      setImagePreviews((current) => [...current, ...previews]);
+      setMessage(`${paths.length} coach ad image${paths.length === 1 ? "" : "s"} uploaded. Save your profile to publish them.`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The profile image could not be uploaded.");
+      setError(reason instanceof Error ? reason.message : "The coach ad images could not be uploaded.");
     } finally {
       setBusy(false);
     }
@@ -279,7 +298,7 @@ export default function CoachApplicationPage() {
       </header>
 
       <section className="application-intro">
-        <div><p className="eyebrow">Coach onboarding</p><h1>Build your coach profile</h1><p>Tell members what you coach, how your sessions work, and where you can train.</p></div>
+        <div><p className="eyebrow">Coach onboarding</p><h1>Build your coach profile</h1><p>Tell members what you coach, how your sessions work, and where you can train.</p>{application?.status === "APPROVED" && <Link className="button button-accent" href="/account#schedule-heading">Manage availability and bookings</Link>}</div>
         <div className="application-status"><span>Application status</span><strong>{application ? statusLabels[application.status] : "Not started"}</strong></div>
       </section>
 
@@ -299,11 +318,11 @@ export default function CoachApplicationPage() {
         </fieldset>
 
         <fieldset disabled={locked || busy}>
-          <legend>Profile image</legend>
+          <legend>Coach ad images</legend>
           <div className="application-image-upload">
-            {imagePreview && <Image className="application-image-preview" src={imagePreview} width={160} height={160} unoptimized alt="New coach profile preview" />}
-            <label>Profile image<input aria-label="Profile image" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProfileImage(file); }} /><span className="application-field-hint">JPEG, PNG or WebP, up to 5 MB. New coach profiles require approval once; later profile updates publish immediately.</span></label>
-            {draft.profileImagePath && !imagePreview && <p className="application-field-hint">A profile image is saved with this application.</p>}
+            {imagePreviews.length > 0 && <div className="application-image-gallery" aria-label="New coach ad image previews">{imagePreviews.map((preview, index) => <Image key={preview} className="application-image-preview" src={preview} width={160} height={160} unoptimized alt={`New coach ad preview ${index + 1}`} />)}</div>}
+            <label>Coach ad images<input aria-label="Coach ad images" multiple type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadAdImages(Array.from(event.target.files ?? []))} /><span className="application-field-hint">Add up to five images for your public coach ad. JPEG, PNG or WebP, up to 5 MB each. Your first image is the cover.</span></label>
+            {draft.adImagePaths.length > 0 && imagePreviews.length === 0 && <p className="application-field-hint">{draft.adImagePaths.length} coach ad image{draft.adImagePaths.length === 1 ? " is" : "s are"} saved.</p>}
           </div>
         </fieldset>
 

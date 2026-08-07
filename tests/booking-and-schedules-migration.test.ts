@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const sql = readFileSync("supabase/migrations/20260806164000_booking_and_schedules.sql", "utf8");
 const safetySql = readFileSync("supabase/migrations/20260806165000_booking_safety_completion.sql", "utf8");
+const conflictSql = readFileSync("supabase/migrations/20260807051000_booking_request_slot_conflict_message.sql", "utf8");
 
 describe("booking and schedule migration", () => {
   it("keeps booking writes behind authenticated RPCs and RLS", () => {
@@ -18,6 +19,7 @@ describe("booking and schedule migration", () => {
     expect(sql).toMatch(/tstzrange\(slot\.starts_at, slot\.ends_at, '\[\)'\)\s*&&\s*tstzrange/i);
     expect(sql).toMatch(/create unique index coach_bookings_one_active_request_per_slot/i);
     expect(sql).toMatch(/where status in \('REQUESTED', 'CONFIRMED'\)/i);
+    expect(conflictSql).toMatch(/for update[\s\S]*booking\.slot_id = target_slot\.id[\s\S]*status in \('REQUESTED', 'CONFIRMED'\)[\s\S]*slot is no longer available/i);
   });
 
   it("requires approval, coach acceptance, and participant-bound state transitions", () => {

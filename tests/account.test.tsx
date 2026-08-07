@@ -52,6 +52,27 @@ describe("account page", () => {
     });
   });
 
+  it("lets athletes and coaches add an account profile picture", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const path = String(input);
+      if (path === "/api/auth/session") return response({ user: { ...member, avatarUrl: null } });
+      if (path === "/api/schedule") return response({ userId: member.id, bookings: [], slots: [] });
+      if (path === "/api/coach-application/image?purpose=avatar" && init?.method === "POST") {
+        return response({ path: `${member.id}/avatar.webp`, url: "https://images.example/avatar.webp", purpose: "avatar" });
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AccountPage />);
+
+    const input = await screen.findByLabelText(/account profile picture/i);
+    const file = new File([new Uint8Array([1, 2, 3])], "avatar.png", { type: "image/png" });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect(await screen.findByRole("img", { name: "Ali Member profile picture" })).toHaveAttribute("src", "https://images.example/avatar.webp");
+    expect(fetchMock).toHaveBeenCalledWith("/api/coach-application/image?purpose=avatar", expect.objectContaining({ method: "POST", body: file }));
+  });
+
   it("does not mislabel a member as signed out when the session check fails", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network unavailable")));
 

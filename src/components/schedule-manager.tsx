@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { CoachOwnedSlot, ScheduleBooking, SessionMode } from "@/lib/scheduling";
 
-type Props = { userId: string; approvedCoach: boolean };
+type Props = { userId: string; approvedCoach: boolean; formats?: { online: boolean; inPerson: boolean } };
 type SchedulePayload = { userId: string; bookings: ScheduleBooking[]; slots: CoachOwnedSlot[] };
 
 function when(startsAt: string, endsAt: string) {
@@ -16,6 +16,10 @@ function statusLabel(value: ScheduleBooking["status"]) {
   return value.toLowerCase().replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
+function localDateInput(value: Date) {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+}
+
 function linkedMeetingDetails(value: string) {
   return value.split(/(https?:\/\/[^\s<]+)/gi).map((part, index) => (
     /^https?:\/\//i.test(part)
@@ -24,7 +28,7 @@ function linkedMeetingDetails(value: string) {
   ));
 }
 
-export default function ScheduleManager({ userId, approvedCoach }: Props) {
+export default function ScheduleManager({ userId, approvedCoach, formats }: Props) {
   const [data, setData] = useState<SchedulePayload>({ userId, bookings: [], slots: [] });
   const [state, setState] = useState<"loading" | "ready" | "unavailable">("loading");
   const [busyId, setBusyId] = useState("");
@@ -33,10 +37,11 @@ export default function ScheduleManager({ userId, approvedCoach }: Props) {
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [mode, setMode] = useState<SessionMode>("IN_PERSON");
+  const [mode, setMode] = useState<SessionMode>(() => formats?.inPerson === false && formats.online ? "ONLINE" : "IN_PERSON");
   const [meetingDrafts, setMeetingDrafts] = useState<Record<string, string>>({});
   const [now, setNow] = useState(() => Date.now());
   const messageRef = useRef<HTMLParagraphElement>(null);
+
   const errorRef = useRef<HTMLParagraphElement>(null);
 
   async function load() {
@@ -102,6 +107,11 @@ export default function ScheduleManager({ userId, approvedCoach }: Props) {
     const endsAt = new Date(`${date}T${endTime}`);
     if (!date || !startTime || !endTime || Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) {
       setError("Choose a valid date, start time and end time."); setBusyId(""); return;
+    }
+    const leadTime = startsAt.getTime() - Date.now();
+    const duration = endsAt.getTime() - startsAt.getTime();
+    if (leadTime < 30 * 60 * 1000 || leadTime > 180 * 24 * 60 * 60 * 1000 || duration < 30 * 60 * 1000 || duration > 3 * 60 * 60 * 1000) {
+      setError("Choose a future start time at least 30 minutes from now, lasting 30 minutes to 3 hours."); setBusyId(""); return;
     }
     try {
       const response = await fetch("/api/schedule/slots", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), mode }) });
@@ -204,12 +214,13 @@ export default function ScheduleManager({ userId, approvedCoach }: Props) {
           {approvedCoach && <div className="coach-availability-manager">
             <div><span>Coach tools</span><h3>Add availability</h3><p>Members can request these times. You still decide whether to accept.</p></div>
             <form onSubmit={createSlot}>
-              <label>Date<input type="date" required value={date} onChange={(event) => setDate(event.target.value)} /></label>
+              <label>Date<input type="date" min={localDateInput(new Date(now))} required value={date} onChange={(event) => setDate(event.target.value)} /></label>
               <label>Starts<input type="time" required value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>
               <label>Ends<input type="time" required value={endTime} onChange={(event) => setEndTime(event.target.value)} /></label>
-              <label>Format<select value={mode} onChange={(event) => setMode(event.target.value as SessionMode)}><option value="IN_PERSON">In person</option><option value="ONLINE">Online</option></select></label>
+              <label>Format<select value={mode} onChange={(event) => setMode(event.target.value as SessionMode)}>{formats?.inPerson !== false && <option value="IN_PERSON">In person</option>}{formats?.online !== false && <option value="ONLINE">Online</option>}</select></label>
               <button className="button button-accent" disabled={busyId === "new-slot"} type="submit">{busyId === "new-slot" ? "Adding…" : "Add time"}</button>
             </form>
+            <p className="application-field-hint">Choose a start at least 30 minutes ahead. Each available time can last from 30 minutes to 3 hours.</p>
             <div className="coach-slot-list">
               {futureSlots.length === 0 ? <p className="schedule-empty">No future availability added.</p> : futureSlots.map((slot) => <article key={slot.id}><div><strong>{when(slot.startsAt, slot.endsAt)}</strong><span>{slot.mode === "ONLINE" ? "Online" : "In person"}{slot.bookingStatus ? ` · ${slot.bookingStatus.toLowerCase()}` : " · Open"}</span></div><button aria-label={`Remove availability, ${when(slot.startsAt, slot.endsAt)}`} type="button" disabled={!!slot.bookingStatus || busyId === slot.id} onClick={() => removeSlot(slot.id)}>Remove</button></article>)}
             </div>

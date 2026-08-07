@@ -1,0 +1,731 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CoachConnect Architecture and Product Specification</title><style>:root{--ink:#172033;--line:#dce2ea;--paper:#fff;--accent:#b2382f;--soft:#f7f4ef;--code:#132238}*{box-sizing:border-box}body{margin:0;background:#eceff3;color:var(--ink);font:16px/1.62 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}main{max-width:1040px;margin:32px auto;padding:64px 76px;background:var(--paper);box-shadow:0 14px 50px #23304720}h1{font-size:38px;line-height:1.12;margin:0 0 22px;padding-bottom:18px;border-bottom:4px solid var(--accent)}h2{font-size:27px;margin-top:52px;padding-bottom:8px;border-bottom:1px solid var(--line)}h3{font-size:20px;margin-top:30px;color:#29364a}h4{font-size:17px}p,li{max-width:90ch}blockquote{margin:22px 0;padding:14px 18px;border-left:4px solid var(--accent);background:var(--soft)}table{width:100%;border-collapse:collapse;margin:20px 0;font-size:14px}th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#f0f3f7}code{background:#eef1f5;padding:2px 5px;border-radius:4px}pre{background:var(--code);color:#f5f7fa;padding:18px;border-radius:9px;overflow:auto;white-space:pre-wrap}pre code{background:transparent;color:inherit;padding:0}.diagram-card{border:1px solid var(--line);border-radius:12px;padding:14px;margin:24px 0;overflow:auto;background:#fbfcfe}.diagram-card .mermaid{background:transparent;color:inherit}.mermaid svg{display:block;width:100%!important;max-width:100%!important;height:auto!important;margin:auto}a{color:#9d2f29}hr{border:0;border-top:1px solid var(--line);margin:42px 0}@media(max-width:760px){main{margin:0;padding:28px 20px}h1{font-size:30px}h2{font-size:24px}table{display:block;overflow-x:auto}}@media print{body{background:#fff;font-size:10.5pt}main{max-width:none;margin:0;padding:0;box-shadow:none}h1{font-size:25pt}h2{font-size:18pt;break-after:avoid}h3{break-after:avoid}.diagram-card,table,blockquote{break-inside:avoid}a{color:inherit;text-decoration:none}}</style><script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'strict',flowchart:{htmlLabels:true,useMaxWidth:true}});</script></head><body><main><h1 id="coachconnect-architecture-and-product-specification">CoachConnect Architecture and Product Specification</h1>
+<p><strong>Document status:</strong> Maintained technical specification<br />
+<strong>Architecture view:</strong> Current local implementation plus explicitly marked release gaps<br />
+<strong>Snapshot:</strong> 2026-08-07 03:44 UTC<br />
+<strong>Product:</strong> CoachConnect — zero-cost sports-coach marketplace for Pakistan</p>
+<blockquote>
+<p><strong>Status boundary:</strong> This document describes the current local source tree. The public Vercel site at <code>https://coachconnect-sigma.vercel.app</code> may run an older release. Booking and availability are release-candidate features in local code, but their hosted Supabase migration and production end-to-end verification are still pending. Ratings and reviews are planned.</p>
+</blockquote>
+<hr />
+<h2 id="1-product-purpose">1. Product purpose</h2>
+<p>CoachConnect helps people find approved sports coaches, compare practical service details, and reserve one-to-one sessions. It is designed around four principles:</p>
+<ol>
+<li><strong>The full approved catalog comes first.</strong> Search and recommendations help people rank or narrow coaches, but never hide the complete marketplace.</li>
+<li><strong>One identity can have several capabilities.</strong> Every registered person is a member/athlete. The same account may gain approved coach capability and, through a protected process, administrator capability.</li>
+<li><strong>Trust rules are enforced by the database.</strong> The browser improves usability, but it is not trusted to authorize approval, booking, cancellation, or access to private data.</li>
+<li><strong>The MVP costs Rs 0 to operate.</strong> It avoids paid AI APIs, payment processing, queues, and unnecessary infrastructure.</li>
+</ol>
+<h3 id="launch-baseline">Launch baseline</h3>
+<ul>
+<li><strong>Market:</strong> Pakistan</li>
+<li><strong>Cities:</strong> Karachi, Lahore, Islamabad, and Rawalpindi</li>
+<li><strong>Currency:</strong> Pakistani rupees, displayed as <code>Rs 3,000</code></li>
+<li><strong>Language:</strong> English</li>
+<li><strong>Session types:</strong> One-to-one online or in-person coaching</li>
+<li><strong>Payments:</strong> Not collected by CoachConnect</li>
+<li><strong>Target operating cost:</strong> Rs 0 using local development, Vercel free hosting, and Supabase Free</li>
+<li><strong>Safeguarding limit:</strong> Real under-18 bookings must not launch until a guardian-managed safeguarding workflow exists</li>
+</ul>
+<hr />
+<h2 id="2-product-status-matrix">2. Product status matrix</h2>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Status</th>
+<th>Current boundary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Public home and coach catalog</td>
+<td><strong>Live</strong></td>
+<td>Approved coaches, filters, sorting, profiles, and optional approximate map</td>
+</tr>
+<tr>
+<td>Account authentication</td>
+<td><strong>Live</strong></td>
+<td>Supabase email/password, password recovery, server-managed session cookies</td>
+</tr>
+<tr>
+<td>Coach application and moderation</td>
+<td><strong>Live</strong></td>
+<td>Draft, submission, administrator decision, suspension, restoration, and audit events</td>
+</tr>
+<tr>
+<td>Approved coach profile editing</td>
+<td><strong>Live in current code</strong></td>
+<td>Initial coach capability requires approval; later ordinary profile/image/schedule edits remain publishable unless suspended</td>
+</tr>
+<tr>
+<td>Explainable recommendations</td>
+<td><strong>Live in current code</strong></td>
+<td>Deterministic content-based ranking with visible reasons and stable fallback ordering</td>
+</tr>
+<tr>
+<td>Natural-language search</td>
+<td><strong>Live in current code</strong></td>
+<td>Local intent extraction, aliases, typo tolerance, conflict detection, budget/day parsing, and editable filters</td>
+</tr>
+<tr>
+<td>Coach availability</td>
+<td><strong>Release candidate verified locally</strong></td>
+<td>Explicit slot management is implemented; recurring weekly rules and time-off exceptions remain planned; hosted database migration and live verification remain</td>
+</tr>
+<tr>
+<td>Booking and cancellation</td>
+<td><strong>Release candidate verified locally</strong></td>
+<td>Request, accept/decline, cancellation, completion, schedules, private meeting details, and conflict protection; hosted migration and live verification remain</td>
+</tr>
+<tr>
+<td>Ratings and verified reviews</td>
+<td><strong>Planned</strong></td>
+<td>Must be tied to a completed booking; no fabricated production ratings</td>
+</tr>
+<tr>
+<td>Docker runtime</td>
+<td><strong>Implemented locally</strong></td>
+<td>Loopback-only hardened container workflow</td>
+</tr>
+<tr>
+<td>Public deployment</td>
+<td><strong>Older release live</strong></td>
+<td>Vercel URL exists, but uncommitted local work is not represented until explicitly released and verified</td>
+</tr>
+<tr>
+<td>Online payments, payouts, subscriptions</td>
+<td><strong>Excluded</strong></td>
+<td>Prices and refund-policy outcomes are recorded, but money is handled directly between member and coach</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-users-and-capabilities">3. Users and capabilities</h2>
+<h3 id="visitor">Visitor</h3>
+<ul>
+<li>View the home page and full approved coach catalog.</li>
+<li>Search, sort, filter, and use natural-language discovery.</li>
+<li>View publication-safe coach profiles and future open slots.</li>
+<li>Register or sign in before requesting a booking.</li>
+</ul>
+<h3 id="member-athlete">Member / athlete</h3>
+<p>Every registered account has athlete capability.</p>
+<ul>
+<li>Use visitor features.</li>
+<li>Request another coach's open slot.</li>
+<li>View and cancel their own bookings.</li>
+<li>Receive participant-only meeting details after confirmation.</li>
+<li>Eventually leave one verified review after a completed booking.</li>
+<li>Apply to become a coach without creating another account.</li>
+</ul>
+<h3 id="approved-coach">Approved coach</h3>
+<p>Coach capability is additive; it does not replace athlete access.</p>
+<ul>
+<li>Maintain a public coaching profile and professional image.</li>
+<li>Publish service information, PKR price, formats, broad location, qualifications, and lesson details.</li>
+<li>Create and cancel future availability slots.</li>
+<li>Accept or decline booking requests.</li>
+<li>Add participant-only meeting instructions to confirmed bookings.</li>
+<li>Cancel or complete eligible bookings.</li>
+<li>Continue booking other coaches as an athlete.</li>
+</ul>
+<h3 id="administrator">Administrator</h3>
+<p>Administrator capability cannot be selected during registration.</p>
+<ul>
+<li>Review new coach-capability applications.</li>
+<li>Approve, request changes, suspend, or restore coach capability.</li>
+<li>View audit information needed for moderation and support.</li>
+<li>Never approve or moderate their own coach application.</li>
+</ul>
+<h3 id="core-authorization-rules">Core authorization rules</h3>
+<ul>
+<li>A coach cannot book their own slot.</li>
+<li>Registration cannot grant trusted coach or administrator capability.</li>
+<li>Coach suspension removes coach publication/actions but does not automatically remove athlete access.</li>
+<li>Account suspension is separate from coach suspension.</li>
+<li>Public responses do not disclose whether a missing coach is draft, rejected, or suspended.</li>
+<li>Private meeting details are visible only to booking participants.</li>
+<li>Direct browser access to booking and availability tables is denied; narrow database functions perform allowed operations.</li>
+</ul>
+<hr />
+<h2 id="4-system-architecture">4. System architecture</h2>
+<div class="diagram-card"><pre class="mermaid">flowchart TB
+  classDef live fill:#0f3d2e,stroke:#34d399,color:#ecfdf5,stroke-width:2px
+  classDef local fill:#4a3412,stroke:#fbbf24,color:#fffbeb,stroke-width:2px
+  classDef planned fill:#102a43,stroke:#60a5fa,color:#eff6ff,stroke-width:2px
+  classDef external fill:#2c1d46,stroke:#c084fc,color:#faf5ff,stroke-width:2px
+
+  subgraph PEOPLE[&quot;People&quot;]
+    V[&quot;Visitor&quot;]
+    M[&quot;Member / athlete&quot;]
+    C[&quot;Approved coach&quot;]
+    A[&quot;Administrator&quot;]
+  end
+
+  subgraph WEB[&quot;Next.js 16 application&quot;]
+    UI[&quot;React 19 interface&lt;br/&gt;responsive pages, forms, catalog, schedules&lt;br/&gt;&lt;b&gt;LIVE / LOCAL RC&lt;/b&gt;&quot;]:::live
+    API[&quot;Route handlers — backend for frontend&lt;br/&gt;validation, same-origin checks, session checks&lt;br/&gt;&lt;b&gt;LIVE / LOCAL RC&lt;/b&gt;&quot;]:::live
+    NLP[&quot;Local discovery engine&lt;br/&gt;intent parser + deterministic ranking + explanations&lt;br/&gt;&lt;b&gt;LIVE IN CODE&lt;/b&gt;&quot;]:::live
+  end
+
+  subgraph SUPA[&quot;Supabase Free&quot;]
+    AUTH[&quot;Auth&lt;br/&gt;accounts, passwords, recovery, sessions&lt;br/&gt;&lt;b&gt;LIVE&lt;/b&gt;&quot;]:::external
+    DB[&quot;PostgreSQL&lt;br/&gt;profiles, coach applications, slots, bookings, audit&lt;br/&gt;&lt;b&gt;LIVE + LOCAL MIGRATIONS PENDING HOSTED APPLY&lt;/b&gt;&quot;]:::local
+    SEC[&quot;RLS + protected RPC functions&lt;br/&gt;record ownership, moderation, transactions&lt;br/&gt;&lt;b&gt;LIVE + LOCAL RC&lt;/b&gt;&quot;]:::local
+    STORE[&quot;Private image storage&lt;br/&gt;validated uploads + signed URLs&lt;br/&gt;&lt;b&gt;LIVE IN CODE&lt;/b&gt;&quot;]:::external
+  end
+
+  MAP[&quot;Mapbox GL JS&lt;br/&gt;approximate public areas only&lt;br/&gt;&lt;b&gt;OPTIONAL LIVE FEATURE&lt;/b&gt;&quot;]:::external
+  REV[&quot;Verified reviews&lt;br/&gt;&lt;b&gt;PLANNED&lt;/b&gt;&quot;]:::planned
+  VERCEL[&quot;Vercel&lt;br/&gt;public Next.js hosting&lt;br/&gt;&lt;b&gt;OLDER RELEASE LIVE&lt;/b&gt;&quot;]:::local
+  DOCKER[&quot;Hardened Docker runtime&lt;br/&gt;&lt;b&gt;IMPLEMENTED LOCALLY&lt;/b&gt;&quot;]:::local
+
+  V --&gt; UI
+  M --&gt; UI
+  C --&gt; UI
+  A --&gt; UI
+  UI --&gt; API
+  UI --&gt; NLP
+  UI -. public map data .-&gt; MAP
+  API --&gt; AUTH
+  API --&gt; SEC
+  SEC --&gt; DB
+  API --&gt; STORE
+  NLP --&gt;|approved public coach records only| API
+  DB -. completed booking gate .-&gt; REV
+  WEB --&gt; VERCEL
+  WEB --&gt; DOCKER
+</pre></div>
+<h3 id="primary-runtime-flow">Primary runtime flow</h3>
+<ol>
+<li>A browser requests a page from the Next.js application.</li>
+<li>Server-rendered or interactive React components present the appropriate public or signed-in experience.</li>
+<li>Mutating requests go through Next.js route handlers, which validate input, reject unsafe cross-origin requests, and verify the Supabase session.</li>
+<li>Sensitive business operations call narrow PostgreSQL functions through Supabase RPC.</li>
+<li>PostgreSQL Row-Level Security (RLS) and function logic enforce ownership, capability, lifecycle, and concurrency rules.</li>
+<li>The database returns either a public-safe projection or a participant/owner-specific projection.</li>
+<li>The UI displays a clear success, conflict, unavailable, or permission state.</li>
+</ol>
+<p><strong>RLS definition:</strong> Row-Level Security is a PostgreSQL feature that decides which individual records a signed-in person may read or change. It remains active even if someone bypasses the visible page and calls the backend directly.</p>
+<hr />
+<h2 id="5-frontend-specification">5. Frontend specification</h2>
+<h3 id="technology">Technology</h3>
+<ul>
+<li><strong>Next.js 16 App Router</strong> for pages, layouts, server rendering, route handlers, loading states, and production bundling.</li>
+<li><strong>React 19</strong> for interactive catalog controls, account forms, booking controls, and schedules.</li>
+<li><strong>TypeScript 5</strong> for explicit domain types and safer interface/API contracts.</li>
+<li><strong>Purpose-built CSS</strong> in the application rather than a large component framework.</li>
+<li><strong>Mapbox GL JS</strong> only for optional approximate-area visualization.</li>
+</ul>
+<h3 id="why-nextjs-and-react">Why Next.js and React</h3>
+<ul>
+<li>One codebase can provide both the user interface and the thin server layer required to protect sessions and secrets.</li>
+<li>Server rendering improves initial load, direct profile links, and search-engine readability.</li>
+<li>Route handlers avoid adding a separate Express/FastAPI service for an MVP with one focused domain.</li>
+<li>Vercel supports Next.js directly on a free tier.</li>
+<li>React's component model fits reusable coach cards, filters, forms, booking panels, and schedule views.</li>
+</ul>
+<h3 id="why-typescript">Why TypeScript</h3>
+<p>CoachConnect has lifecycle-heavy data: coach states, booking states, session modes, payment status, and role/capability combinations. TypeScript catches many mismatches before deployment and makes route payloads and UI states easier to review.</p>
+<h3 id="why-custom-css-instead-of-a-heavy-ui-framework">Why custom CSS instead of a heavy UI framework</h3>
+<ul>
+<li>The product needs a distinct sports-marketplace identity rather than a generic dashboard appearance.</li>
+<li>A small custom system reduces dependency weight and makes responsive behavior explicit.</li>
+<li>Accessibility states—labels, focus rings, reduced motion, keyboard order, and error text—remain under direct project control.</li>
+</ul>
+<h3 id="frontend-responsibilities">Frontend responsibilities</h3>
+<ul>
+<li>Present data and available actions based on server responses.</li>
+<li>Keep search interpretation visible and editable.</li>
+<li>Hide obviously invalid actions such as self-booking.</li>
+<li>Disable repeated submissions while a request is pending.</li>
+<li>Render loading, empty, conflict, unavailable, and unauthorized states clearly.</li>
+<li>Preserve privacy by never requesting or embedding private account fields on public pages.</li>
+<li>Never treat hidden buttons as authorization; the database remains authoritative.</li>
+</ul>
+<h3 id="responsive-and-accessibility-requirements">Responsive and accessibility requirements</h3>
+<ul>
+<li>Target widths: 360 px, 768 px, and 1440 px.</li>
+<li>No horizontal scrolling in primary flows.</li>
+<li>Keyboard access for navigation, filters, forms, booking, and schedules.</li>
+<li>Visible focus styles and associated form labels.</li>
+<li>Motion respects <code>prefers-reduced-motion</code>.</li>
+<li>Images include meaningful alternative text or are marked decorative.</li>
+<li>Long names, missing images, empty states, and backend failures remain usable.</li>
+</ul>
+<hr />
+<h2 id="6-backend-and-api-specification">6. Backend and API specification</h2>
+<h3 id="backend-pattern-backend-for-frontend-bff">Backend pattern: Backend for Frontend (BFF)</h3>
+<p>CoachConnect uses Next.js route handlers as a <strong>Backend for Frontend</strong>: a small server layer tailored to the web interface. It validates browser requests and forwards only authorized operations to Supabase.</p>
+<p>Representative route groups:</p>
+<ul>
+<li><code>/api/auth/*</code> — registration, login, logout, session, confirmation, and password recovery</li>
+<li><code>/api/account</code> — private profile maintenance and account deletion</li>
+<li><code>/api/coach-application</code> — draft, submission, and image handling</li>
+<li><code>/api/admin/coach-applications</code> — protected moderation actions</li>
+<li><code>/api/coaches</code> and <code>/api/coaches/[id]/availability</code> — public-safe catalog/profile availability</li>
+<li><code>/api/bookings</code> and <code>/api/bookings/[id]</code> — booking lifecycle operations</li>
+<li><code>/api/schedule</code> and <code>/api/schedule/slots</code> — participant schedules and coach inventory</li>
+<li><code>/api/health</code> — process liveness</li>
+<li><code>/api/ready</code> — dependency readiness, including public Supabase catalog access</li>
+</ul>
+<h3 id="api-responsibilities">API responsibilities</h3>
+<ol>
+<li>Parse and validate input types, lengths, IDs, and allowed action names.</li>
+<li>Reject unsafe cross-origin mutation requests.</li>
+<li>Resolve the signed-in user through Supabase rather than trusting a client-supplied user ID.</li>
+<li>Call a narrowly scoped Supabase query or RPC function.</li>
+<li>Translate internal database errors into understandable, non-leaking HTTP responses.</li>
+<li>Apply refreshed authentication cookies to the response.</li>
+</ol>
+<h3 id="why-there-is-no-separate-microservice-backend">Why there is no separate microservice backend</h3>
+<p>A separate service would add deployment, networking, authentication, logging, and synchronization overhead without improving the current product. The modular monolith keeps domain boundaries in source code and database functions while remaining easy to test and deploy. A service split should occur only if measured load, team ownership, or independent scaling requires it.</p>
+<hr />
+<h2 id="7-why-supabase-was-chosen">7. Why Supabase was chosen</h2>
+<p>Supabase combines the backend capabilities required by CoachConnect while keeping the MVP within its Rs 0 constraint.</p>
+<table>
+<thead>
+<tr>
+<th>Supabase capability</th>
+<th>CoachConnect use</th>
+<th>Reason for choosing it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Auth</td>
+<td>Email/password identity, recovery, secure sessions</td>
+<td>Avoids building and securing password storage and session rotation</td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>Durable marketplace records</td>
+<td>Strong relational constraints and transactions fit booking and moderation</td>
+</tr>
+<tr>
+<td>Row-Level Security</td>
+<td>Owner, participant, public, coach, and admin access rules</td>
+<td>Authorization remains enforced at the data boundary</td>
+</tr>
+<tr>
+<td>SQL functions / RPC</td>
+<td>Approval and booking lifecycle transitions</td>
+<td>Sensitive multi-step actions can be atomic and narrowly exposed</td>
+</tr>
+<tr>
+<td>Storage</td>
+<td>Coach profile images</td>
+<td>Private objects, controlled upload paths, and signed read URLs</td>
+</tr>
+<tr>
+<td>SQL migrations</td>
+<td>Reproducible schema</td>
+<td>Database design and security rules are reviewed and versioned with code</td>
+</tr>
+<tr>
+<td>Free plan</td>
+<td>Hosted MVP backend</td>
+<td>Meets the explicit zero-cost requirement</td>
+</tr>
+</tbody>
+</table>
+<h3 id="why-supabase-instead-of-firebase">Why Supabase instead of Firebase</h3>
+<p>Booking and moderation are relational and transaction-heavy. PostgreSQL provides explicit foreign keys, unique indexes, row locks, partial indexes, and SQL transactions that naturally express “one active booking per slot” and participant permissions. Firebase could support the product, but would require a less direct data model and more application-side transaction/security complexity.</p>
+<h3 id="why-supabase-instead-of-a-custom-postgresql-server">Why Supabase instead of a custom PostgreSQL server</h3>
+<p>A custom database plus authentication service would require server maintenance, password/session security, backups, networking, and deployment. Supabase provides these managed pieces while preserving standard PostgreSQL and portable SQL migrations.</p>
+<h3 id="free-plan-limitation">Free-plan limitation</h3>
+<p>A Supabase Free project may pause after inactivity and has finite database, storage, and bandwidth allowances. The application therefore has separate liveness/readiness checks, explicit unavailable states, efficient public projections, and no authorization to upgrade or spend money without approval.</p>
+<hr />
+<h2 id="8-data-and-trust-model">8. Data and trust model</h2>
+<h3 id="main-records">Main records</h3>
+<table>
+<thead>
+<tr>
+<th>Record</th>
+<th>Purpose</th>
+<th>Visibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>profiles</code></td>
+<td>One private member record per Supabase Auth identity</td>
+<td>Owner and authorized administrator only</td>
+</tr>
+<tr>
+<td><code>coach_applications</code></td>
+<td>Coach profile, publication data, approval and suspension state</td>
+<td>Owner/admin; approved subset exposed through public functions</td>
+</tr>
+<tr>
+<td><code>coach_moderation_events</code></td>
+<td>Auditable moderation history</td>
+<td>Administrator only</td>
+</tr>
+<tr>
+<td><code>coach_profile_image_upload_limits</code></td>
+<td>Upload reservation/rate safety</td>
+<td>Server/protected function only</td>
+</tr>
+<tr>
+<td><code>coach_availability_slots</code></td>
+<td>Coach-owned future inventory</td>
+<td>Coach-owned; restricted public projection for open approved slots</td>
+</tr>
+<tr>
+<td><code>coach_bookings</code></td>
+<td>Athlete, coach, slot, lifecycle, price snapshot, cancellation and meeting details</td>
+<td>Participants through restricted functions</td>
+</tr>
+<tr>
+<td><code>curated_demo_coaches</code></td>
+<td>Clearly labeled illustrative catalog records</td>
+<td>Restricted public demo projection</td>
+</tr>
+<tr>
+<td>Reviews table</td>
+<td>One verified review per completed booking</td>
+<td><strong>Planned</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="public-projection-rule">Public projection rule</h3>
+<p>Public coach APIs return only approved, active, publication-safe fields. They omit:</p>
+<ul>
+<li>Login email and password/session data</li>
+<li>Personal phone number</li>
+<li>Exact home address or precise residential coordinates</li>
+<li>Private credential files</li>
+<li>Moderation notes and reviewer identity</li>
+<li>Participant-only meeting instructions</li>
+</ul>
+<p>Unavailable profiles return the same not-found behavior whether they are missing, draft, rejected, or suspended, preventing moderation-state disclosure.</p>
+<h3 id="secret-boundary">Secret boundary</h3>
+<ul>
+<li>Publishable Supabase and origin-restricted Mapbox browser keys may be used by the web client.</li>
+<li>Service-role keys and any secret provider tokens remain server-only and never enter browser bundles, public logs, or source control.</li>
+<li>Authentication sessions use server-managed HTTP-only cookies via <code>@supabase/ssr</code>.</li>
+</ul>
+<hr />
+<h2 id="9-coach-onboarding-and-moderation">9. Coach onboarding and moderation</h2>
+<h3 id="lifecycle">Lifecycle</h3>
+<pre><code class="language-text">DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED
+                         └──────→ REJECTED / changes requested
+APPROVED → SUSPENDED → APPROVED (restore)
+</code></pre>
+<h3 id="design-decision-approve-capability-once">Design decision: approve capability once</h3>
+<p>The administrator approves the creation of coach capability, not every ordinary text or schedule edit. Once approved, a coach may keep their public profile current unless suspended. This avoids a moderation bottleneck and prevents harmless schedule/profile maintenance from disappearing while preserving administrator suspension and audit controls.</p>
+<h3 id="trust-controls">Trust controls</h3>
+<ul>
+<li>Application ownership is derived from the authenticated identity.</li>
+<li>Submission requires complete mandatory data.</li>
+<li>Only protected administrator operations may change trusted states.</li>
+<li>Self-review is rejected.</li>
+<li>Suspension is recorded and removes public coach capability without deleting the member account.</li>
+<li>Public visibility is derived from current approved/active state, not a browser flag.</li>
+</ul>
+<hr />
+<h2 id="10-ai-and-intelligent-discovery-design">10. AI and intelligent discovery design</h2>
+<p>CoachConnect currently uses two zero-cost intelligent systems. They are implemented locally and do not send user queries to a paid external model.</p>
+<h3 id="101-natural-language-search">10.1 Natural-language search</h3>
+<p>Example input:</p>
+<blockquote>
+<p><code>Beginner cricket coach in Lahore under Rs 5,000 on Saturday</code></p>
+</blockquote>
+<p>The local pipeline:</p>
+<ol>
+<li>Normalizes case, spacing, punctuation, Unicode, and common currency forms.</li>
+<li>Recognizes controlled aliases such as <code>LHR</code>, <code>KHI</code>, <code>soccer</code>, <code>ping pong</code>, and <code>personal trainer</code>.</li>
+<li>Applies length-aware Damerau–Levenshtein matching for likely typos.</li>
+<li>Extracts supported sport, city, level, format, budget, day, and goal/specialty tags.</li>
+<li>Detects conflicting values rather than silently choosing one.</li>
+<li>Keeps unknown terms as ordinary keywords.</li>
+<li>Shows the interpretation as visible filters/corrections that the user can remove or change.</li>
+<li>Searches only approved coach records returned by the database.</li>
+</ol>
+<h3 id="102-explainable-recommendations">10.2 Explainable recommendations</h3>
+<p>A deterministic content-based scorer compares interpreted needs with coach facts:</p>
+<ul>
+<li>Sport eligibility</li>
+<li>Goal or specialty</li>
+<li>Athlete level</li>
+<li>City or online/in-person mode</li>
+<li>Maximum budget</li>
+<li>Listed availability</li>
+<li>Profile keyword overlap</li>
+<li>Stable neutral ordering as a final tie-breaker</li>
+</ul>
+<p>The result uses labels such as <strong>Strong match</strong>, <strong>Good match</strong>, or <strong>Possible match</strong> and displays reasons generated from factors that were actually scored.</p>
+<h3 id="ai-flow">AI flow</h3>
+<div class="diagram-card"><pre class="mermaid">flowchart LR
+  Q[&quot;User request&quot;] --&gt; N[&quot;Normalize and validate&quot;]
+  N --&gt; P[&quot;Local intent parser&lt;br/&gt;aliases + typo tolerance + numeric constraints&quot;]
+  P --&gt; C[&quot;Editable filters, corrections, and conflicts&quot;]
+  C --&gt; D[&quot;Approved public coach data from Supabase&quot;]
+  D --&gt; E[&quot;Deterministic eligibility rules&quot;]
+  E --&gt; S[&quot;Weighted content-based score&quot;]
+  S --&gt; X[&quot;Match label + truthful reasons&quot;]
+  P -. uncertain text .-&gt; K[&quot;Ordinary keyword fallback&quot;]
+  K --&gt; D
+</pre></div>
+<h3 id="why-this-ai-approach-was-chosen">Why this AI approach was chosen</h3>
+<ul>
+<li><strong>Zero cost:</strong> no API subscription or per-token fee.</li>
+<li><strong>Explainable:</strong> every ranking reason maps to a known coach field and score factor.</li>
+<li><strong>Fast:</strong> no network round-trip to a model provider.</li>
+<li><strong>Private:</strong> search text remains inside the application.</li>
+<li><strong>Predictable:</strong> the system cannot invent coaches, prices, credentials, ratings, or availability.</li>
+<li><strong>Testable:</strong> fixed queries can assert extracted filters, conflicts, rankings, and explanations.</li>
+<li><strong>Resilient:</strong> ordinary keyword search remains available if an interpretation is incomplete.</li>
+</ul>
+<h3 id="honest-limitation">Honest limitation</h3>
+<p>The current implementation is deterministic NLP and recommendation logic, not a trained machine-learning model or hosted LLM. It is still a meaningful intelligent feature, but an evaluator who explicitly requires a learned model may treat this as a rubric risk. A semantic model or provider should be added only after a representative evaluation set identifies failures that the local baseline cannot solve.</p>
+<h3 id="ai-safety-boundary">AI safety boundary</h3>
+<p>AI/discovery logic cannot:</p>
+<ul>
+<li>Approve or suspend a coach</li>
+<li>Grant permissions</li>
+<li>Create or confirm a booking</li>
+<li>Access passwords, session tokens, private files, or exact addresses</li>
+<li>Invent a coach, qualification, rating, price, or available time</li>
+<li>Replace database eligibility or authorization rules</li>
+<li>Hide the complete approved catalog</li>
+</ul>
+<h3 id="evaluation-requirements">Evaluation requirements</h3>
+<p>Use a fixed test set containing clean queries, misspellings, abbreviations, local slang, incomplete requests, PKR variants, conflicting constraints, no-match cases, and suspended/unavailable records. Ranking quality must be evaluated against a representative multi-coach catalog, not one homogeneous fixture.</p>
+<hr />
+<h2 id="11-availability-and-booking-architecture">11. Availability and booking architecture</h2>
+<p>Availability and booking are treated as a transaction system, not merely a calendar interface.</p>
+<div class="diagram-card"><pre class="mermaid">sequenceDiagram
+  autonumber
+  actor Athlete
+  participant UI as CoachConnect UI
+  participant API as Next.js booking route
+  participant Auth as Supabase Auth
+  participant DB as PostgreSQL RPC transaction
+  participant Coach as Coach schedule
+
+  Athlete-&gt;&gt;UI: Select an open future slot
+  UI-&gt;&gt;API: Request booking with slot ID
+  API-&gt;&gt;Auth: Resolve authenticated member
+  Auth--&gt;&gt;API: Verified member ID
+  API-&gt;&gt;DB: request_coach_booking(slot ID)
+  DB-&gt;&gt;DB: Lock and recheck coach, slot, self-booking, and overlaps
+  alt Slot is no longer available
+    DB--&gt;&gt;API: Conflict, no partial write
+    API--&gt;&gt;UI: Choose another slot
+  else Request succeeds
+    DB--&gt;&gt;API: Booking in REQUESTED state
+    API--&gt;&gt;UI: Show request in athlete schedule
+    DB--&gt;&gt;Coach: Show request in coach schedule
+  end
+  Coach-&gt;&gt;API: Accept or decline
+  API-&gt;&gt;DB: Protected lifecycle transition
+  DB--&gt;&gt;UI: Both participant schedules agree
+</pre></div>
+<h3 id="booking-lifecycle">Booking lifecycle</h3>
+<pre><code class="language-text">REQUESTED → CONFIRMED | DECLINED
+REQUESTED | CONFIRMED → CANCELLED_BY_ATHLETE | CANCELLED_BY_COACH
+CONFIRMED → COMPLETED after the session end
+Past abandoned requests may become EXPIRED
+</code></pre>
+<h3 id="conflict-and-retry-safety">Conflict and retry safety</h3>
+<ul>
+<li>A partial unique index allows only one active requested/confirmed booking per slot.</li>
+<li>Database functions lock and recheck state inside the transaction.</li>
+<li>Provider approval is rechecked when a request is accepted.</li>
+<li>Athlete schedule overlap is checked to prevent simultaneous sessions with different coaches.</li>
+<li>Coach slot overlap is rejected.</li>
+<li>Repeated or stale actions return truthful conflicts rather than creating duplicate state.</li>
+<li>The browser's availability display is advisory until PostgreSQL confirms the operation.</li>
+</ul>
+<h3 id="private-fulfillment-details">Private fulfillment details</h3>
+<p>Only the coach may add exact meeting instructions or an online URL, and only after confirmation. The authenticated participant schedule may return these details; public coach and availability APIs must never include them.</p>
+<h3 id="payment-and-cancellation-decision">Payment and cancellation decision</h3>
+<p><code>payment_status</code> remains <code>NOT_COLLECTED</code>. CoachConnect records the price snapshot and policy outcome but does not charge or refund anyone.</p>
+<ul>
+<li>Athlete cancels at least 24 hours before: <code>FULL_REFUND_DUE</code> if prepaid directly</li>
+<li>Athlete cancels within 24 hours: <code>OUTSIDE_FULL_REFUND_WINDOW</code></li>
+<li>Coach cancellation: <code>FULL_REFUND_DUE</code> if prepaid directly</li>
+</ul>
+<p>This language is intentionally honest: the coach, not CoachConnect, handles any direct refund.</p>
+<hr />
+<h2 id="12-external-services-and-design-decisions">12. External services and design decisions</h2>
+<h3 id="mapbox">Mapbox</h3>
+<p><strong>Purpose:</strong> Optional map visualization of broad public training areas.<br />
+<strong>Why chosen:</strong> Mature browser map library, usable free allowance, and synchronized list/map interaction.<br />
+<strong>Privacy rule:</strong> No home address or precise private GPS point. Online-only coaches are not pinned.<br />
+<strong>Fallback:</strong> The catalog remains fully usable as a list if the map or token is unavailable.</p>
+<h3 id="vercel">Vercel</h3>
+<p><strong>Purpose:</strong> Public hosting for the Next.js application.<br />
+<strong>Why chosen:</strong> Direct Next.js support, preview/build workflow, HTTPS, and a free tier.<br />
+<strong>Boundary:</strong> Deployment does not migrate Supabase automatically unless the release process explicitly applies migrations. A successful Vercel build alone does not prove auth or booking works against production data.</p>
+<h3 id="docker">Docker</h3>
+<p><strong>Purpose:</strong> Reproducible local release verification.<br />
+<strong>Why chosen:</strong> Gives reviewers one consistent startup path independent of globally installed Node packages.<br />
+<strong>Hardening:</strong> Loopback-only port binding, non-root Node user, read-only root filesystem, dropped Linux capabilities, and <code>no-new-privileges</code>.</p>
+<h3 id="prisma-and-sqlite">Prisma and SQLite</h3>
+<p>Prisma/SQLite belong to the original Phase 1 sample foundation and remain for isolated/local compatibility. Supabase PostgreSQL is the authoritative marketplace backend. New production marketplace features should not be split between two sources of truth.</p>
+<h3 id="services-deliberately-not-chosen">Services deliberately not chosen</h3>
+<ul>
+<li><strong>Stripe/payment provider:</strong> Pakistan availability, compliance, disputes, real charges, refunds, and webhook complexity exceed the MVP need.</li>
+<li><strong>Redis/cache:</strong> No measured bottleneck currently justifies another stateful service.</li>
+<li><strong>Message queue:</strong> Current operations are short and synchronous; no durable background workload requires one.</li>
+<li><strong>Paid LLM API:</strong> Conflicts with Rs 0, adds latency/privacy/cost risk, and is not required for the explainable baseline.</li>
+<li><strong>Microservices:</strong> Add operational complexity without a present scaling or ownership requirement.</li>
+<li><strong>Native mobile apps:</strong> Responsive web covers the MVP audience with one codebase.</li>
+</ul>
+<hr />
+<h2 id="13-reliability-performance-and-scaling">13. Reliability, performance, and scaling</h2>
+<h3 id="current-safeguards">Current safeguards</h3>
+<ul>
+<li>Public-safe database functions instead of exposing full tables.</li>
+<li>Dedicated profile routes load one coach rather than embedding every detail in the list.</li>
+<li>Stable coach ID tie-breakers prevent sorting from jumping unpredictably.</li>
+<li>Database constraints and transactions protect booking correctness.</li>
+<li><code>/api/health</code> distinguishes process liveness from <code>/api/ready</code> dependency readiness.</li>
+<li>Clear service-unavailable responses when Supabase is paused or unreachable.</li>
+<li>Local image assets and validated profile uploads reduce unnecessary bandwidth and unsafe file handling.</li>
+</ul>
+<h3 id="growth-plan">Growth plan</h3>
+<p>Before a large catalog launch:</p>
+<ol>
+<li>Move public catalog filtering, sorting, and page boundaries fully server-side.</li>
+<li>Add/verify indexes for publication state, sport, city, price, review summary, and next availability.</li>
+<li>Load profile, reviews, and availability only on demand.</li>
+<li>Maintain a small next-available summary for catalog sorting, then recheck the real slot transactionally.</li>
+<li>Measure slow queries before adding caches.</li>
+<li>Add structured operational monitoring only when it can remain within the cost limit.</li>
+</ol>
+<hr />
+<h2 id="14-testing-and-quality-gates">14. Testing and quality gates</h2>
+<h3 id="current-verification-snapshot">Current verification snapshot</h3>
+<p>At the 2026-08-07 document check:</p>
+<ul>
+<li><code>npm run lint</code> passed.</li>
+<li><code>npm run typecheck</code> passed.</li>
+<li><code>npm test</code> completed <strong>198 of 204 tests successfully</strong> across 38 files.</li>
+<li>One coach-profile test expects outdated demo lesson wording (<code>Focused batting drills</code>) while the current UI renders the revised <code>Focused skill work</code> copy.</li>
+<li>Five real Supabase integration cases failed while creating disposable users because Supabase Auth returned a retryable HTTP 500 (<code>AuthRetryableFetchError</code>). These same integration cases had passed immediately before this rerun, so the current result is recorded as an external/transient verification blocker rather than hidden as a pass.</li>
+</ul>
+<p>This means the architecture document is verified and renderable, but the whole application test gate is <strong>not currently green</strong>.</p>
+<h3 id="automated-checks">Automated checks</h3>
+<ul>
+<li><strong>ESLint:</strong> source-quality and framework rules</li>
+<li><strong>TypeScript:</strong> static type checking with <code>tsc --noEmit</code></li>
+<li><strong>Vitest:</strong> domain, API, component, and migration contract tests</li>
+<li><strong>Testing Library:</strong> user-facing React behavior</li>
+<li><strong>Supabase integration tests:</strong> real Auth/RLS/RPC checks when explicit test credentials are provided</li>
+<li><strong>Next.js production build:</strong> compilation and route bundling</li>
+<li><strong>npm audit:</strong> high-severity dependency review</li>
+<li><strong>Docker startup and health/readiness:</strong> release-runtime verification</li>
+</ul>
+<h3 id="trust-critical-test-coverage">Trust-critical test coverage</h3>
+<ul>
+<li>Cross-account and unauthenticated denial</li>
+<li>Coach self-approval and self-booking denial</li>
+<li>Suspended-coach publication and booking denial</li>
+<li>Simultaneous booking attempts with exactly one valid winner</li>
+<li>Participant-only meeting-detail access</li>
+<li>Cancellation policy boundaries, including exactly 24 hours</li>
+<li>Account deletion blocked by future active bookings and allowed after terminal states</li>
+<li>Public response checks for email, private location, moderation notes, and secrets</li>
+<li>Search typo/slang/conflict/no-match behavior</li>
+<li>Mobile, keyboard, loading, empty, and failure states</li>
+</ul>
+<h3 id="release-gates">Release gates</h3>
+<p>A release is not complete until:</p>
+<ol>
+<li>Migrations apply cleanly to a disposable PostgreSQL/Supabase environment.</li>
+<li>Lint, types, tests, build, and security audit pass.</li>
+<li>Separate authenticated browser contexts prove the athlete and coach workflow.</li>
+<li>Responsive and keyboard checks pass.</li>
+<li>Docker starts successfully and readiness is healthy.</li>
+<li>Hosted migrations are applied intentionally.</li>
+<li>The production URL is tested end to end after deployment.</li>
+<li>README, requirements, plan, scope, screens, and this specification agree.</li>
+</ol>
+<hr />
+<h2 id="15-deployment-architecture">15. Deployment architecture</h2>
+<h3 id="local-development">Local development</h3>
+<pre><code class="language-text">Developer browser → Next.js dev server → Supabase project
+                                └──────→ optional Mapbox tiles
+</code></pre>
+<h3 id="local-release-verification">Local release verification</h3>
+<pre><code class="language-text">Browser → 127.0.0.1:3000 → hardened Docker container → Supabase project
+</code></pre>
+<h3 id="production">Production</h3>
+<pre><code class="language-text">User browser → Vercel HTTPS/CDN → Next.js pages and route handlers → Supabase Auth/PostgreSQL/Storage
+                                                   └──────────────→ Mapbox public tiles
+</code></pre>
+<h3 id="deployment-truth-rules">Deployment truth rules</h3>
+<ul>
+<li>Git source state, Vercel deployment state, and Supabase migration state are separate.</li>
+<li>“Built locally” does not mean deployed.</li>
+<li>“Deployed” requires a verified production URL and end-to-end behavior.</li>
+<li>No GitHub push, Vercel deployment, database migration, paid upgrade, or external service change occurs without explicit authorization.</li>
+</ul>
+<hr />
+<h2 id="16-product-exclusions-and-future-options">16. Product exclusions and future options</h2>
+<h3 id="explicitly-excluded-from-the-mvp">Explicitly excluded from the MVP</h3>
+<ul>
+<li>Online payment collection, payouts, commissions, and subscriptions</li>
+<li>Native mobile applications</li>
+<li>In-app video, real-time chat, SMS, or WhatsApp</li>
+<li>Exact public addresses or residential GPS locations</li>
+<li>Group sessions and recurring packages</li>
+<li>Medical, physiotherapy, or rehabilitation advice</li>
+<li>AI-generated coach biographies</li>
+<li>Paid cloud or AI services</li>
+</ul>
+<h3 id="planned-release-work">Planned release work</h3>
+<ol>
+<li>Apply and verify availability/booking migrations in the hosted environment.</li>
+<li>Complete production end-to-end booking verification.</li>
+<li>Implement verified ratings and reviews tied to completed bookings.</li>
+<li>Add recurring weekly availability and time-off exceptions; the current release candidate manages explicit slots.</li>
+<li>Add the required Earliest availability catalog sort; the current sort options are Recommended, Rating, Price low-to-high, and Price high-to-low.</li>
+<li>Move catalog filtering/sorting/pagination to server-side queries before inventory growth.</li>
+<li>Add automated multi-user browser end-to-end coverage; current tests cover components, routes, SQL contracts, and real Supabase integration but no Playwright/Cypress suite exists.</li>
+<li>Reconcile the older project report, stale phase text, and demo-catalog wording with current implementation status. The UI deliberately uses clearly labeled database demos and a bundled labeled fallback when the demo endpoint is unavailable.</li>
+<li>Complete final mobile, keyboard, Docker, security, and five-minute demo gates.</li>
+</ol>
+<h3 id="optional-later-work">Optional later work</h3>
+<ul>
+<li>AI-generated training plans after all mandatory marketplace features are complete</li>
+<li>Guardian-managed under-18 booking and safeguarding</li>
+<li>Real email notifications</li>
+<li>In-platform messaging</li>
+<li>Payment integration suitable for Pakistan</li>
+<li>Group coaching and packages</li>
+<li>Semantic model only if evaluation proves it materially improves discovery</li>
+</ul>
+<hr />
+<h2 id="17-decision-summary">17. Decision summary</h2>
+<p>CoachConnect is intentionally a <strong>modular monolith</strong>: one Next.js/React/TypeScript application, one Supabase backend, an optional Mapbox view, and two deployment paths (Vercel and Docker). This design was chosen because it is understandable, secure enough to enforce trust at the database boundary, inexpensive, and fast to test.</p>
+<p>The most important architectural decisions are:</p>
+<ol>
+<li><strong>One identity, multiple capabilities</strong> instead of separate athlete and coach accounts.</li>
+<li><strong>Supabase PostgreSQL + RLS + protected RPC</strong> for durable authorization and conflict-safe booking.</li>
+<li><strong>Next.js BFF route handlers</strong> to keep browser-facing APIs and server-only security in one deployable application.</li>
+<li><strong>Deterministic, explainable local AI</strong> to meet discovery goals without paid APIs, hidden model behavior, or hallucinated marketplace facts.</li>
+<li><strong>No payment collection</strong> so the MVP can prove marketplace value without compliance and financial risk.</li>
+<li><strong>Current-versus-production status honesty</strong> so local release-candidate work is never mistaken for a verified live feature.</li>
+</ol>
+<hr />
+<h2 id="18-source-of-truth-map">18. Source-of-truth map</h2>
+<ul>
+<li><code>PRODUCT_REQUIREMENTS.md</code> — required product behavior and quality bar</li>
+<li><code>PLAN.md</code> — implementation order and verification gates</li>
+<li><code>SCOPE.md</code> — accepted scope decisions and priority changes</li>
+<li><code>README.md</code> — current status, setup, architecture summary, and commands</li>
+<li><code>SCREEN_MAP.md</code> — routes and screen responsibilities</li>
+<li><code>ARCHITECTURE_AND_PRODUCT_SPECIFICATION.md</code> — full product/system architecture and technology rationale</li>
+<li><code>architecture/</code> — editable and rendered architecture diagrams</li>
+<li><code>supabase/migrations/</code> — authoritative database schema, policies, functions, and constraints</li>
+<li><code>src/lib/coach-discovery.ts</code> — natural-language interpretation and recommendation logic</li>
+<li><code>src/lib/public-coaches.ts</code> — publication-safe coach projection</li>
+<li><code>src/lib/scheduling.ts</code> — scheduling and booking domain types</li>
+<li><code>src/app/api/</code> — server API boundaries</li>
+<li><code>tests/</code> — behavior and security evidence</li>
+</ul></main></body></html>

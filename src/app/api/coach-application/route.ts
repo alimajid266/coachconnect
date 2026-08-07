@@ -73,6 +73,9 @@ export async function PUT(request: NextRequest) {
     if (draft.profile_image_path && !draft.profile_image_path.startsWith(`${authData.user.id}/`)) {
       return applyCookies(NextResponse.json({ error: "The profile image must belong to your account." }, { status: 400 }));
     }
+    if (draft.ad_image_paths.some((path) => !path.startsWith(`${authData.user.id}/`))) {
+      return applyCookies(NextResponse.json({ error: "Every coach ad image must belong to your account." }, { status: 400 }));
+    }
 
     const { data, error } = await supabase
       .from("coach_applications")

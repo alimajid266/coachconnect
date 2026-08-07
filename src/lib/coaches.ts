@@ -19,6 +19,8 @@ export type Coach = {
   coordinates: [longitude: number, latitude: number] | null;
   availability: string[];
   image: string | null;
+  avatar?: string | null;
+  adImages?: string[];
   rank: number;
   bio: string;
   experience: string;

@@ -5,9 +5,11 @@ import sharp from "sharp";
 const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
   profile: vi.fn(),
+  updateProfile: vi.fn(),
   upload: vi.fn(),
   createSignedUrl: vi.fn(),
   rpc: vi.fn(),
+  attachAd: vi.fn(),
   application: vi.fn(),
   list: vi.fn(),
   remove: vi.fn(),
@@ -30,7 +32,11 @@ vi.mock("@/lib/supabase/route", () => ({
   createSupabaseRouteClient: () => ({
     supabase: {
       auth: { getUser: mocks.getUser },
-      from: () => ({ select: () => ({ eq: () => ({ maybeSingle: mocks.profile }) }) }),
+      rpc: mocks.attachAd,
+      from: () => ({
+        select: () => ({ eq: () => ({ maybeSingle: mocks.profile }) }),
+        update: mocks.updateProfile,
+      }),
     },
     applyCookies: mocks.applyCookies,
   }),
@@ -38,8 +44,8 @@ vi.mock("@/lib/supabase/route", () => ({
 
 import { POST } from "@/app/api/coach-application/image/route";
 
-function imageRequest(file: File) {
-  return new NextRequest("http://127.0.0.1:3000/api/coach-application/image", {
+function imageRequest(file: File, purpose?: "avatar" | "coach-ad") {
+  return new NextRequest(`http://127.0.0.1:3000/api/coach-application/image${purpose ? `?purpose=${purpose}` : ""}`, {
     method: "POST",
     headers: { "Content-Type": file.type },
     body: file,
@@ -53,7 +59,9 @@ describe("coach profile image upload", () => {
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "server-only-service-role-key");
     mocks.getUser.mockResolvedValue({ data: { user: { id: "11111111-1111-4111-8111-111111111111" } }, error: null });
     mocks.profile.mockResolvedValue({ data: { account_status: "ACTIVE" }, error: null });
+    mocks.updateProfile.mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
     mocks.rpc.mockResolvedValue({ data: true, error: null });
+    mocks.attachAd.mockResolvedValue({ data: true, error: null });
     mocks.application.mockResolvedValue({ data: null, error: null });
     mocks.list.mockResolvedValue({ data: [], error: null });
     mocks.upload.mockResolvedValue({ data: { path: "11111111-1111-4111-8111-111111111111/image.webp" }, error: null });
@@ -86,7 +94,38 @@ describe("coach profile image upload", () => {
     expect(await response.json()).toEqual({
       path: uploadedPath,
       url: "https://images.example/private-signed.webp",
+      purpose: "coach-ad",
     });
+  });
+
+  it("lets any active member save the upload as their account profile picture", async () => {
+    const png = await sharp({
+      create: { width: 32, height: 32, channels: 3, background: "#336699" },
+    }).png().toBuffer();
+    const response = await POST(imageRequest(new File([new Uint8Array(png)], "avatar.png", { type: "image/png" }), "avatar"));
+    const uploadedPath = mocks.upload.mock.calls[0]?.[0] as string;
+
+    expect(response.status).toBe(201);
+    expect(mocks.updateProfile).toHaveBeenCalledWith({ avatar_path: uploadedPath });
+    expect(await response.json()).toMatchObject({ path: uploadedPath, purpose: "avatar" });
+  });
+
+  it("immediately attaches a coach-ad upload to the coach profile", async () => {
+    const png = await sharp({ create: { width: 32, height: 32, channels: 3, background: "#336699" } }).png().toBuffer();
+    const response = await POST(imageRequest(new File([new Uint8Array(png)], "ad.png", { type: "image/png" }), "coach-ad"));
+    const uploadedPath = mocks.upload.mock.calls[0]?.[0] as string;
+    expect(response.status).toBe(201);
+    expect(mocks.attachAd).toHaveBeenCalledWith("attach_coach_ad_image", { image_path: uploadedPath });
+    expect(await response.json()).toMatchObject({ path: uploadedPath, purpose: "coach-ad" });
+  });
+
+  it("removes an uploaded object when it cannot be attached as a coach ad", async () => {
+    mocks.attachAd.mockResolvedValue({ data: null, error: { message: "Coach application required" } });
+    const png = await sharp({ create: { width: 32, height: 32, channels: 3, background: "#336699" } }).png().toBuffer();
+    const response = await POST(imageRequest(new File([new Uint8Array(png)], "ad.png", { type: "image/png" }), "coach-ad"));
+    const uploadedPath = mocks.upload.mock.calls[0]?.[0] as string;
+    expect(response.status).toBe(403);
+    expect(mocks.remove).toHaveBeenCalledWith([uploadedPath]);
   });
 
   it("uses independent immutable paths and never deletes another upload", async () => {

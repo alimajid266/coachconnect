@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Fast multi-sport ball in motion symbol">
+  <path d="M48 194h151M23 256h150M58 318h141" stroke="#161B2B" stroke-width="34" stroke-linecap="round"/>
+  <circle cx="314" cy="256" r="157" fill="#E83F36"/>
+  <circle cx="314" cy="256" r="111" fill="#FFF4E8"/>
+  <path d="M314 145l38 52 63 20-38 53 1 65-64-20-64 20 1-65-38-53 63-20z" fill="#161B2B"/>
+  <path d="M379 122l72 33-41 65" fill="none" stroke="#FFB23E" stroke-width="27" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="314" cy="256" r="22" fill="#FFB23E"/>
+</svg>

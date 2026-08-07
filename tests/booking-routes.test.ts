@@ -16,7 +16,7 @@ vi.mock("@/lib/supabase/route", () => ({
 
 import { POST } from "@/app/api/bookings/route";
 import { PATCH } from "@/app/api/bookings/[id]/route";
-import { DELETE as DELETE_SLOT } from "@/app/api/schedule/slots/route";
+import { DELETE as DELETE_SLOT, POST as POST_SLOT } from "@/app/api/schedule/slots/route";
 
 const bookingId = "33333333-3333-4333-8333-333333333333";
 const slotId = "22222222-2222-4222-8222-222222222222";
@@ -74,6 +74,24 @@ describe("booking mutation routes", () => {
     const response = await patch({ action: "cancel" });
     expect(response.status).toBe(401);
     expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("explains why an approved coach availability slot was rejected", async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { message: "Choose a valid future slot" } });
+    const response = await POST_SLOT(new NextRequest("http://127.0.0.1:3000/api/schedule/slots", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        startsAt: "2099-08-14T10:00:00.000Z",
+        endsAt: "2099-08-14T11:00:00.000Z",
+        mode: "IN_PERSON",
+      }),
+    }));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: "Choose a future start time at least 30 minutes from now, lasting 30 minutes to 3 hours.",
+    });
   });
 
   it("sends bounded meeting details through the protected coach RPC", async () => {

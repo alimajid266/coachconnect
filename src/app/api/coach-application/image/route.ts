@@ -56,6 +56,10 @@ function hasValidSignature(type: string, bytes: Uint8Array) {
 export async function POST(request: NextRequest) {
   const originRejection = rejectCrossOriginRequest(request);
   if (originRejection) return originRejection;
+  const purpose = request.nextUrl.searchParams.get("purpose") ?? "coach-ad";
+  if (purpose !== "avatar" && purpose !== "coach-ad") {
+    return NextResponse.json({ error: "Choose a valid image purpose." }, { status: 400 });
+  }
 
   try {
     const { supabase, applyCookies } = createSupabaseRouteClient(request);
@@ -134,11 +138,27 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       return applyCookies(NextResponse.json({ error: "The profile image could not be uploaded." }, { status: 503 }));
     }
+    if (purpose === "avatar") {
+      const { error: saveError } = await supabase
+        .from("profiles")
+        .update({ avatar_path: path })
+        .eq("id", authData.user.id);
+      if (saveError) {
+        await bucket.remove([path]);
+        return applyCookies(NextResponse.json({ error: "The profile picture could not be saved." }, { status: 503 }));
+      }
+    } else {
+      const { error: attachError } = await supabase.rpc("attach_coach_ad_image", { image_path: path });
+      if (attachError) {
+        await bucket.remove([path]);
+        return applyCookies(NextResponse.json({ error: "Only an active coach application can add up to five ad images." }, { status: 403 }));
+      }
+    }
     const { data: signedData, error: signedError } = await bucket.createSignedUrl(path, 3600);
     if (signedError || !signedData?.signedUrl) {
       return applyCookies(NextResponse.json({ error: "The profile image was saved, but its preview is temporarily unavailable." }, { status: 503 }));
     }
-    return applyCookies(NextResponse.json({ path, url: signedData.signedUrl }, { status: 201 }));
+    return applyCookies(NextResponse.json({ path, url: signedData.signedUrl, purpose }, { status: 201 }));
   } catch {
     return NextResponse.json({ error: "The profile image could not be uploaded." }, { status: 400 });
   }

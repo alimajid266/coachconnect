@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Dynamic red rally orbit symbol">
+  <path d="M77 284C57 167 142 69 263 66c82-2 151 38 187 103" fill="none" stroke="#E83F36" stroke-width="68" stroke-linecap="round"/>
+  <path d="M435 228c20 117-65 215-186 218-82 2-151-38-187-103" fill="none" stroke="#161B2B" stroke-width="68" stroke-linecap="round"/>
+  <path d="M112 141l58 5-31 47" fill="none" stroke="#FFB23E" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="392" cy="164" r="42" fill="#FFB23E"/>
+  <circle cx="392" cy="164" r="15" fill="#FFF4E8"/>
+</svg>

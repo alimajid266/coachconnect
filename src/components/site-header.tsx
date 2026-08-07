@@ -8,10 +8,12 @@ export type SessionUser = {
   id: string | number;
   displayName: string;
   email: string;
+  avatarUrl?: string | null;
   role: "ATHLETE" | "COACH" | "ADMIN";
   capabilities?: {
     administrator: boolean;
     coachStatus: "DRAFT" | "SUBMITTED" | "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED" | null;
+    coachFormats?: { online: boolean; inPerson: boolean } | null;
   };
 };
 
@@ -118,7 +120,9 @@ export default function SiteHeader({ initialSession, onSessionResolved }: SiteHe
                 aria-expanded={menuOpen}
                 onClick={() => { setMenuOpen((open) => !open); setMenuError(""); }}
               >
-                <span aria-hidden="true">{initials}</span>
+                {session.user.avatarUrl
+                  ? <img aria-hidden="true" alt="" src={session.user.avatarUrl} />
+                  : <span aria-hidden="true">{initials}</span>}
               </button>
               <div
                 className="nav-account-popover"

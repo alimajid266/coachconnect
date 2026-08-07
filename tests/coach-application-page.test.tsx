@@ -20,7 +20,9 @@ describe("coach application page", () => {
     expect(screen.getByRole("group", { name: /sports you coach/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/add another sport/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/profile tags/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/profile image/i)).toHaveAttribute("accept", "image/jpeg,image/png,image/webp");
+    expect(screen.getByLabelText(/coach ad images/i)).toHaveAttribute("accept", "image/jpeg,image/png,image/webp");
+    expect(screen.getByLabelText(/coach ad images/i)).toHaveAttribute("multiple");
+    expect(screen.getByText(/up to five images for your public coach ad/i)).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /people you coach/i })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /training formats/i })).toBeInTheDocument();
     expect(screen.getByText(/never enter a home address/i)).toBeInTheDocument();
@@ -159,6 +161,7 @@ describe("coach application page", () => {
 
     render(<CoachApplicationPage />);
     await screen.findByRole("heading", { name: /build your coach profile/i });
+    expect(screen.getByRole("link", { name: /manage availability and bookings/i })).toHaveAttribute("href", "/account#schedule-heading");
     fireEvent.change(screen.getByLabelText(/professional headline/i), { target: { value: "Patient online tennis coach" } });
     fireEvent.click(screen.getByRole("button", { name: /save profile updates/i }));
 

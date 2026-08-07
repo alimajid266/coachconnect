@@ -1,0 +1,31 @@
+flowchart TB
+  classDef input fill:#172033,stroke:#94a3b8,color:#f8fafc,stroke-width:2px
+  classDef guard fill:#4a3412,stroke:#fbbf24,color:#fffbeb,stroke-width:2px
+  classDef ai fill:#2c1d46,stroke:#c084fc,color:#faf5ff,stroke-width:2px
+  classDef rules fill:#102a43,stroke:#60a5fa,color:#eff6ff,stroke-width:2px
+  classDef data fill:#0f3d2e,stroke:#34d399,color:#ecfdf5,stroke-width:2px
+  classDef fail fill:#3b2026,stroke:#fb7185,color:#fff1f2,stroke-width:2px
+
+  Q["1 · User sentence<br/>Beginner cricket coach in Lahore under Rs 5,000 Saturday"]:::input
+  LIMIT["2 · Validate and sanitize<br/>500-character limit · no email/address/token<br/>rate + daily cost limit"]:::guard
+  ADAPTER["3 · Provider adapter<br/>3-second timeout · max 200 output tokens<br/>server-only API key"]:::ai
+  GROQ["4A · Groq GPT-OSS 20B<br/>returns controlled JSON only"]:::ai
+  LOCAL["4B · Local parser<br/>sports/cities/budget/day synonyms<br/>always available"]:::rules
+  CHECK["5 · Validate interpreted JSON<br/>discard unknown or unsafe fields"]:::guard
+  CHIPS["6 · Show editable filter chips<br/>user can correct the interpretation"]:::rules
+  DB["7 · Query Supabase<br/>approved + active coaches only<br/>RLS still applies"]:::data
+  HARD["8 · Hard eligibility rules<br/>sport · active status · public profile"]:::rules
+  SCORE["9 · Deterministic score<br/>goal · level · city/mode · budget · availability"]:::rules
+  FAIR["10 · Trust controls<br/>full list remains visible · neutral cold start<br/>new-coach exposure check"]:::guard
+  WHY["11 · Truthful result<br/>coach facts from database + visible match reasons"]:::data
+  FAIL["Provider unavailable / invalid output"]:::fail
+
+  Q --> LIMIT --> ADAPTER
+  ADAPTER --> GROQ --> CHECK
+  ADAPTER --> LOCAL --> CHECK
+  GROQ -. "timeout, quota or malformed JSON" .-> FAIL
+  FAIL --> LOCAL
+  CHECK --> CHIPS --> DB --> HARD --> SCORE --> FAIR --> WHY
+
+  POLICY["AI CANNOT: approve coaches · change permissions · invent prices/ratings/availability · access passwords or tokens · book sessions"]:::fail
+  POLICY -. "enforced boundary" .-> ADAPTER

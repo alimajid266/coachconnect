@@ -1,0 +1,40 @@
+sequenceDiagram
+  autonumber
+  actor Athlete
+  participant UI as CoachConnect page
+  participant API as Vercel booking API
+  participant Auth as Supabase Auth
+  participant DB as PostgreSQL transaction
+  participant RLS as RLS permission rules
+  participant Coach as Coach dashboard
+
+  Athlete->>UI: Choose an available future slot
+  UI->>API: POST booking request + slot ID
+  API->>Auth: Verify secure session
+  alt Not signed in
+    Auth-->>API: No valid member
+    API-->>UI: 401 — sign in first
+  else Signed in
+    Auth-->>API: Authenticated member ID
+    API->>RLS: Check athlete may book this coach
+    alt Self-booking or unauthorized
+      RLS-->>API: Denied
+      API-->>UI: Clear permission message
+    else Allowed
+      RLS-->>API: Allowed
+      API->>DB: Begin one atomic transaction
+      Note right of DB: Atomic means all booking steps succeed together or none are saved.
+      DB->>DB: Recheck future slot, coach status and availability
+      DB->>DB: Insert booking under unique active-slot rule
+      alt Another athlete already booked it
+        DB-->>API: Conflict — transaction rolled back
+        API-->>UI: Slot just became unavailable - choose another
+      else Booking succeeds
+        DB-->>API: Confirmed booking record
+        API-->>UI: Show confirmation once
+        API-->>Coach: Booking appears in coach dashboard
+      end
+    end
+  end
+
+  Note over Athlete,Coach: Cancellation records who cancelled and when.<br/>It frees the slot safely and displays policy wording.<br/>CoachConnect never holds money and cannot issue refunds.

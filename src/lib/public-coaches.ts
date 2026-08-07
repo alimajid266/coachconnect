@@ -43,6 +43,27 @@ export async function attachSignedProfileImage(
   return !error && data?.signedUrl ? { ...coach, image: data.signedUrl } : coach;
 }
 
+export async function attachSignedCoachMedia(
+  supabase: SupabaseClient,
+  coach: Coach,
+  row: Record<string, unknown>,
+): Promise<Coach> {
+  const adPaths = stringArray(row.ad_image_paths).map(safeProfileImagePath).filter((path): path is string => path !== null);
+  const coverPath = safeProfileImagePath(row.profile_image_path);
+  const paths = Array.from(new Set(coverPath ? [coverPath, ...adPaths] : adPaths)).slice(0, 5);
+  const signedAds = (await Promise.all(paths.map(async (path) => {
+    const { data, error } = await supabase.storage.from("coach-profile-images").createSignedUrl(path, 3600);
+    return !error ? data?.signedUrl ?? null : null;
+  }))).filter((url): url is string => url !== null);
+  const avatarPath = safeProfileImagePath(row.avatar_path);
+  let avatar: string | null = null;
+  if (avatarPath) {
+    const { data, error } = await supabase.storage.from("coach-profile-images").createSignedUrl(avatarPath, 3600);
+    if (!error) avatar = data?.signedUrl ?? null;
+  }
+  return { ...coach, image: signedAds[0] ?? coach.image, adImages: signedAds, avatar };
+}
+
 export function publicCoach(row: Record<string, unknown>, rank: number): Coach | null {
   const id = typeof row.profile_id === "string"
     ? row.profile_id

@@ -194,6 +194,14 @@ export default function CoachMap({ city, coaches, profileHref }: Props) {
 
       {selectedVisibleCoach && (
         <article className="catalog-map-preview">
+          <button
+            className="catalog-map-preview-close"
+            type="button"
+            aria-label="Close coach preview"
+            onClick={() => setSelectedCoach(null)}
+          >
+            <span aria-hidden="true">×</span>
+          </button>
           <p>{selectedVisibleCoach.area}, {selectedVisibleCoach.location}</p>
           <h2>{selectedVisibleCoach.name}</h2>
           <span>{selectedVisibleCoach.sports.join(" · ")} · {selectedVisibleCoach.isDemo ? "Demo profile" : selectedVisibleCoach.rating === null ? "New coach" : `★ ${selectedVisibleCoach.rating}`}</span>

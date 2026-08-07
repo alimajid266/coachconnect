@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Abstract coach and athlete orbit symbol">
+  <g fill="none" stroke-linecap="round">
+    <path d="M116 289C92 194 151 106 245 93c55-8 110 10 149 48" stroke="#10294A" stroke-width="58"/>
+    <path d="M396 223c24 95-35 183-129 196-55 8-110-10-149-48" stroke="#4E8FE7" stroke-width="58"/>
+  </g>
+  <circle cx="256" cy="256" r="42" fill="#EF6458"/>
+  <circle cx="256" cy="256" r="15" fill="#FFF7F1"/>
+</svg>

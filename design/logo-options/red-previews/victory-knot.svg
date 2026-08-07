@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Red interlocking victory knot symbol">
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M86 274c0-83 67-150 150-150 70 0 112 48 154 126 20 37 36 61 58 76" stroke="#E83F36" stroke-width="72"/>
+    <path d="M426 238c0 83-67 150-150 150-70 0-112-48-154-126-20-37-36-61-58-76" stroke="#161B2B" stroke-width="72"/>
+  </g>
+  <path d="M64 185l12-60 57 23" fill="none" stroke="#FFB23E" stroke-width="27" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M448 327l-12 60-57-23" fill="none" stroke="#FFB23E" stroke-width="27" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="256" r="31" fill="#FFF4E8"/>
+  <circle cx="256" cy="256" r="13" fill="#FFB23E"/>
+</svg>

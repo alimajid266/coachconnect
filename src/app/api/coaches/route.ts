@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Coach } from "@/lib/coaches";
-import { attachSignedProfileImage, publicCoach } from "@/lib/public-coaches";
+import { attachSignedCoachMedia, publicCoach } from "@/lib/public-coaches";
 
 export async function GET() {
   const url = process.env.SUPABASE_INTERNAL_URL ?? process.env.SUPABASE_URL;
@@ -24,7 +24,7 @@ export async function GET() {
   const approvedRows = await Promise.all(approvedResult.data.map(async (row, index) => {
     const record = row as Record<string, unknown>;
     const coach = publicCoach(record, 1000 + index);
-    return coach ? attachSignedProfileImage(supabase, coach, record.profile_image_path) : null;
+    return coach ? attachSignedCoachMedia(supabase, coach, record) : null;
   }));
   const coaches = approvedRows.filter((coach): coach is Coach => coach !== null);
   const demosAvailable = !demoResult.error && Array.isArray(demoResult.data);

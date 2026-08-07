@@ -5,10 +5,13 @@ import { createSupabaseRouteClient } from "@/lib/supabase/route";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function message(error: string) {
+  if (/valid future slot/i.test(error)) return "Choose a future start time at least 30 minutes from now, lasting 30 minutes to 3 hours.";
+  if (/overlap.*booking/i.test(error)) return "That time overlaps an active booking in your schedule.";
   if (/overlap/i.test(error)) return "That time overlaps an existing slot.";
   if (/format/i.test(error)) return "That session format is not enabled on your coach profile.";
   if (/Approved coach/i.test(error)) return "Only approved coaches can add availability.";
-  return "The availability slot could not be saved.";
+  if (/active account/i.test(error)) return "Your account must be active before you can add availability.";
+  return "The availability slot could not be saved. Please try again.";
 }
 
 async function authenticated(request: NextRequest) {

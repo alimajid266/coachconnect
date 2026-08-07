@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import CoachLocationPreview from "@/app/coaches/coach-location-preview";
 import CoachBookingPanel from "@/components/coach-booking-panel";
 import SiteHeader from "@/components/site-header";
-import { attachSignedProfileImage, publicCoach } from "@/lib/public-coaches";
+import { attachSignedCoachMedia, publicCoach } from "@/lib/public-coaches";
 import { coaches, formatCoachPrice, type Coach } from "@/lib/coaches";
 
 type ProfileProps = {
@@ -43,7 +43,7 @@ async function loadCoach(id: string): Promise<Coach | null> {
   const coach = publicCoach(record, 1000);
   if (!coach) return fallbackDemo;
   return isUuid
-    ? attachSignedProfileImage(supabase, coach, record.profile_image_path)
+    ? attachSignedCoachMedia(supabase, coach, record)
     : coach;
 }
 
@@ -77,6 +77,7 @@ export default async function CoachProfilePage({ params, searchParams }: Profile
                 : <div className="catalog-coach-placeholder" aria-hidden="true">{coach.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</div>}
             </div>
             <div className="coach-profile-heading">
+              {coach.avatar && <Image className="coach-profile-avatar" src={coach.avatar} width={72} height={72} alt={`${coach.name} profile picture`} />}
               {coach.isDemo && <span className="catalog-demo-label">Demo profile</span>}
               <p>{coach.area !== "Online" && coach.area !== coach.location ? `${coach.area}, ` : ""}{coach.location} · {coach.mode}</p>
               <h1>{coach.name}</h1>
@@ -98,6 +99,7 @@ export default async function CoachProfilePage({ params, searchParams }: Profile
           <div className="coach-profile-content">
             <CoachBookingPanel coachId={coach.id} coachName={coach.name} isDemo={coach.isDemo === true} pricePkr={coach.price} />
             <section><h2>About {firstName}</h2><p>{coach.bio}</p></section>
+            {(coach.adImages?.length ?? 0) > 1 && <section className="coach-profile-ad-gallery"><h2>Coach ad gallery</h2><div>{coach.adImages?.map((image, index) => <Image key={image} src={image} width={260} height={180} alt={`${coach.name} coaching ad image ${index + 1}`} />)}</div></section>}
             <div className="catalog-profile-fit-grid">
               <section className="catalog-profile-fit"><h2>Who {firstName} teaches</h2><div>{coach.audiences.map((audience) => <span key={audience}>{audience}</span>)}</div></section>
               <section className="catalog-profile-fit"><h2>Levels supported</h2><div>{coach.levels.map((level) => <span key={level}>{level}</span>)}</div></section>

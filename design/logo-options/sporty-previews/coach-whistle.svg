@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Red coach whistle with motion symbol">
+  <path d="M97 188h228c30 0 54 24 54 54v18h54c23 0 42 19 42 42s-19 42-42 42h-79c-26 62-87 105-158 105-94 0-170-76-170-170 0-36 11-68 30-96 10-15 24-22 41-22z" fill="#E83F36" transform="rotate(-8 256 256)"/>
+  <circle cx="197" cy="292" r="75" fill="#FFF4E8"/>
+  <circle cx="197" cy="292" r="38" fill="#161B2B"/>
+  <path d="M355 197h100" stroke="#FFB23E" stroke-width="25" stroke-linecap="round"/>
+  <path d="M377 149h67" stroke="#FFB23E" stroke-width="21" stroke-linecap="round"/>
+  <path d="M366 391c31 27 47 55 47 84" fill="none" stroke="#161B2B" stroke-width="22" stroke-linecap="round"/>
+</svg>

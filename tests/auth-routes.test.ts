@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   signOut: vi.fn(),
   profileSingle: vi.fn(),
   applicationMaybeSingle: vi.fn(),
+  signedAvatar: vi.fn(),
   applyCookies: vi.fn(<T>(response: T) => response),
 }));
 
@@ -27,6 +28,7 @@ vi.mock("@/lib/supabase/route", () => ({
             : { maybeSingle: mocks.applicationMaybeSingle },
         }),
       }),
+      storage: { from: () => ({ createSignedUrl: mocks.signedAvatar }) },
     },
     applyCookies: mocks.applyCookies,
   }),
@@ -52,6 +54,7 @@ describe("Supabase authentication routes", () => {
     vi.clearAllMocks();
     mocks.applyCookies.mockImplementation(<T>(response: T) => response);
     mocks.applicationMaybeSingle.mockResolvedValue({ data: null, error: null });
+    mocks.signedAvatar.mockResolvedValue({ data: { signedUrl: "https://images.example/avatar.webp" }, error: null });
   });
 
   it("registers one neutral member account without accepting a self-selected role", async () => {
@@ -142,7 +145,7 @@ describe("Supabase authentication routes", () => {
       error: null,
     });
     mocks.profileSingle.mockResolvedValue({
-      data: { display_name: "Coach Account", role: "COACH" },
+      data: { display_name: "Coach Account", role: "COACH", avatar_path: "user-2/avatar.webp" },
       error: null,
     });
     mocks.applicationMaybeSingle.mockResolvedValue({
@@ -157,6 +160,7 @@ describe("Supabase authentication routes", () => {
         displayName: "Coach Account",
         email: "coach@example.com",
         role: "COACH",
+        avatarUrl: "https://images.example/avatar.webp",
         capabilities: { administrator: false, coachStatus: "APPROVED" },
       },
     });

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("display_name, role")
+      .select("display_name, role, avatar_path")
       .eq("id", authData.user.id)
       .single();
 
@@ -25,23 +25,34 @@ export async function GET(request: NextRequest) {
 
     const { data: coachApplication, error: coachApplicationError } = await supabase
       .from("coach_applications")
-      .select("status")
+      .select("status, offers_online, offers_in_person")
       .eq("user_id", authData.user.id)
       .maybeSingle();
     if (coachApplicationError) {
       return applyCookies(NextResponse.json({ error: "Coach status is unavailable." }, { status: 503 }));
     }
     const coachStatus = coachApplication?.status ?? (profile.role === "COACH" ? "APPROVED" : null);
-
+    let avatarUrl: string | undefined;
+    if (profile.avatar_path) {
+      const { data: avatarData } = await supabase.storage
+        .from("coach-profile-images")
+        .createSignedUrl(profile.avatar_path, 3600);
+      avatarUrl = avatarData?.signedUrl;
+    }
     return applyCookies(NextResponse.json({
       user: {
         id: authData.user.id,
         displayName: profile.display_name,
         email: authData.user.email ?? "",
         role: profile.role,
+        ...(avatarUrl ? { avatarUrl } : {}),
         capabilities: {
           administrator: profile.role === "ADMIN",
           coachStatus,
+          coachFormats: coachStatus === "APPROVED" ? {
+            online: coachApplication?.offers_online !== false,
+            inPerson: coachApplication?.offers_in_person !== false,
+          } : null,
         },
       },
     }));

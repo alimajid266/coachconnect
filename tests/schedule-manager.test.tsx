@@ -101,6 +101,42 @@ describe("account schedule manager", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("explains the scheduling window before sending an invalid slot", async () => {
+    const start = new Date(Date.now() + 10 * 60 * 1000);
+    const end = new Date(start.getTime() + 45 * 60 * 1000);
+    const localDate = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+    const localTime = (value: Date) => `${String(value.getHours()).padStart(2, "0")}:${String(value.getMinutes()).padStart(2, "0")}`;
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ userId, bookings: [], slots: [] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ScheduleManager userId={userId} approvedCoach />);
+    await screen.findByRole("heading", { name: /add availability/i });
+
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: localDate(start) } });
+    fireEvent.change(screen.getByLabelText("Starts"), { target: { value: localTime(start) } });
+    fireEvent.change(screen.getByLabelText("Ends"), { target: { value: localTime(end) } });
+    fireEvent.click(screen.getByRole("button", { name: "Add time" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/at least 30 minutes from now/i);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("submits only an approved coach format", async () => {
+    const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const localDate = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+    const localTime = (value: Date) => `${String(value.getHours()).padStart(2, "0")}:${String(value.getMinutes()).padStart(2, "0")}`;
+    const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve({ ok: true, json: async () => String(input) === "/api/schedule" ? { userId, bookings: [], slots: [] } : { slot: {} } }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ScheduleManager userId={userId} approvedCoach formats={{ online: true, inPerson: false }} />);
+    await screen.findByRole("heading", { name: /add availability/i });
+    expect(screen.queryByRole("option", { name: "In person" })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: localDate(start) } });
+    fireEvent.change(screen.getByLabelText("Starts"), { target: { value: localTime(start) } });
+    fireEvent.change(screen.getByLabelText("Ends"), { target: { value: localTime(end) } });
+    fireEvent.click(screen.getByRole("button", { name: "Add time" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/schedule/slots", expect.objectContaining({ body: expect.stringContaining('"mode":"ONLINE"') })));
+  });
+
   it("gives repeated actions contextual names and announces progress", async () => {
     let resolveAction: ((value: { ok: boolean; json: () => Promise<unknown> }) => void) | undefined;
     const fetchMock = vi.fn().mockImplementation((input: string | URL | Request, init?: RequestInit) => {

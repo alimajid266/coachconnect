@@ -76,6 +76,14 @@ function profileImagePath(value: unknown) {
   return path;
 }
 
+function adImagePaths(value: unknown) {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > 5) throw new Error("Coach ads can include up to five images.");
+  const paths = value.map((item) => profileImagePath(item));
+  if (paths.some((path) => path === null)) throw new Error("Coach ad image paths are invalid.");
+  return Array.from(new Set(paths as string[]));
+}
+
 function optionalInteger(value: unknown, label: string, minimum: number, maximum: number) {
   if (value === null || value === undefined || value === "") return null;
   const result = typeof value === "string" ? Number(value) : value;
@@ -125,6 +133,7 @@ export function normalizeCoachApplicationDraft(body: UnknownRecord) {
     sports: flexibleTermList(body.sports, "sports", 8, 60),
     tags: tagsList(body.tags),
     profile_image_path: profileImagePath(body.profileImagePath),
+    ad_image_paths: adImagePaths(body.adImagePaths),
     experience_years: optionalInteger(body.experienceYears, "Experience", 0, 80),
     qualifications: optionalText(body.qualifications, "Qualifications", 1200),
     audiences: stringList(body.audiences, "audiences", audiences, audiences.length),
@@ -150,6 +159,7 @@ export function serializeCoachApplication(row: UnknownRecord | null) {
     sports: row.sports,
     tags: row.tags,
     profileImagePath: row.profile_image_path,
+    adImagePaths: row.ad_image_paths ?? [],
     experienceYears: row.experience_years,
     qualifications: row.qualifications,
     audiences: row.audiences,
