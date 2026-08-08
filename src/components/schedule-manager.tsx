@@ -93,17 +93,28 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
 
   const upcoming = useMemo(() => data.bookings.filter((booking) => booking.status === "REQUESTED" || booking.status === "CONFIRMED"), [data.bookings]);
   const history = useMemo(() => data.bookings.filter((booking) => !upcoming.includes(booking)), [data.bookings, upcoming]);
+  const athleteRefunds = useMemo(
+    () => data.bookings.filter((booking) => booking.athleteId === userId && booking.paymentStatus === "DEMO_REFUNDED"),
+    [data.bookings, userId],
+  );
   const futureSlots = useMemo(() => data.slots.filter((slot) => slot.state === "OPEN" && new Date(slot.endsAt).getTime() >= now), [data.slots, now]);
   const earnings = useMemo(() => {
-    const paid = data.bookings.filter((booking) => booking.coachId === userId && booking.status === "COMPLETED" && booking.paymentStatus === "DEMO_PAID");
+    const coachBookings = data.bookings.filter((booking) => booking.coachId === userId);
+    const paid = coachBookings.filter((booking) => booking.status === "COMPLETED" && booking.paymentStatus === "DEMO_PAID");
+    const pending = coachBookings.filter((booking) => booking.status === "CONFIRMED" && booking.paymentStatus === "DEMO_PAID");
+    const refunded = coachBookings.filter((booking) => booking.paymentStatus === "DEMO_REFUNDED");
     const current = new Date(now);
     const monthStart = new Date(current.getFullYear(), current.getMonth(), 1).getTime();
     const weekStart = now - 7 * 24 * 60 * 60 * 1000;
     const total = (items: ScheduleBooking[]) => items.reduce((sum, booking) => sum + booking.pricePkr, 0);
+    const recordedAt = (booking: ScheduleBooking) => booking.paymentRecordedAt ? new Date(booking.paymentRecordedAt).getTime() : null;
     return {
-      week: total(paid.filter((booking) => new Date(booking.startsAt).getTime() >= weekStart)),
-      month: total(paid.filter((booking) => new Date(booking.startsAt).getTime() >= monthStart)),
+      week: total(paid.filter((booking) => (recordedAt(booking) ?? -Infinity) >= weekStart)),
+      month: total(paid.filter((booking) => (recordedAt(booking) ?? -Infinity) >= monthStart)),
       lifetime: total(paid),
+      pending: total(pending),
+      refunded: total(refunded),
+      unknownDates: paid.filter((booking) => recordedAt(booking) === null).length,
     };
   }, [data.bookings, now, userId]);
   const busyAnnouncement = useMemo(() => {
@@ -154,7 +165,12 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
       const response = await fetch(`/api/bookings/${bookingId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "The booking could not be changed.");
-      setMessage(action === "accept" ? "Session confirmed." : action === "decline" ? "Request declined and the slot is open again." : action === "complete" ? "Session marked complete." : "Booking cancelled.");
+      const refundRecorded = action === "cancel" && result.booking?.payment_status === "DEMO_REFUNDED";
+      setMessage(action === "accept" ? "Session confirmed."
+        : action === "decline" ? "Request declined and the slot is open again."
+        : action === "complete" ? "Session marked complete."
+        : refundRecorded ? `Booking cancelled. Demo refund recorded for ${money(result.booking.price_pkr)}; no real money moved.`
+        : "Booking cancelled.");
       await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "The booking could not be changed."); }
     finally { setBusyId(""); }
@@ -185,6 +201,22 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
       setPaymentForm({ bookingId: "", name: "", card: "", expiry: "", cvc: "" }); setMessage("Demo payment recorded. No real charge was made."); await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Demo payment could not be recorded."); }
     finally { setBusyId(""); }
+  }
+
+  function demoPaymentControl(booking: ScheduleBooking) {
+    if (booking.athleteId !== userId || booking.paymentStatus !== "NOT_COLLECTED" || !["CONFIRMED", "COMPLETED"].includes(booking.status)) return null;
+    return paymentForm.bookingId === booking.bookingId ? (
+      <form className="schedule-payment-form" onSubmit={(event) => submitDemoPayment(event, booking.bookingId)}>
+        <strong>Demo card payment</strong>
+        <p>Placeholder only. Do not enter real card information. Nothing from these fields is sent or stored.</p>
+        <label>Name on card<input required autoComplete="off" value={paymentForm.name} onChange={(event) => setPaymentForm((current) => ({ ...current, name: event.target.value }))} /></label>
+        <label>Test card number<input required inputMode="numeric" autoComplete="off" placeholder="4242 4242 4242 4242" value={paymentForm.card} onChange={(event) => setPaymentForm((current) => ({ ...current, card: event.target.value }))} /></label>
+        <label>Expiry<input required autoComplete="off" placeholder="12/30" value={paymentForm.expiry} onChange={(event) => setPaymentForm((current) => ({ ...current, expiry: event.target.value }))} /></label>
+        <label>CVC<input required inputMode="numeric" autoComplete="off" placeholder="123" value={paymentForm.cvc} onChange={(event) => setPaymentForm((current) => ({ ...current, cvc: event.target.value }))} /></label>
+        <button type="submit" disabled={!!busyId}>Record demo payment</button>
+        <button type="button" className="is-subtle" onClick={() => setPaymentForm({ bookingId: "", name: "", card: "", expiry: "", cvc: "" })}>Cancel</button>
+      </form>
+    ) : <button type="button" className="is-subtle" onClick={() => setPaymentForm({ bookingId: booking.bookingId, name: "", card: "", expiry: "", cvc: "" })}>Open demo payment</button>;
   }
 
   async function removeSlot(slotId: string) {
@@ -237,11 +269,14 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
             <button type="button" onClick={() => setActivePanel("sessions")}><span>Upcoming sessions</span><strong>{upcoming.length}</strong><small>Requests, confirmed sessions and meeting details</small></button>
             {approvedCoach && <button type="button" onClick={() => setActivePanel("schedule")}><span>Open bookable times</span><strong>{futureSlots.length}</strong><small>Manage your working hours and generated slots</small></button>}
             <button type="button" onClick={() => setActivePanel("history")}><span>Session history</span><strong>{history.length}</strong><small>Completed sessions, cancellations and verified reviews</small></button>
+            {athleteRefunds.length > 0 && <button type="button" onClick={() => setActivePanel("history")}><span>Refund update</span><strong>{money(athleteRefunds.reduce((sum, booking) => sum + booking.pricePkr, 0))}</strong><small>{athleteRefunds.length} demo refund {athleteRefunds.length === 1 ? "recorded" : "records"} in your history</small></button>}
             {approvedCoach && <section className="coach-earnings-summary" aria-label="Demo earnings">
-              <header><span>Coach earnings</span><small>Completed sessions with confirmed demo payments. No real funds are processed.</small></header>
-              <article><span>Last 7 days</span><strong data-testid="earnings-week">{money(earnings.week)}</strong></article>
-              <article><span>This month</span><strong data-testid="earnings-month">{money(earnings.month)}</strong></article>
-              <article><span>Lifetime</span><strong data-testid="earnings-lifetime">{money(earnings.lifetime)}</strong></article>
+              <header><span>Coach payment totals</span><small>Recent periods use known demo-payment recording dates. Lifetime includes every completed demo payment. No real funds are processed.</small>{earnings.unknownDates > 0 && <small>Recent periods exclude {earnings.unknownDates} older demo {earnings.unknownDates === 1 ? "payment" : "payments"} with no trustworthy recording date.</small>}</header>
+              <article><span>Completed, last 7 days</span><strong data-testid="earnings-week">{money(earnings.week)}</strong></article>
+              <article><span>Completed, this month</span><strong data-testid="earnings-month">{money(earnings.month)}</strong></article>
+              <article><span>Completed, lifetime</span><strong data-testid="earnings-lifetime">{money(earnings.lifetime)}</strong></article>
+              <article><span>Pending completion</span><strong data-testid="earnings-pending">{money(earnings.pending)}</strong></article>
+              <article><span>Demo refunds</span><strong data-testid="earnings-refunded">{money(earnings.refunded)}</strong></article>
             </section>}
           </div>}
           {activePanel === "sessions" && <div className="dashboard-panel">
@@ -267,16 +302,16 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
                     <div className="schedule-meeting-details"><strong>Meeting details</strong><p>{booking.meetingDetails ? linkedMeetingDetails(booking.meetingDetails) : "The coach has not shared the final meeting details yet."}</p></div>
                   ))}
                   {booking.paymentStatus === "DEMO_PAID" && <p className="schedule-payment-confirmation"><strong>Payment confirmed on CoachConnect</strong> for {money(booking.pricePkr)}. This is a demo record; no real charge was made.</p>}
-                  {!isCoach && booking.status === "CONFIRMED" && booking.paymentStatus !== "DEMO_PAID" && (paymentForm.bookingId === booking.bookingId ? <form className="schedule-payment-form" onSubmit={(event) => submitDemoPayment(event, booking.bookingId)}><strong>Demo card payment</strong><p>Placeholder only. Do not enter real card information. Nothing from these fields is sent or stored.</p><label>Name on card<input required autoComplete="off" value={paymentForm.name} onChange={(event) => setPaymentForm((current) => ({ ...current, name: event.target.value }))} /></label><label>Test card number<input required inputMode="numeric" autoComplete="off" placeholder="4242 4242 4242 4242" value={paymentForm.card} onChange={(event) => setPaymentForm((current) => ({ ...current, card: event.target.value }))} /></label><label>Expiry<input required autoComplete="off" placeholder="12/30" value={paymentForm.expiry} onChange={(event) => setPaymentForm((current) => ({ ...current, expiry: event.target.value }))} /></label><label>CVC<input required inputMode="numeric" autoComplete="off" placeholder="123" value={paymentForm.cvc} onChange={(event) => setPaymentForm((current) => ({ ...current, cvc: event.target.value }))} /></label><button type="submit" disabled={!!busyId}>Record demo payment</button><button type="button" className="is-subtle" onClick={() => setPaymentForm({ bookingId: "", name: "", card: "", expiry: "", cvc: "" })}>Cancel</button></form> : <button type="button" className="is-subtle" onClick={() => setPaymentForm({ bookingId: booking.bookingId, name: "", card: "", expiry: "", cvc: "" })}>Open demo payment</button>)}
+                  {demoPaymentControl(booking)}
                 </article>;
               })}
           </div>}
           {activePanel === "history" && <div className="dashboard-panel">
               <div className="dashboard-panel-heading"><div><span>Past activity</span><h3>History & reviews</h3></div><p>Completed and cancelled sessions are kept separate from active bookings.</p></div>
-              {history.length === 0 ? <p className="schedule-empty">Completed and cancelled sessions will appear here.</p> : history.slice(-8).reverse().map((booking) => {
+              {history.length === 0 ? <p className="schedule-empty">Completed and cancelled sessions will appear here.</p> : history.slice().reverse().map((booking) => {
                 const isAthlete = booking.athleteId === userId;
                 const draft = reviewDrafts[booking.bookingId] ?? { rating: 5, body: "" };
-                return <article className="schedule-booking compact" key={booking.bookingId}><div><span className={`schedule-status status-${booking.status.toLowerCase()}`}>{statusLabel(booking.status)}</span><h4>{booking.coachId === userId ? booking.athleteName : booking.coachName}</h4><p>{when(booking.startsAt, booking.endsAt)}</p>{booking.paymentStatus === "DEMO_PAID" && <p className="schedule-payment-confirmation"><strong>Payment confirmed on CoachConnect</strong> for {money(booking.pricePkr)}. This is a demo record; no real charge was made.</p>}{booking.refundPolicyOutcome !== "NOT_APPLICABLE" && <p>{booking.refundPolicyOutcome === "FULL_REFUND_DUE" ? "Refund policy: eligible for a full refund from the coach." : "Refund policy: outside the full-refund window."}</p>}{booking.reviewRating ? <p><strong>Your verified review:</strong> {"★".repeat(booking.reviewRating)}. {booking.reviewBody}</p> : isAthlete && booking.status === "COMPLETED" ? <div className="schedule-review-form"><label>Rating<select aria-label={`Rating for ${booking.coachName}`} value={draft.rating} onChange={(event) => setReviewDrafts((current) => ({ ...current, [booking.bookingId]: { ...draft, rating: Number(event.target.value) } }))}>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} stars</option>)}</select></label><label>Review<textarea aria-label={`Review for ${booking.coachName}`} minLength={10} maxLength={1000} value={draft.body} onChange={(event) => setReviewDrafts((current) => ({ ...current, [booking.bookingId]: { ...draft, body: event.target.value } }))} /></label><button type="button" disabled={!!busyId || draft.body.trim().length < 10} onClick={() => submitReview(booking.bookingId)}>Submit review</button></div> : null}</div></article>;
+                return <article className="schedule-booking compact" key={booking.bookingId}><div><span className={`schedule-status status-${booking.status.toLowerCase()}`}>{statusLabel(booking.status)}</span><h4>{booking.coachId === userId ? booking.athleteName : booking.coachName}</h4><p>{when(booking.startsAt, booking.endsAt)}</p>{booking.paymentStatus === "DEMO_PAID" && <p className="schedule-payment-confirmation"><strong>Payment confirmed on CoachConnect</strong> for {money(booking.pricePkr)}. This is a demo record; no real charge was made.</p>}{booking.paymentStatus === "DEMO_REFUNDED" && <p className="schedule-refund-confirmation"><strong>Demo refund recorded</strong> for {money(booking.pricePkr)}. No real money was moved.</p>}{demoPaymentControl(booking)}{booking.paymentStatus !== "DEMO_REFUNDED" && booking.refundPolicyOutcome !== "NOT_APPLICABLE" && <p>{booking.refundPolicyOutcome === "FULL_REFUND_DUE" ? "Refund policy: eligible for a full refund from the coach." : "Refund policy: outside the full-refund window."}</p>}{booking.reviewRating ? <p><strong>Your verified review:</strong> {"★".repeat(booking.reviewRating)}. {booking.reviewBody}</p> : isAthlete && booking.status === "COMPLETED" ? <div className="schedule-review-form"><label>Rating<select aria-label={`Rating for ${booking.coachName}`} value={draft.rating} onChange={(event) => setReviewDrafts((current) => ({ ...current, [booking.bookingId]: { ...draft, rating: Number(event.target.value) } }))}>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} stars</option>)}</select></label><label>Review<textarea aria-label={`Review for ${booking.coachName}`} minLength={10} maxLength={1000} value={draft.body} onChange={(event) => setReviewDrafts((current) => ({ ...current, [booking.bookingId]: { ...draft, body: event.target.value } }))} /></label><button type="button" disabled={!!busyId || draft.body.trim().length < 10} onClick={() => submitReview(booking.bookingId)}>Submit review</button></div> : null}</div></article>;
               })}
           </div>}
 
@@ -296,7 +331,7 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
             </div>
           </div>}
 
-          <p className="schedule-policy"><strong>Payment is currently a demonstration only; no real money is charged.</strong> Never enter real card information. For direct off-platform payments, athlete cancellations qualify for the full-refund policy until 24 hours before the session; the coach is responsible for issuing any eligible refund.</p>
+          <p className="schedule-policy"><strong>Payment and refund records are demonstrations only; no real money is charged or transferred.</strong> Never enter real card information. Eligible demo payments are marked refunded automatically when the coach cancels or the athlete cancels at least 24 hours before the session. Any direct off-platform refund remains the coach&apos;s responsibility.</p>
         </>
       )}
     </section>

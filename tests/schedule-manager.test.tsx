@@ -40,7 +40,7 @@ describe("account schedule manager", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/api\/bookings\//), expect.objectContaining({ method: "PATCH" })));
     expect(await screen.findByText("Session confirmed.")).toBeInTheDocument();
-    expect(screen.getByText(/payment is currently a demonstration only/i)).toBeInTheDocument();
+    expect(screen.getByText(/payment and refund records are demonstrations only/i)).toBeInTheDocument();
   });
 
   it("lets a coach share participant-only details after confirmation", async () => {
@@ -152,19 +152,35 @@ describe("account schedule manager", () => {
       ...booking,
       status: "COMPLETED",
       paymentStatus: "DEMO_PAID",
-      startsAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-      endsAt: new Date(Date.now()).toISOString(),
+      startsAt: "2020-08-14T10:00:00.000Z",
+      endsAt: "2020-08-14T11:00:00.000Z",
+      paymentRecordedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
       pricePkr: 3000,
     };
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ userId, bookings: [paid], slots: [] }) });
+    const retainedLateCancellation = {
+      ...booking,
+      bookingId: "booking-late-cancel",
+      status: "CANCELLED_BY_ATHLETE",
+      paymentStatus: "DEMO_PAID",
+      pricePkr: 2500,
+    };
+    const legacyPaidWithoutDate = {
+      ...paid,
+      bookingId: "booking-legacy-paid",
+      paymentRecordedAt: null,
+      pricePkr: 2000,
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ userId, bookings: [paid, retainedLateCancellation, legacyPaidWithoutDate], slots: [] }) });
     vi.stubGlobal("fetch", fetchMock);
 
     const { unmount } = render(<ScheduleManager userId={userId} approvedCoach />);
     expect(await screen.findByTestId("earnings-week")).toHaveTextContent("Rs 3,000");
     expect(screen.getByTestId("earnings-month")).toHaveTextContent("Rs 3,000");
-    expect(screen.getByTestId("earnings-lifetime")).toHaveTextContent("Rs 3,000");
+    expect(screen.getByTestId("earnings-lifetime")).toHaveTextContent("Rs 5,000");
+    expect(screen.getByTestId("earnings-pending")).toHaveTextContent("Rs 0");
+    expect(screen.getByText(/recent periods exclude 1 older demo payment/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^history & reviews/i }));
-    expect(screen.getByText(/payment confirmed on coachconnect/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/payment confirmed on coachconnect/i)).toHaveLength(3);
     unmount();
 
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ userId: booking.athleteId, bookings: [paid], slots: [] }) }));
@@ -172,6 +188,63 @@ describe("account schedule manager", () => {
     fireEvent.click(await screen.findByRole("button", { name: /^history & reviews/i }));
     expect(screen.getByText(/payment confirmed on coachconnect/i)).toBeInTheDocument();
     vi.useRealTimers();
+  });
+
+  it("lets an athlete record a late demo payment after completion", async () => {
+    const completedUnpaid = {
+      ...booking,
+      status: "COMPLETED",
+      paymentStatus: "NOT_COLLECTED",
+      startsAt: "2020-08-14T10:00:00.000Z",
+      endsAt: "2020-08-14T11:00:00.000Z",
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ userId: booking.athleteId, bookings: [completedUnpaid], slots: [] }) }));
+    render(<ScheduleManager userId={booking.athleteId} approvedCoach={false} />);
+    fireEvent.click(await screen.findByRole("button", { name: /^history & reviews/i }));
+    fireEvent.click(screen.getByRole("button", { name: /open demo payment/i }));
+    expect(screen.getByText(/demo card payment/i)).toBeInTheDocument();
+  });
+
+  it("tells the athlete when an eligible demo refund was recorded", async () => {
+    const refunded = {
+      ...booking,
+      status: "CANCELLED_BY_COACH",
+      paymentStatus: "DEMO_REFUNDED",
+      refundPolicyOutcome: "FULL_REFUND_DUE",
+      refundedAt: new Date().toISOString(),
+    };
+    const newerHistory = Array.from({ length: 9 }, (_, index) => ({
+      ...booking,
+      bookingId: `newer-history-${index}`,
+      status: "COMPLETED",
+      paymentStatus: "NOT_COLLECTED",
+      startsAt: new Date(Date.now() + index * 1000).toISOString(),
+    }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ userId: booking.athleteId, bookings: [refunded, ...newerHistory], slots: [] }) }));
+    render(<ScheduleManager userId={booking.athleteId} approvedCoach={false} />);
+    expect(await screen.findByText(/1 demo refund recorded in your history/i)).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /^history & reviews/i }));
+    expect(screen.getByText(/demo refund recorded/i)).toBeInTheDocument();
+    expect(screen.getByText(/no real money was moved/i)).toBeInTheDocument();
+  });
+
+  it("announces an automatically recorded demo refund immediately after cancellation", async () => {
+    const confirmedPaid = { ...booking, status: "CONFIRMED", paymentStatus: "DEMO_PAID" };
+    const refunded = { ...confirmedPaid, status: "CANCELLED_BY_ATHLETE", paymentStatus: "DEMO_REFUNDED" };
+    let scheduleCalls = 0;
+    const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => {
+      if (String(input) === "/api/schedule") {
+        scheduleCalls += 1;
+        return Promise.resolve({ ok: true, json: async () => ({ userId: booking.athleteId, bookings: scheduleCalls === 1 ? [confirmedPaid] : [refunded], slots: [] }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ booking: { payment_status: "DEMO_REFUNDED", price_pkr: 3000 } }) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<ScheduleManager userId={booking.athleteId} approvedCoach={false} />);
+    fireEvent.click(await screen.findByRole("button", { name: /sessions \(1\)/i }));
+    fireEvent.click(screen.getByRole("button", { name: /cancel session with/i }));
+    expect(await screen.findByText(/demo refund recorded for rs 3,000/i)).toBeInTheDocument();
   });
 
   it("gives repeated actions contextual names and announces progress", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { coaches } from "@/lib/coaches";
-import { interpretCoachQuery, recommendCoaches } from "@/lib/coach-discovery";
+import { RECOMMENDATION_WEIGHTS, interpretCoachQuery, recommendCoaches } from "@/lib/coach-discovery";
 
 describe("coach discovery interpreter", () => {
   it.each([
@@ -73,6 +73,36 @@ describe("coach discovery interpreter", () => {
     expect(interpretCoachQuery("need help with batting").filters.tags).toContain("Batting");
   });
 
+  it("recognizes catalog-defined sports and cities instead of relying on a fixed list", () => {
+    const result = interpretCoachQuery("archery coach in Faisalabad under Rs 5k", {
+      sports: ["Archery", "Cricket"],
+      cities: ["Faisalabad", "Lahore"],
+    });
+    expect(result.filters).toMatchObject({ sport: "Archery", city: "Faisalabad", maxPrice: 5000 });
+  });
+
+  it.each([
+    ["up to PKR 4,500", 4500],
+    ["maximum 6k", 6000],
+    ["budget of 3500 rupees", 3500],
+  ])("understands natural budget phrase %s", (query, maxPrice) => {
+    const result = interpretCoachQuery(`tennis coach ${query}`);
+    expect(result.filters.maxPrice).toBe(maxPrice);
+    expect(result.keywords).toEqual([]);
+  });
+
+  it("understands training-goal and one-to-one phrases", () => {
+    const result = interpretCoachQuery("one-to-one coach for weight loss and recovery");
+    expect(result.filters.format).toBe("In person");
+    expect(result.filters.tags).toEqual(expect.arrayContaining(["Conditioning", "Mobility"]));
+  });
+
+  it("gives an exact catalog sport priority over a legacy alias", () => {
+    expect(interpretCoachQuery("soccer coach", { sports: ["Soccer", "Football"] }).filters.sport).toBe("Soccer");
+    expect(interpretCoachQuery("ping pong coach", { sports: ["Ping Pong", "Table Tennis"] }).filters.sport).toBe("Ping Pong");
+    expect(interpretCoachQuery("cricket coach", { sports: ["cricket"] }).filters.sport).toBe("Cricket");
+  });
+
   it("surfaces conflicting requirements instead of silently choosing", () => {
     const result = interpretCoachQuery("online face-to-face cricket tennis in Lahore Karachi");
     expect(result.conflicts).toEqual(expect.arrayContaining([
@@ -92,6 +122,46 @@ describe("coach discovery interpreter", () => {
 });
 
 describe("deterministic coach recommendations", () => {
+  it("publishes the exact deterministic recommendation weightages", () => {
+    expect(RECOMMENDATION_WEIGHTS).toEqual({
+      sport: 100,
+      focusTag: 25,
+      level: 20,
+      city: 20,
+      format: 20,
+      budget: 15,
+      day: 10,
+      keyword: 3,
+      keywordCap: 15,
+      geminiNudgeCap: 4,
+    });
+  });
+
+  it("rotates equal-score profiles daily so one account is not permanently first", () => {
+    const tiedCoaches = coaches.slice(0, 3).map((coach, index) => ({ ...coach, rank: index + 1 }));
+    const empty = interpretCoachQuery("");
+    const firstProfiles = ["2026-08-08", "2026-08-09", "2026-08-10"].map(
+      (rotationSeed) => recommendCoaches(tiedCoaches, empty, { rotationSeed })[0].coach.id,
+    );
+
+    expect(new Set(firstProfiles)).toEqual(new Set(tiedCoaches.map((coach) => coach.id)));
+  });
+
+  it("rotates fairly inside a score subgroup even when other scores intervene", () => {
+    const mixed = [
+      { ...coaches[0], id: "ali-majid2", location: "Lahore", rank: 1 },
+      { ...coaches[1], id: "lower-a", location: "Karachi", rank: 2 },
+      { ...coaches[2], id: "tied-peer", location: "Lahore", rank: 3 },
+      { ...coaches[3], id: "lower-b", location: "Islamabad", rank: 4 },
+    ];
+    const interpretation = interpretCoachQuery("coach in Lahore");
+    const firstProfiles = ["2026-08-08", "2026-08-09"].map(
+      (rotationSeed) => recommendCoaches(mixed, interpretation, { rotationSeed })[0].coach.id,
+    );
+
+    expect(new Set(firstProfiles)).toEqual(new Set(["ali-majid2", "tied-peer"]));
+  });
+
   it("returns every coach, ranks explicit matches first, and explains them qualitatively", () => {
     const interpretation = interpretCoachQuery("affordable beginner cricket coach in Lahore on Saturday");
     const ranked = recommendCoaches(coaches, interpretation);

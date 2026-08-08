@@ -12,6 +12,13 @@ describe("reported interface regressions", () => {
     expect(css).not.toMatch(/input,\s*textarea[^\{]*\{[^}]*cursor:\s*text/);
   });
 
+  it("uses wide responsive shells instead of leaving large unused desktop margins", () => {
+    expect(css).toMatch(/\.container\s*\{[^}]*width:\s*min\(2400px,\s*calc\(100%\s*-\s*clamp\(24px,\s*4vw,\s*80px\)\)\)/);
+    expect(css).toMatch(/\.member-account-main\s*\{[^}]*width:\s*min\(2400px,\s*calc\(100%\s*-\s*clamp\(24px,\s*4vw,\s*80px\)\)\)/);
+    expect(css).toMatch(/\.coach-profile-main\s*\{[^}]*width:\s*min\(2400px,\s*calc\(100%\s*-\s*clamp\(24px,\s*4vw,\s*80px\)\)\)/);
+    expect(css).toMatch(/@media\s*\(max-width:\s*1100px\)\s*\{[\s\S]*?\.coach-earnings-summary\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  });
+
   it("gives the coach specialty its own spaced line below the name", () => {
     expect(profile).toContain('className="coach-profile-specialty"');
     expect(css).toMatch(/\.coach-profile-specialty\s*\{[^}]*margin-top:\s*(?:1[2-9]|[2-9]\d)px/);

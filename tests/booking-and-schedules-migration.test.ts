@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 const sql = readFileSync("supabase/migrations/20260806164000_booking_and_schedules.sql", "utf8");
 const safetySql = readFileSync("supabase/migrations/20260806165000_booking_safety_completion.sql", "utf8");
 const conflictSql = readFileSync("supabase/migrations/20260807051000_booking_request_slot_conflict_message.sql", "utf8");
+const refundSql = readFileSync("supabase/migrations/20260808010000_demo_payment_totals_and_refunds.sql", "utf8");
 
 describe("booking and schedule migration", () => {
   it("keeps booking writes behind authenticated RPCs and RLS", () => {
@@ -81,5 +82,17 @@ describe("booking and schedule migration", () => {
     expect(safetySql).toMatch(/on delete cascade/i);
     expect(safetySql).toMatch(/revoke all on function public\.set_coach_booking_meeting_details/i);
     expect(safetySql).toMatch(/slot\.ends_at > clock_timestamp\(\)/i);
+  });
+
+  it("timestamps demo payments and records eligible demo refunds atomically", () => {
+    expect(refundSql).toMatch(/payment_recorded_at timestamptz/i);
+    expect(refundSql).toMatch(/refunded_at timestamptz/i);
+    expect(refundSql).toMatch(/payment_status in \('NOT_COLLECTED', 'DEMO_PAID', 'DEMO_REFUNDED'\)/i);
+    expect(refundSql).toMatch(/record_demo_booking_payment[\s\S]*status not in \('CONFIRMED', 'COMPLETED'\)[\s\S]*payment_recorded_at = timezone\('utc', now\(\)\)/i);
+    expect(refundSql).not.toMatch(/update public\.coach_bookings\s+set payment_recorded_at/i);
+    expect(refundSql).not.toMatch(/refunded_at\s*=\s*coalesce\([^;]*(?:cancelled_at|updated_at)/i);
+    expect(refundSql).toMatch(/set payment_status = 'DEMO_REFUNDED',[\s\S]*refunded_at = timezone\('utc', now\(\)\)/i);
+    expect(refundSql).toMatch(/cancel_coach_booking[\s\S]*FULL_REFUND_DUE[\s\S]*payment_status = case[\s\S]*DEMO_REFUNDED[\s\S]*refunded_at = case/i);
+    expect(refundSql).toMatch(/list_my_coach_schedule[\s\S]*payment_recorded_at[\s\S]*refunded_at/i);
   });
 });

@@ -16,6 +16,10 @@ export type DiscoveryFilters = {
   day?: string;
   tags: string[];
 };
+export type DiscoveryVocabulary = {
+  sports?: string[];
+  cities?: string[];
+};
 export type CoachQueryInterpretation = {
   original: string;
   filters: DiscoveryFilters;
@@ -30,6 +34,19 @@ export type Recommendation = {
   label: "Strong match" | "Good match" | "Possible match" | null;
   reasons: string[];
 };
+
+export const RECOMMENDATION_WEIGHTS = {
+  sport: 100,
+  focusTag: 25,
+  level: 20,
+  city: 20,
+  format: 20,
+  budget: 15,
+  day: 10,
+  keyword: 3,
+  keywordCap: 15,
+  geminiNudgeCap: 4,
+} as const;
 
 type ConceptMap = Record<string, readonly string[]>;
 
@@ -62,16 +79,16 @@ const levelAliases: ConceptMap = {
 
 const formatAliases: ConceptMap = {
   Online: ["online", "virtual", "remote"],
-  "In person": ["in person", "face to face", "offline"],
+  "In person": ["in person", "face to face", "offline", "one to one", "one on one", "physical session"],
 };
 
 const tagAliases: ConceptMap = {
   Batting: ["batting", "batsman", "batter"],
   Serving: ["serving", "serve"],
   "Match preparation": ["match prep", "match preparation", "competition prep"],
-  Mobility: ["mobility", "flexibility"],
+  Mobility: ["mobility", "flexibility", "recovery", "rehab", "rehabilitation"],
   Footwork: ["footwork", "movement"],
-  Conditioning: ["conditioning", "stamina"],
+  Conditioning: ["conditioning", "stamina", "weight loss", "lose weight", "fat loss"],
   Shooting: ["shooting", "shot technique"],
   "Ball handling": ["ball handling", "dribbling"],
 };
@@ -104,6 +121,36 @@ function normalize(value: string) {
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function withVocabulary(base: ConceptMap, values: string[] = []) {
+  const concepts: Record<string, string[]> = Object.fromEntries(
+    Object.entries(base).map(([concept, aliases]) => [concept, [...aliases]]),
+  );
+  for (const value of values) {
+    const catalogConcept = value.trim();
+    const normalizedCatalogConcept = normalize(catalogConcept);
+    if (!normalizedCatalogConcept) continue;
+    const existingConcept = Object.keys(concepts).find((concept) => normalize(concept) === normalizedCatalogConcept);
+    const targetConcept = existingConcept ?? catalogConcept;
+    for (const concept of Object.keys(concepts)) {
+      if (concept === targetConcept) continue;
+      concepts[concept] = concepts[concept].filter((alias) => normalize(alias) !== normalizedCatalogConcept);
+    }
+    concepts[targetConcept] = [...new Set([...(concepts[targetConcept] ?? []), normalizedCatalogConcept])];
+  }
+  return concepts;
+}
+
+function naturalBudget(input: string) {
+  const match = input.toLowerCase().match(
+    /\b(?:under|below|less\s+than|up\s+to|max(?:imum)?|budget(?:\s+of)?|around)\s*(?:pkr|rs\.?|rupees?)?\s*([0-9][0-9,]*(?:\.[0-9]+)?\s*k?)\b/i,
+  );
+  if (!match) return undefined;
+  const token = match[1].replace(/[\s,]/g, "").toLowerCase();
+  const multiplier = token.endsWith("k") ? 1000 : 1;
+  const amount = Number(token.replace(/k$/, "")) * multiplier;
+  return Number.isFinite(amount) && amount >= 500 && amount <= 1_000_000 ? Math.round(amount) : undefined;
 }
 
 type ConceptMatch = {
@@ -196,6 +243,7 @@ function removeRecognized(query: string, groups: ConceptMatch[][]) {
   const aliases = groups.flat().map((entry) => entry.alias).sort((first, second) => second.length - first.length);
   for (const alias of aliases) residual = residual.replace(new RegExp(`\\s${escapeRegExp(alias)}(?=\\s)`, "g"), " ");
   return residual
+    .replace(/\b(?:under|below|less than|up to|max(?:imum)?|budget(?: of)?|around)\s*(?:pkr|rs|rupees?)?\s*[0-9][0-9\s]*k?\s*(?:pkr|rs|rupees?)?\b/g, " ")
     .replace(/\b(?:cheap|affordable|budget|low cost|below|less than|under)\b/g, " ")
     .replace(/\b\d{3,6}\b/g, " ")
     .replace(/\s+/g, " ")
@@ -204,10 +252,10 @@ function removeRecognized(query: string, groups: ConceptMatch[][]) {
     .filter((term) => term.length > 1 && !stopWords.has(term));
 }
 
-export function interpretCoachQuery(input: string): CoachQueryInterpretation {
+export function interpretCoachQuery(input: string, vocabulary: DiscoveryVocabulary = {}): CoachQueryInterpretation {
   const query = normalize(input);
-  const sports = aliasesIn(query, sportAliases);
-  const cities = aliasesIn(query, cityAliases);
+  const sports = aliasesIn(query, withVocabulary(sportAliases, vocabulary.sports));
+  const cities = aliasesIn(query, withVocabulary(cityAliases, vocabulary.cities));
   const levels = aliasesIn(query, levelAliases);
   const formats = aliasesIn(query, formatAliases);
   const tags = aliasesIn(query, tagAliases);
@@ -220,8 +268,7 @@ export function interpretCoachQuery(input: string): CoachQueryInterpretation {
   if (new Set(levels.map((entry) => entry.concept)).size > 1) conflicts.push("Conflicting experience levels found. Choose one level.");
   if (new Set(days.map((entry) => entry.concept)).size > 1) conflicts.push("Multiple preferred days found. Choose one day for a stricter match.");
 
-  const budgetMatch = query.match(/\b(?:under|below|less than)\s*(?:rs\s*)?(\d{3,6})\b/);
-  const maxPrice = budgetMatch ? Number(budgetMatch[1]) : undefined;
+  const maxPrice = naturalBudget(input);
   const affordability = /\b(?:cheap|affordable|budget|low cost)\b/.test(query);
   const groups = [sports, cities, levels, formats, tags, days];
 
@@ -248,8 +295,31 @@ function includesCaseInsensitive(values: string[], target: string) {
   return values.some((value) => normalize(value) === normalizedTarget);
 }
 
-export function recommendCoaches(coaches: Coach[], interpretation: CoachQueryInterpretation): Recommendation[] {
+export function fairDailyTieOrder(ids: string[], rotationSeed = new Date().toISOString().slice(0, 10)) {
+  const stableIds = [...ids].sort((first, second) => first.localeCompare(second));
+  const parsedSeed = Date.parse(`${rotationSeed}T00:00:00Z`);
+  const dayNumber = Number.isFinite(parsedSeed) ? Math.floor(parsedSeed / 86_400_000) : 0;
+  const rotationOffset = stableIds.length > 0 ? ((dayNumber % stableIds.length) + stableIds.length) % stableIds.length : 0;
+  return new Map(stableIds.map((id, index) => [id, (index - rotationOffset + stableIds.length) % stableIds.length]));
+}
+
+export function fairDailyBucketTieOrder(entries: Array<{ id: string; bucket: string }>, rotationSeed?: string) {
+  const buckets = new Map<string, string[]>();
+  for (const entry of entries) buckets.set(entry.bucket, [...(buckets.get(entry.bucket) ?? []), entry.id]);
+  const order = new Map<string, number>();
+  for (const ids of buckets.values()) {
+    for (const [id, rank] of fairDailyTieOrder(ids, rotationSeed)) order.set(id, rank);
+  }
+  return order;
+}
+
+export function recommendCoaches(
+  coaches: Coach[],
+  interpretation: CoachQueryInterpretation,
+  options: { rotationSeed?: string } = {},
+): Recommendation[] {
   const filters = interpretation.filters;
+  const rotationSeed = options.rotationSeed ?? new Date().toISOString().slice(0, 10);
   const recommendations = coaches.map((coach): Recommendation => {
     let score = 0;
     const reasons: string[] = [];
@@ -257,37 +327,37 @@ export function recommendCoaches(coaches: Coach[], interpretation: CoachQueryInt
     const eligible = sportMatch;
 
     if (filters.sport && sportMatch) {
-      score += 100;
+      score += RECOMMENDATION_WEIGHTS.sport;
       reasons.push(`Coaches ${filters.sport}`);
     }
     for (const tag of filters.tags) {
       const searchableTags = [...(Array.isArray(coach.tags) ? coach.tags : []), coach.specialty];
       if (searchableTags.some((value) => normalize(value).includes(normalize(tag)))) {
-        score += 25;
+        score += RECOMMENDATION_WEIGHTS.focusTag;
         reasons.push(`Focuses on ${tag}`);
       }
     }
     if (filters.level && includesCaseInsensitive(Array.isArray(coach.levels) ? coach.levels : [], filters.level)) {
-      score += 20;
+      score += RECOMMENDATION_WEIGHTS.level;
       reasons.push(`Supports ${filters.level.toLowerCase()} athletes`);
     }
     if (filters.city && normalize(coach.location) === normalize(filters.city)) {
-      score += 20;
+      score += RECOMMENDATION_WEIGHTS.city;
       reasons.push(`Based in ${filters.city}`);
     }
     if (filters.format) {
       const match = filters.format === "Online" ? coach.offersOnline : coach.offersInPerson;
       if (match) {
-        score += 20;
+        score += RECOMMENDATION_WEIGHTS.format;
         reasons.push(`Offers ${filters.format.toLowerCase()} coaching`);
       }
     }
     if (filters.maxPrice !== undefined && coach.price <= filters.maxPrice) {
-      score += 15;
+      score += RECOMMENDATION_WEIGHTS.budget;
       reasons.push(`Within your stated budget of Rs ${filters.maxPrice.toLocaleString("en-PK")}`);
     }
     if (filters.day && includesCaseInsensitive(Array.isArray(coach.availability) ? coach.availability : [], filters.day)) {
-      score += 10;
+      score += RECOMMENDATION_WEIGHTS.day;
       reasons.push(`Lists ${filters.day} availability`);
     }
 
@@ -296,7 +366,7 @@ export function recommendCoaches(coaches: Coach[], interpretation: CoachQueryInt
     ].join(" "));
     const keywordMatches = interpretation.keywords.filter((keyword) => searchable.includes(normalize(keyword)));
     if (keywordMatches.length > 0) {
-      score += Math.min(15, keywordMatches.length * 3);
+      score += Math.min(RECOMMENDATION_WEIGHTS.keywordCap, keywordMatches.length * RECOMMENDATION_WEIGHTS.keyword);
       reasons.push(`Profile mentions ${keywordMatches.slice(0, 3).join(", ")}`);
     }
 
@@ -305,11 +375,15 @@ export function recommendCoaches(coaches: Coach[], interpretation: CoachQueryInt
       : score >= 80 ? "Strong match" : score >= 35 ? "Good match" : "Possible match";
     return { coach, score, eligible, label, reasons };
   });
+  const fairTieOrder = fairDailyBucketTieOrder(recommendations.map((entry) => ({
+    id: String(entry.coach.id),
+    bucket: `${entry.eligible}:${entry.score}:${filters.affordability ? entry.coach.price : "any-price"}`,
+  })), rotationSeed);
 
   return recommendations.sort((first, second) => {
     if (first.eligible !== second.eligible) return first.eligible ? -1 : 1;
     if (second.score !== first.score) return second.score - first.score;
     if (filters.affordability && first.coach.price !== second.coach.price) return first.coach.price - second.coach.price;
-    return first.coach.rank - second.coach.rank || String(first.coach.id).localeCompare(String(second.coach.id));
+    return (fairTieOrder.get(String(first.coach.id)) ?? 0) - (fairTieOrder.get(String(second.coach.id)) ?? 0);
   });
 }

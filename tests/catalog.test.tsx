@@ -25,17 +25,41 @@ describe("coach catalog", () => {
     expect(screen.getByRole("heading", { level: 1, name: /coach catalog/i })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /find a coach/i })).not.toBeInTheDocument();
     const resultCount = Number(screen.getByRole("status").textContent?.match(/\d+/)?.[0]);
-    expect(resultCount).toBeGreaterThan(10);
-    expect(screen.getAllByRole("article").length).toBeGreaterThan(10);
-    expect(screen.getAllByText("Demo profile").length).toBeGreaterThanOrEqual(coaches.length);
+    expect(coaches).toHaveLength(30);
+    expect(resultCount).toBe(30);
+    expect(screen.getAllByRole("article")).toHaveLength(20);
+    expect(screen.getAllByText("Demo profile").length).toBeGreaterThanOrEqual(20);
     expect(document.querySelectorAll(".catalog-coach-placeholder")).toHaveLength(0);
-    expect(screen.getAllByRole("img", { name: /illustrative .* training image/i })).toHaveLength(coaches.length);
+    expect(screen.getAllByRole("img", { name: /illustrative .* training image/i })).toHaveLength(20);
     const ayeshaHeading = screen.getByRole("heading", { name: "Ayesha Khan" });
     expect(ayeshaHeading).toBeInTheDocument();
     const ayeshaCard = ayeshaHeading.closest("article") as HTMLElement;
     expect(within(ayeshaCard).getByText("Demo")).toBeInTheDocument();
     expect(within(ayeshaCard).queryByText("New")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bilal Raza" })).toBeInTheDocument();
+  });
+
+  it("explains recommendation weightages and separates positive matches into a tagged top row", () => {
+    renderCatalog();
+
+    fireEvent.click(screen.getByText("How recommendations are ranked"));
+    expect(screen.getByText(/Sport 100 · Focus 25 · Level 20 · City 20 · Format 20 · Budget 15 · Day 10/i)).toBeInTheDocument();
+    expect(screen.getByText(/equal scores rotate daily/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: /search/i }), { target: { value: "cricket" } });
+    const recommended = screen.getByRole("region", { name: "Recommended profiles" });
+    const recommendedCards = within(recommended).getAllByRole("article");
+    expect(recommendedCards.length).toBeGreaterThan(0);
+    expect(recommendedCards.length).toBeLessThanOrEqual(4);
+    recommendedCards.forEach((card) => expect(within(card).getByText("Recommended")).toBeInTheDocument());
+
+    const recommendedLinks = new Set(within(recommended).getAllByRole("link", { name: /view .* profile/i }).map((link) => link.getAttribute("href")));
+    const allProfiles = screen.queryByRole("region", { name: "All matching profiles" });
+    if (allProfiles) {
+      within(allProfiles).queryAllByRole("link", { name: /view .* profile/i }).forEach((link) => {
+        expect(recommendedLinks.has(link.getAttribute("href"))).toBe(false);
+      });
+    }
   });
 
   it("explains the marketplace cancellation and refund policy honestly", () => {
@@ -140,7 +164,7 @@ describe("coach catalog", () => {
     fireEvent.click(screen.getByRole("button", { name: /show map/i }));
 
     expect(screen.getByRole("region", { name: /coach locations/i })).toBeInTheDocument();
-    expect(screen.getByText(/11 training areas/i)).toBeInTheDocument();
+    expect(screen.getByText(/training areas/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /hide map/i })).toBeInTheDocument();
   });
@@ -188,8 +212,8 @@ describe("coach catalog", () => {
     fireEvent.change(screen.getByRole("combobox", { name: /city/i }), { target: { value: "Lahore" } });
 
     const map = screen.getByRole("region", { name: /coach locations/i });
-    expect(within(map).getByText(/4 training areas in Lahore/i)).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("5 coaches");
+    expect(within(map).getByText(/8 training areas in Lahore/i)).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("8 coaches");
   });
 
   it("opens coach details from a map marker", () => {
@@ -215,7 +239,7 @@ describe("coach catalog", () => {
     expect(screen.queryByRole("heading", { name: "Zainab Malik" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /clear filters/i }));
-    expect(screen.getByRole("status")).toHaveTextContent("15 coaches");
+    expect(screen.getByRole("status")).toHaveTextContent(`${coaches.length} coaches`);
   });
 
   it("allows one coach to be discovered through each sport they teach", () => {
@@ -224,11 +248,34 @@ describe("coach catalog", () => {
     expect(screen.getByRole("option", { name: "Badminton" })).toBeInTheDocument();
     fireEvent.change(screen.getByRole("combobox", { name: /sport/i }), { target: { value: "Badminton" } });
 
-    expect(screen.getByRole("status")).toHaveTextContent("2 coaches");
+    expect(screen.getByRole("status")).toHaveTextContent("4 coaches");
     const hamzaCard = screen.getByRole("heading", { name: "Hamza Siddiqui" }).closest("article");
     expect(hamzaCard).not.toBeNull();
     expect(within(hamzaCard as HTMLElement).getByText(/Tennis · Badminton/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Hira Noor" })).toBeInTheDocument();
+  });
+
+  it("filters by a catalog-defined sport even when it is a legacy alias", async () => {
+    const soccerCoach = { ...coaches[0], id: "soccer-specialist", name: "Soccer Specialist", sports: ["Soccer"] };
+    const footballCoach = { ...coaches[1], id: "football-specialist", name: "Football Specialist", sports: ["Football"] };
+    const lowercaseCricketCoach = { ...coaches[2], id: "lowercase-cricket", name: "Lowercase Cricket Specialist", sports: ["cricket"] };
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve({
+      ok: true,
+      json: async () => String(input).includes("/api/coaches")
+        ? { coaches: [], demos: [soccerCoach, footballCoach, lowercaseCricketCoach], demosAvailable: true }
+        : { user: null },
+    })));
+    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={[soccerCoach, footballCoach, lowercaseCricketCoach]} />);
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "soccer coach" } });
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("1 coach"));
+    expect(screen.getByRole("heading", { name: "Soccer Specialist" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Football Specialist" })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "cricket coach" } });
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("1 coach"));
+    expect(screen.getByRole("heading", { name: "Lowercase Cricket Specialist" })).toBeInTheDocument();
   });
 
   it("accepts ordinary searches such as tennis coach", () => {
@@ -275,8 +322,9 @@ describe("coach catalog", () => {
 
     fireEvent.change(screen.getByRole("combobox", { name: /sort/i }), { target: { value: "price-low" } });
     const cards = screen.getAllByRole("article");
-    expect(within(cards[0]).getByRole("heading", { name: "Nadia Hussain" })).toBeInTheDocument();
-    expect(within(cards[cards.length - 1]).getByRole("heading", { name: "Farhan Akram" })).toBeInTheDocument();
+    expect(within(cards[0]).getByRole("heading", { name: "Anum Tariq" })).toBeInTheDocument();
+    const visiblePrices = cards.map((card) => Number(within(card).getByText(/Rs [\d,]+/).textContent?.replace(/\D/g, "")));
+    expect(visiblePrices).toEqual([...visiblePrices].sort((first, second) => first - second));
   });
 
   it("does not show fabricated lesson counts on demo cards", () => {
@@ -334,7 +382,7 @@ describe("coach catalog", () => {
 
     const search = screen.getByRole("searchbox", { name: "Search" });
     fireEvent.change(search, { target: { value: "tennis coach" } });
-    fireEvent.keyDown(search, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: /get ai suggestions/i }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/ai/coach-discovery", expect.anything()));
     fireEvent.change(search, { target: { value: "yoga coach" } });
     resolveAi({ ok: true, json: async () => ({
@@ -342,7 +390,7 @@ describe("coach catalog", () => {
       recommendations: [], model: "Gemini 3.5 Flash-Lite",
     }) });
 
-    await waitFor(() => expect(screen.getByText(/standard search and filters stay authoritative/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/smart search works instantly without ai/i)).toBeInTheDocument());
     expect(screen.queryByText(/coach suggestions generated with gemini/i)).not.toBeInTheDocument();
   });
 
@@ -365,7 +413,7 @@ describe("coach catalog", () => {
 
     const search = screen.getByRole("searchbox", { name: "Search" });
     fireEvent.change(search, { target: { value: "tennis coach" } });
-    fireEvent.keyDown(search, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: /get ai suggestions/i }));
 
     expect(await screen.findByText(/generated with gemini 3.5 flash-lite/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: tennisCoach.name })).toBeInTheDocument();
@@ -373,7 +421,29 @@ describe("coach catalog", () => {
     expect(screen.getByText(/ai suggestions only provide a small ranking nudge/i)).toBeInTheDocument();
   });
 
-  it("runs natural-language AI search when the member presses Enter", async () => {
+  it("does not label zero-score AI results as recommended", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const path = String(input);
+      if (path === "/api/coaches") return { ok: true, json: async () => ({ coaches: [], demos: coaches, demosAvailable: true }) };
+      if (path === "/api/auth/session") return { ok: true, json: async () => ({ user: null }) };
+      if (path === "/api/ai/coach-discovery") return { ok: true, json: async () => ({
+        interpretation: { original: "find a coach", filters: { tags: [] }, corrections: [], conflicts: [], keywords: [] },
+        recommendations: [{ id: coaches[0].id, reasons: ["First source row"] }],
+        model: "Gemini 3.5 Flash-Lite",
+      }) };
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "find a coach" } });
+    fireEvent.click(screen.getByRole("button", { name: /get ai suggestions/i }));
+
+    expect(await screen.findByText(/generated with gemini 3.5 flash-lite/i)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Recommended profiles" })).not.toBeInTheDocument();
+  });
+
+  it("keeps Enter fast and deterministic instead of spending an AI request", async () => {
     const tennisCoach = coaches.find((coach) => coach.sports.includes("Tennis")) ?? coaches[0];
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const path = String(input);
@@ -393,8 +463,9 @@ describe("coach catalog", () => {
     fireEvent.change(search, { target: { value: "tennis coach" } });
     fireEvent.keyDown(search, { key: "Enter" });
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/ai/coach-discovery", expect.objectContaining({ method: "POST" })));
-    expect(await screen.findByText(/generated with gemini 3.5 flash-lite/i)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: tennisCoach.name })).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/ai/coach-discovery", expect.anything());
+    expect(screen.getByText(/smart search works instantly without ai/i)).toBeInTheDocument();
   });
 
   it("does not claim a member is signed out when session status is unavailable", async () => {

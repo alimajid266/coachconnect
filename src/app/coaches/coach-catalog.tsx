@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import CoachMap from "@/app/coaches/coach-map";
 import SiteHeader from "@/components/site-header";
-import { interpretCoachQuery, recommendCoaches, type CoachQueryInterpretation, type DiscoveryFilters } from "@/lib/coach-discovery";
+import { RECOMMENDATION_WEIGHTS, interpretCoachQuery, recommendCoaches, type CoachQueryInterpretation, type DiscoveryFilters, type Recommendation } from "@/lib/coach-discovery";
 import { coaches as demoCoaches, formatCoachPrice, type Coach } from "@/lib/coaches";
 
 type Props = {
@@ -16,6 +16,77 @@ type Props = {
 
 type SortOption = "recommended" | "rating" | "price-low" | "price-high";
 const PAGE_SIZE = 20;
+const sameCatalogValue = (first: string, second: string) => first.trim().toLocaleLowerCase("en") === second.trim().toLocaleLowerCase("en");
+const includesCatalogValue = (values: string[], target: string) => values.some((value) => sameCatalogValue(value, target));
+
+function CatalogCoachCard({
+  coach,
+  recommendation,
+  href,
+  recommended = false,
+}: {
+  coach: Coach;
+  recommendation?: Recommendation;
+  href: string;
+  recommended?: boolean;
+}) {
+  return (
+    <article className={`catalog-card${recommended ? " catalog-card-recommended" : ""}`}>
+      <div className="catalog-card-image">
+        {coach.image ? (
+          <Image
+            src={coach.image}
+            alt={coach.isDemo
+              ? `Illustrative ${coach.sports.join(" and ")} training image for Demo profile`
+              : `${coach.name}, ${coach.sports.join(" and ")} coach`}
+            fill
+            sizes="(max-width: 680px) 100vw, (max-width: 1050px) 50vw, 33vw"
+            unoptimized={coach.image.startsWith("http")}
+          />
+        ) : (
+          <div className="catalog-coach-placeholder" aria-hidden="true">
+            {coach.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
+          </div>
+        )}
+        <span>{coach.badge}</span>
+      </div>
+      <div className="catalog-card-body">
+        {recommended && <span className="catalog-recommended-tag">Recommended</span>}
+        <div className="catalog-card-title">
+          <h2>{coach.name}</h2>
+          {coach.isDemo
+            ? <span>Demo</span>
+            : coach.rating === null
+              ? <span>New</span>
+              : <span aria-label={`${coach.rating} out of 5 stars`}>★ {coach.rating}</span>}
+        </div>
+        {recommendation?.label && (
+          <div className="catalog-match-summary">
+            <b>{recommendation.label}</b>
+            {recommendation.reasons.length > 0 && <span>{recommendation.reasons.slice(0, 3).join(" · ")}</span>}
+          </div>
+        )}
+        <p>{coach.area !== "Online" && coach.area !== coach.location ? `${coach.area}, ` : ""}{coach.location} · {coach.sports.join(" · ")} · {coach.mode}</p>
+        <strong>{coach.specialty}</strong>
+        <div className="catalog-card-footer">
+          <span><b>{formatCoachPrice(coach.price)}</b> per session</span>
+          <span>{coach.isDemo
+            ? "Demo profile"
+            : coach.lessonCount > 0
+              ? `${coach.lessonCount} lessons`
+              : coach.rating === null ? "New coach" : `${coach.reviewCount} reviews`}</span>
+        </div>
+        <Link
+          className="catalog-profile-button"
+          aria-label={`View ${coach.name}'s profile`}
+          href={href}
+        >
+          View profile
+        </Link>
+      </div>
+    </article>
+  );
+}
 
 export default function CoachCatalog({ initialQuery, initialCity, initialCoaches = [] }: Props) {
   const [query, setQuery] = useState(initialQuery);
@@ -89,7 +160,10 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
     ? "any"
     : city;
 
-  const deterministicInterpretation = useMemo(() => interpretCoachQuery(query), [query]);
+  const deterministicInterpretation = useMemo(() => interpretCoachQuery(query, {
+    sports: availableSports,
+    cities: availableCities,
+  }), [availableCities, availableSports, query]);
   const interpretation = deterministicInterpretation;
   const effectiveFilters: DiscoveryFilters = useMemo(() => ({
     sport: dismissedInterpretations.includes("sport") ? undefined : interpretation.filters.sport,
@@ -113,14 +187,14 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
     const aiBonus = (coachId: string) => {
       const rank = ranked.get(coachId)?.index;
       if (rank === undefined) return 0;
-      return Math.max(0, 4 - (rank * 4 / Math.max(1, aiRanking.length)));
+      return Math.max(0, RECOMMENDATION_WEIGHTS.geminiNudgeCap - (rank * RECOMMENDATION_WEIGHTS.geminiNudgeCap / Math.max(1, aiRanking.length)));
     };
     return deterministicRecommendations.map((entry) => {
       const ai = ranked.get(entry.coach.id);
       return ai ? {
         ...entry,
         reasons: [...entry.reasons, ...ai.reasons.slice(0, 1).map((reason) => `AI suggestion: ${reason}`)].slice(0, 3),
-        label: entry.label ?? "Possible match" as const,
+        label: entry.label,
       } : entry;
     }).sort((first, second) => (
       (second.score + aiBonus(second.coach.id)) - (first.score + aiBonus(first.coach.id))
@@ -130,14 +204,14 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
 
   const visibleRecommendations = useMemo(() => {
     const matches = recommendations.filter(({ coach }) => (
-      (activeCity === "any" || coach.location === activeCity)
-      && (sport === "any" || coach.sports.includes(sport))
-      && (!effectiveFilters.sport || coach.sports.includes(effectiveFilters.sport))
-      && (!effectiveFilters.city || coach.location === effectiveFilters.city)
-      && (!effectiveFilters.level || coach.levels.includes(effectiveFilters.level))
+      (activeCity === "any" || sameCatalogValue(coach.location, activeCity))
+      && (sport === "any" || includesCatalogValue(coach.sports, sport))
+      && (!effectiveFilters.sport || includesCatalogValue(coach.sports, effectiveFilters.sport))
+      && (!effectiveFilters.city || sameCatalogValue(coach.location, effectiveFilters.city))
+      && (!effectiveFilters.level || includesCatalogValue(coach.levels, effectiveFilters.level))
       && (!effectiveFilters.maxPrice || coach.price <= effectiveFilters.maxPrice)
-      && (!effectiveFilters.day || coach.availability.includes(effectiveFilters.day))
-      && effectiveFilters.tags.every((tag) => coach.tags.includes(tag))
+      && (!effectiveFilters.day || includesCatalogValue(coach.availability, effectiveFilters.day))
+      && effectiveFilters.tags.every((tag) => includesCatalogValue(coach.tags, tag))
       && (!effectiveFilters.format
         || (effectiveFilters.format === "Online" && coach.offersOnline)
         || (effectiveFilters.format === "In person" && coach.offersInPerson))
@@ -158,7 +232,14 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
   const pageCount = Math.max(1, Math.ceil(visibleRecommendations.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, pageCount);
   const pagedRecommendations = useMemo(() => visibleRecommendations.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE), [safePage, visibleRecommendations]);
-  const visibleCoaches = useMemo(() => pagedRecommendations.map((entry) => entry.coach), [pagedRecommendations]);
+  const recommendedProfiles = useMemo(() => (
+    safePage === 1 && sort === "recommended"
+      ? pagedRecommendations.filter((entry) => entry.eligible && Boolean(entry.label) && entry.score > 0).slice(0, 4)
+      : []
+  ), [pagedRecommendations, safePage, sort]);
+  const recommendedIds = useMemo(() => new Set(recommendedProfiles.map((entry) => entry.coach.id)), [recommendedProfiles]);
+  const allPageRecommendations = useMemo(() => pagedRecommendations.filter((entry) => !recommendedIds.has(entry.coach.id)), [pagedRecommendations, recommendedIds]);
+  const mapCoaches = useMemo(() => pagedRecommendations.map((entry) => entry.coach), [pagedRecommendations]);
   const recommendationById = useMemo(() => new Map(pagedRecommendations.map((entry) => [entry.coach.id, entry])), [pagedRecommendations]);
   const correctionLabel = (value: string, fallback: string) => {
     const correction = interpretation.corrections.find((entry) => entry.target === value);
@@ -246,9 +327,8 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
                 setCurrentPage(1); setAiInterpretation(null); setAiRanking(null); setAiStatus("idle"); setAiError("");
               }}
               onKeyDown={(event) => {
-                if (event.key === "Enter" && query.trim().length >= 2 && aiStatus !== "loading") {
+                if (event.key === "Enter") {
                   event.preventDefault();
-                  void runAiSearch();
                 }
               }}
             />
@@ -292,11 +372,17 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
           <div>
             <span>{aiStatus === "ready"
               ? "Coach suggestions generated with Gemini 3.5 Flash-Lite. AI suggestions only provide a small ranking nudge; your search filters stay authoritative."
-              : "Standard search and filters stay authoritative. Gemini can suggest the closest profiles with only a small ranking influence."}</span>
+              : "Smart search works instantly without AI. Gemini is optional and can suggest the closest profiles with only a small ranking influence."}</span>
             {aiStatus === "ready" && aiSuggestedCriteria.length > 0 && <small>Gemini read your request as: {aiSuggestedCriteria.join(", ")}. These are suggestion signals, not active filters.</small>}
           </div>
           {aiError && <p role="alert">{aiError} Showing standard search results instead.</p>}
         </div>
+
+        <details className="catalog-ranking-method">
+          <summary>How recommendations are ranked</summary>
+          <p>Sport 100 · Focus 25 · Level 20 · City 20 · Format 20 · Budget 15 · Day 10 · Keywords up to 15.</p>
+          <p>Gemini can add at most 4 points. Equal scores rotate daily for fair visibility, so no account keeps a permanent top position.</p>
+        </details>
 
         {(interpretationChips.length > 0 || interpretation.conflicts.length > 0) && (
           <section className="catalog-interpretation" aria-label="Search interpretation">
@@ -337,70 +423,46 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
           <p className="catalog-data-warning" role="alert">The approved coach catalog is temporarily unavailable. Please refresh and try again.</p>
         )}
 
-        <div className={`catalog-content${showMap ? " catalog-content-with-map" : ""}`}>
-          {showMap && <CoachMap city={city} coaches={visibleCoaches} profileHref={profileHref} />}
-          {visibleCoaches.length > 0 ? (
-          <section className="catalog-grid" aria-label="Coach results">
-            {visibleCoaches.map((coach) => {
-              const recommendation = recommendationById.get(coach.id);
-              return (
-              <article className="catalog-card" key={coach.id}>
-                <div className="catalog-card-image">
-                  {coach.image ? (
-                    <Image
-                      src={coach.image}
-                      alt={coach.isDemo
-                        ? `Illustrative ${coach.sports.join(" and ")} training image for Demo profile`
-                        : `${coach.name}, ${coach.sports.join(" and ")} coach`}
-                      fill
-                      sizes="(max-width: 680px) 100vw, (max-width: 1050px) 50vw, 33vw"
-                      unoptimized={coach.image.startsWith("http")}
-                    />
-                  ) : (
-                    <div className="catalog-coach-placeholder" aria-hidden="true">
-                      {coach.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
-                    </div>
-                  )}
-                  <span>{coach.badge}</span>
-                </div>
-                <div className="catalog-card-body">
-                  <div className="catalog-card-title">
-                    <h2>{coach.name}</h2>
-                    {coach.isDemo
-                      ? <span>Demo</span>
-                      : coach.rating === null
-                        ? <span>New</span>
-                        : <span aria-label={`${coach.rating} out of 5 stars`}>★ {coach.rating}</span>}
-                  </div>
-                  {recommendation?.label && (
-                    <div className="catalog-match-summary">
-                      <b>{recommendation.label}</b>
-                      {recommendation.reasons.length > 0 && <span>{recommendation.reasons.slice(0, 3).join(" · ")}</span>}
-                    </div>
-                  )}
-                  <p>{coach.area !== "Online" && coach.area !== coach.location ? `${coach.area}, ` : ""}{coach.location} · {coach.sports.join(" · ")} · {coach.mode}</p>
-                  <strong>{coach.specialty}</strong>
-                  <div className="catalog-card-footer">
-                    <span><b>{formatCoachPrice(coach.price)}</b> per session</span>
-                    <span>{coach.isDemo
-                      ? "Demo profile"
-                      : coach.lessonCount > 0
-                        ? `${coach.lessonCount} lessons`
-                        : coach.rating === null ? "New coach" : `${coach.reviewCount} reviews`}</span>
-                  </div>
-                  <Link
-                    className="catalog-profile-button"
-                    aria-label={`View ${coach.name}'s profile`}
-                    href={profileHref(coach)}
-                  >
-                    View profile
-                  </Link>
-                </div>
-              </article>
-              );
-            })}
+        {recommendedProfiles.length > 0 && (
+          <section className="catalog-recommended" aria-label="Recommended profiles">
+            <div className="catalog-section-heading">
+              <div>
+                <span>Recommended</span>
+                <h2>Top matches for this search</h2>
+              </div>
+              <p>These profiles have the highest positive match scores from your active search criteria.</p>
+            </div>
+            <div className="catalog-grid catalog-recommended-grid">
+              {recommendedProfiles.map((entry) => (
+                <CatalogCoachCard
+                  key={entry.coach.id}
+                  coach={entry.coach}
+                  recommendation={entry}
+                  href={profileHref(entry.coach)}
+                  recommended
+                />
+              ))}
+            </div>
           </section>
-          ) : catalogStatus === "loading" ? (
+        )}
+
+        <div className={`catalog-content${showMap ? " catalog-content-with-map" : ""}`}>
+          {showMap && <CoachMap city={city} coaches={mapCoaches} profileHref={profileHref} />}
+          {pagedRecommendations.length > 0 && allPageRecommendations.length > 0 ? (
+          <section aria-label="All matching profiles">
+            {recommendedProfiles.length > 0 && <h2 className="catalog-all-heading">All other matches</h2>}
+            <div className="catalog-grid">
+              {allPageRecommendations.map((entry) => (
+                <CatalogCoachCard
+                  key={entry.coach.id}
+                  coach={entry.coach}
+                  recommendation={recommendationById.get(entry.coach.id)}
+                  href={profileHref(entry.coach)}
+                />
+              ))}
+            </div>
+          </section>
+          ) : pagedRecommendations.length > 0 ? null : catalogStatus === "loading" ? (
           <section className="catalog-empty">
             <h2>Loading approved coaches</h2>
             <p>Please wait while the latest coach profiles are loaded.</p>
@@ -427,7 +489,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
           <div className="catalog-policy-points">
             <p><strong>At least 24 hours before the session:</strong> cancellation is eligible for a full refund or credit from the coach.</p>
             <p><strong>Less than 24 hours:</strong> the coach&apos;s stated late-cancellation terms apply, unless the coach cancels.</p>
-            <p><strong>Current MVP:</strong> CoachConnect records booking and payment-demo status but does not process real payments. Any eligible refund is completed outside the platform.</p>
+            <p><strong>Current MVP:</strong> CoachConnect automatically records eligible demo refunds but does not process real payments. Any real off-platform refund remains the coach&apos;s responsibility.</p>
           </div>
         </section>
       </main>

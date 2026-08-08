@@ -239,13 +239,25 @@ runIntegration("Supabase account and coach capability policies", () => {
     const unrelatedSchedule = await (winner.userId === athleteOne.userId ? athleteTwo : athleteOne).client.rpc("list_my_coach_schedule");
     expect(unrelatedSchedule.data).not.toContainEqual(expect.objectContaining({ booking_id: bookingId }));
 
+    const paid = await winner.client.rpc("record_demo_booking_payment", { target_booking_id: bookingId });
+    expect(paid.error).toBeNull();
+    expect(paid.data?.payment_status).toBe("DEMO_PAID");
+    expect(paid.data?.payment_recorded_at).toBeTruthy();
+
     const blockedDeletion = await winner.client.rpc("begin_my_account_deletion");
     expect(blockedDeletion.error?.message).toMatch(/booking history must be retained/i);
 
     const cancelled = await winner.client.rpc("cancel_coach_booking", { target_booking_id: bookingId, requested_reason: "Plans changed" });
     expect(cancelled.error).toBeNull();
     expect(cancelled.data?.status).toBe("CANCELLED_BY_ATHLETE");
-    expect(cancelled.data?.payment_status).toBe("NOT_COLLECTED");
+    expect(cancelled.data?.payment_status).toBe("DEMO_REFUNDED");
+    expect(cancelled.data?.refunded_at).toBeTruthy();
+    const refundedSchedule = await winner.client.rpc("list_my_coach_schedule");
+    expect(refundedSchedule.data).toContainEqual(expect.objectContaining({
+      booking_id: bookingId,
+      payment_status: "DEMO_REFUNDED",
+      refund_policy_outcome: "FULL_REFUND_DUE",
+    }));
 
     const directRead = await winner.client.from("coach_bookings").select("id");
     expect(directRead.error).not.toBeNull();
