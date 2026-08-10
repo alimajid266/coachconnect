@@ -22,9 +22,9 @@ CoachConnect is a sports-coach marketplace MVP for adults in Pakistan. The proto
 | Coach profiles | **Live** | Dedicated public profile routes with publication-safe fields |
 | Explainable coach recommendations | **Live in current code** | Saved member preferences rank positive matches first with visible reasons and tags; no AI API call |
 | Natural-language search | **Live in current code** | Deterministically extracts sport, city, level, format, budget, day, and goals; corrections remain editable |
-| Booking system | **Release candidate verified locally** | Conflict-safe request, acceptance, cancellation, completion, participant schedules, private meeting details, and cancellation-policy outcomes are implemented; hosted migration and live verification remain required |
-| Coach availability management | **Release candidate verified locally** | Approved coaches can add and remove slots; database serialization protects booking, suspension, deletion, and cross-role schedule conflicts; hosted migration and live verification remain required |
-| Ratings and reviews | **Planned** | Only reviews tied to completed bookings may become public; demo profiles must not fabricate them |
+| Booking system | **Implemented** | Conflict-safe request, acceptance, cancellation, completion, participant schedules, private meeting details, and cancellation-policy outcomes |
+| Coach availability management | **Implemented** | Approved coaches can add and remove slots; database serialization protects booking, suspension, deletion, and cross-role schedule conflicts |
+| Ratings and reviews | **Implemented** | Athletes may submit one permanent verified review per completed booking; it cannot be edited or submitted twice |
 | Dockerized application | **Implemented locally** | The Next.js application is containerized with a hardened loopback-only Compose workflow; Supabase, Mapbox, and optional Gemini training plans remain managed external services |
 | Maintained documentation | **Required continuously** | Requirements, plan, scope, README, screens, and architecture must change with the code |
 
@@ -120,14 +120,40 @@ The real Supabase policy test in `tests/supabase-auth.integration.test.ts` runs 
 
 ## Docker
 
+Docker packages the CoachConnect **web application** with the Node.js version and production dependencies it needs. This lets another person run the same build without installing Node.js manually. It does not contain member data, secret keys, Supabase, Mapbox, Gemini, or the Vercel deployment.
+
+### Run it with Docker Desktop
+
+1. Install and open [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+2. Download or clone this repository.
+3. Copy `.env.example` to `.env.local` and fill in the required Supabase and Mapbox values. Use a hosted Supabase URL; `127.0.0.1` inside a container points back to the container itself.
+4. From the CoachConnect folder, run:
+
 ```bash
 docker compose up --build -d
 docker compose ps
 ```
 
+5. Open <http://127.0.0.1:3000>.
+
+Useful commands:
+
+```bash
+docker compose logs -f web  # View live application output; press Ctrl+C to leave
+docker compose down         # Stop and remove the CoachConnect container
+docker compose up -d        # Start an already-built container again
+```
+
 Compose optionally reads ignored `.env.local`, publishes only `127.0.0.1:3000`, runs as `node`, uses a read-only root filesystem, drops all Linux capabilities, and enables `no-new-privileges`.
 
 Compose contains the **web application only**. Hosted Supabase (authentication/database), Mapbox, and optional Gemini training-plan generation are external services and are configured through environment variables rather than additional local containers. This is intentional for the Rs 0 hosted MVP.
+
+### Share it safely
+
+- Share the GitHub repository or a ZIP made from the repository.
+- Include `.env.example`; never share or upload `.env.local`.
+- The recipient must supply valid service settings before authentication, maps, and optional AI plans will work.
+- `Dockerfile`, `compose.yaml`, and `.dockerignore` are the complete Docker setup. `docker compose up --build -d` builds it locally, so no prebuilt image is required.
 
 ## Privacy and payments
 

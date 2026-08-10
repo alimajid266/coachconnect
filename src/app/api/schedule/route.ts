@@ -17,7 +17,10 @@ export async function GET(request: NextRequest) {
     if (bookingResult.error || slotResult.error || reviewResult.error) return applyCookies(NextResponse.json({ error: "Schedule is unavailable." }, { status: 503 }));
     const reviews = new Map((Array.isArray(reviewResult.data) ? reviewResult.data : []).map((row) => {
       const record = row as Record<string, unknown>;
-      return [String(record.booking_id), record];
+      return [String(record.booking_id), {
+        review_rating: record.rating,
+        review_body: record.review_body,
+      }];
     }));
     const bookings = Array.isArray(bookingResult.data) ? bookingResult.data.flatMap((row) => {
       const record = row as Record<string, unknown>;

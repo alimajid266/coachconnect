@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 const sql = readFileSync("supabase/migrations/20260806164000_booking_and_schedules.sql", "utf8");
 const safetySql = readFileSync("supabase/migrations/20260806165000_booking_safety_completion.sql", "utf8");
 const conflictSql = readFileSync("supabase/migrations/20260807051000_booking_request_slot_conflict_message.sql", "utf8");
+const reviewSql = readFileSync("supabase/migrations/20260807053000_availability_completion_reviews.sql", "utf8");
 const refundSql = readFileSync("supabase/migrations/20260808010000_demo_payment_totals_and_refunds.sql", "utf8");
 
 describe("booking and schedule migration", () => {
@@ -82,6 +83,13 @@ describe("booking and schedule migration", () => {
     expect(safetySql).toMatch(/on delete cascade/i);
     expect(safetySql).toMatch(/revoke all on function public\.set_coach_booking_meeting_details/i);
     expect(safetySql).toMatch(/slot\.ends_at > clock_timestamp\(\)/i);
+  });
+
+  it("keeps submitted reviews immutable at the database boundary", () => {
+    expect(reviewSql).toMatch(/create table public\.coach_reviews[\s\S]*booking_id uuid primary key/i);
+    expect(reviewSql).toMatch(/submit_coach_review[\s\S]*for update[\s\S]*insert into public\.coach_reviews/i);
+    expect(reviewSql).toMatch(/when unique_violation then raise exception 'This session has already been reviewed'/i);
+    expect(reviewSql).not.toMatch(/update public\.coach_reviews|on conflict[\s\S]*do update/i);
   });
 
   it("timestamps demo payments and records eligible demo refunds atomically", () => {

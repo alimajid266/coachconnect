@@ -43,6 +43,30 @@ describe("account schedule manager", () => {
     expect(screen.getByText(/payment and refund records are demonstrations only/i)).toBeInTheDocument();
   });
 
+  it("locks a submitted verified review with no edit or resubmit controls", async () => {
+    const reviewed = {
+      ...booking,
+      status: "COMPLETED",
+      startsAt: "2026-08-08T10:00:00.000Z",
+      endsAt: "2026-08-08T11:00:00.000Z",
+      reviewRating: 5,
+      reviewBody: "Excellent coaching session.",
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ userId: booking.athleteId, bookings: [reviewed], slots: [] }),
+    }));
+
+    render(<ScheduleManager userId={booking.athleteId} approvedCoach={false} />);
+    fireEvent.click(await screen.findByRole("button", { name: /^history & reviews/i }));
+
+    const reviewLabel = await screen.findByText(/your verified review/i);
+    expect(reviewLabel.closest("p")).toHaveTextContent("★★★★★. Excellent coaching session.");
+    expect(screen.queryByRole("button", { name: /submit review/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /review for/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: /rating for/i })).not.toBeInTheDocument();
+  });
+
   it("lets a coach share participant-only details after confirmation", async () => {
     const confirmed = { ...booking, status: "CONFIRMED", meetingDetails: null };
     const fetchMock = vi.fn().mockImplementation((input: string | URL | Request, init?: RequestInit) => {
