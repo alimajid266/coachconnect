@@ -64,11 +64,25 @@ describe("coach booking panel", () => {
     expect(fetchMock).not.toHaveBeenCalledWith("/api/bookings", expect.anything());
   });
 
-  it("replaces booking controls with schedule management on the coach's own profile", async () => {
+  it("shows incoming session status on the coach's own profile", async () => {
     const coachId = "82851394-6f65-4ee7-a80c-fc98c28e65ec";
+    const incoming = {
+      bookingId: "booking-1",
+      coachId,
+      athleteId: "athlete-1",
+      coachName: "Ali Majid2",
+      athleteName: "Training Member",
+      startsAt: slot.startsAt,
+      endsAt: slot.endsAt,
+      mode: slot.mode,
+      status: "REQUESTED",
+      pricePkr: 3000,
+      paymentStatus: "NOT_COLLECTED",
+    };
     const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => {
       if (String(input).includes("/availability")) return Promise.resolve({ ok: true, json: async () => ({ slots: [slot] }) });
       if (String(input) === "/api/auth/session") return Promise.resolve({ ok: true, json: async () => ({ user: { id: coachId } }) });
+      if (String(input) === "/api/schedule") return Promise.resolve({ ok: true, json: async () => ({ userId: coachId, bookings: [incoming], slots: [] }) });
       return Promise.resolve({ ok: false, json: async () => ({}) });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -76,7 +90,9 @@ describe("coach booking panel", () => {
     render(<CoachBookingPanel coachId={coachId} coachName="Ali Majid2" isDemo={false} pricePkr={3000} />);
 
     expect(await screen.findByRole("heading", { name: /manage your schedule/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /open my schedule/i })).toHaveAttribute("href", "/account");
+    expect(await screen.findByText("Requested")).toBeInTheDocument();
+    expect(screen.getByText("Training Member")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /open sessions/i })).toHaveAttribute("href", "/sessions");
     expect(screen.queryByRole("button", { name: /request session/i })).not.toBeInTheDocument();
   });
 });

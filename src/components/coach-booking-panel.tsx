@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { PublicCoachSlot } from "@/lib/scheduling";
+import type { PublicCoachSlot, ScheduleBooking } from "@/lib/scheduling";
 
 type Props = {
   coachId: string;
@@ -25,6 +25,7 @@ export default function CoachBookingPanel({ coachId, coachName, isDemo, pricePkr
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [viewer, setViewer] = useState<"checking" | "owner" | "member" | "anonymous">(isDemo ? "anonymous" : "checking");
+  const [ownerSessions, setOwnerSessions] = useState<ScheduleBooking[]>([]);
   const messageRef = useRef<HTMLParagraphElement>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
 
@@ -55,6 +56,24 @@ export default function CoachBookingPanel({ coachId, coachName, isDemo, pricePkr
       .catch(() => { if (active) setViewer("member"); });
     return () => { active = false; };
   }, [coachId, isDemo]);
+
+  useEffect(() => {
+    if (viewer !== "owner") return;
+    let active = true;
+    fetch("/api/schedule", { cache: "no-store", credentials: "same-origin" })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error("Schedule unavailable");
+        return result;
+      })
+      .then((result) => {
+        if (!active) return;
+        const bookings = Array.isArray(result.bookings) ? result.bookings as ScheduleBooking[] : [];
+        setOwnerSessions(bookings.filter((booking) => booking.coachId === coachId && ["REQUESTED", "CONFIRMED"].includes(booking.status)));
+      })
+      .catch(() => { if (active) setOwnerSessions([]); });
+    return () => { active = false; };
+  }, [coachId, viewer]);
 
   useEffect(() => {
     if (error) errorRef.current?.focus();
@@ -105,8 +124,18 @@ export default function CoachBookingPanel({ coachId, coachName, isDemo, pricePkr
       <section className="coach-booking-panel" aria-label="Your coach profile schedule">
         <span className="coach-booking-kicker">Your public profile</span>
         <h2>Manage your schedule</h2>
-        <p>Add or remove bookable times and respond to member requests from your account.</p>
-        <Link className="button button-primary" href="/account">Open my schedule</Link>
+        <p>New athlete requests and confirmed sessions appear here and in your Sessions workspace.</p>
+        {ownerSessions.length > 0 ? (
+          <div className="coach-profile-session-status" aria-label="Active session statuses">
+            {ownerSessions.slice(0, 3).map((booking) => (
+              <div key={booking.bookingId}>
+                <strong>{booking.athleteName}</strong>
+                <span className={`schedule-status status-${booking.status.toLowerCase()}`}>{booking.status === "REQUESTED" ? "Requested" : "Confirmed"}</span>
+              </div>
+            ))}
+          </div>
+        ) : <p className="coach-profile-session-empty">No active booking requests.</p>}
+        <Link className="button button-primary" href="/sessions">Open sessions</Link>
       </section>
     );
   }

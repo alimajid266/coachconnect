@@ -113,7 +113,7 @@ export default function ScheduleManager({ userId, approvedCoach, formats }: Prop
       month: total(paid.filter((booking) => (recordedAt(booking) ?? -Infinity) >= monthStart)),
       lifetime: total(paid),
       pending: total(pending),
-      refunded: total(refunded),
+      refunded: -total(refunded),
       unknownDates: paid.filter((booking) => recordedAt(booking) === null).length,
     };
   }, [data.bookings, now, userId]);

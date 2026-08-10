@@ -172,7 +172,16 @@ describe("account schedule manager", () => {
       paymentRecordedAt: null,
       pricePkr: 2000,
     };
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ userId, bookings: [paid, retainedLateCancellation, legacyPaidWithoutDate], slots: [] }) });
+    const fullRefund = {
+      ...booking,
+      bookingId: "booking-full-refund",
+      status: "CANCELLED_BY_ATHLETE",
+      paymentStatus: "DEMO_REFUNDED",
+      refundPolicyOutcome: "FULL_REFUND_DUE",
+      refundedAt: new Date().toISOString(),
+      pricePkr: 5600,
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ userId, bookings: [paid, retainedLateCancellation, legacyPaidWithoutDate, fullRefund], slots: [] }) });
     vi.stubGlobal("fetch", fetchMock);
 
     const { unmount } = render(<ScheduleManager userId={userId} approvedCoach />);
@@ -180,6 +189,7 @@ describe("account schedule manager", () => {
     expect(screen.getByTestId("earnings-month")).toHaveTextContent("Rs 3,000");
     expect(screen.getByTestId("earnings-lifetime")).toHaveTextContent("Rs 5,000");
     expect(screen.getByTestId("earnings-pending")).toHaveTextContent("Rs 0");
+    expect(screen.getByTestId("earnings-refunded")).toHaveTextContent("Rs -5,600");
     expect(screen.getByText(/recent periods exclude 1 older demo payment/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^history & reviews/i }));
     expect(screen.getAllByText(/payment confirmed on coachconnect/i)).toHaveLength(3);

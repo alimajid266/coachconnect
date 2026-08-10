@@ -76,6 +76,8 @@ a { color: inherit; text-decoration: none; }
 .nav-workspace-shortcuts { display: flex; align-items: center; gap: 14px; padding-right: 2px; }
 .nav-workspace-shortcuts a { color: #4f5b57; font-size: .78rem; font-weight: 800; white-space: nowrap; }
 .nav-workspace-shortcuts a:hover { color: var(--sport-blue); }
+.nav-sessions-link { position: relative; }
+.nav-session-badge { position: absolute; top: -10px; right: -14px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border: 2px solid #fff; border-radius: 999px; color: #fff; background: #c62828; font-size: .6rem; font-weight: 950; line-height: 1; }
 @media (max-width: 900px) { .nav-workspace-shortcuts { display: none; } }
 .nav-account-menu { position: relative; }
 .nav-account-trigger { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #ddd; border-radius: 50%; color: #fff; background: var(--coral); font-size: .76rem; font-weight: 950; letter-spacing: .02em; cursor: pointer; }
@@ -1199,6 +1201,10 @@ a { color: inherit; text-decoration: none; }
 .coach-booking-price strong { font-size: 1.35rem; letter-spacing: -.035em; }
 .coach-booking-price span, .coach-booking-panel > p { color: var(--muted); }
 .coach-booking-kicker { color: var(--coral); font-size: .72rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.coach-profile-session-status { display: grid; gap: 8px; }
+.coach-profile-session-status > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #e2e8e4; border-radius: 12px; background: #f8faf9; }
+.coach-profile-session-status strong { overflow: hidden; font-size: .8rem; text-overflow: ellipsis; white-space: nowrap; }
+.coach-profile-session-empty { padding: 10px 12px; border-radius: 12px; background: #f4f6f5; font-size: .78rem; }
 .coach-slot-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; border: 0; }
 .coach-slot-picker legend { grid-column: 1/-1; margin-bottom: 5px; font-size: .78rem; font-weight: 800; }
 .coach-slot-picker label { position: relative; display: flex; min-width: 0; padding: 12px; border: 1px solid #ddd; border-radius: 12px; background: #fff; cursor: pointer; transition: transform var(--motion-fast) var(--motion-ease-out), border-color var(--motion-fast), box-shadow var(--motion-standard); }

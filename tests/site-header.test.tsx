@@ -32,7 +32,7 @@ describe("site header", () => {
 
     expect(screen.getByRole("link", { name: "CoachConnect home" })).toHaveAttribute("href", "/");
     expect(await screen.findByRole("navigation", { name: "Workspace shortcuts" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute("href", "/sessions");
+    expect(screen.getByRole("link", { name: /^Sessions/ })).toHaveAttribute("href", "/sessions");
     expect(screen.getByRole("link", { name: "Plans" })).toHaveAttribute("href", "/training-plans");
     expect(screen.getByRole("link", { name: "Recommendation settings" })).toHaveAttribute("href", "/recommendations");
     const menuButton = await screen.findByRole("button", { name: /open account menu for ali member/i });
@@ -49,6 +49,36 @@ describe("site header", () => {
     expect(screen.getByRole("menuitem", { name: "Log out" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /dashboard/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^sign in$/i })).not.toBeInTheDocument();
+  });
+
+  it("shows an accessible Sessions notification count for athlete and coach bookings", async () => {
+    const memberId = "member-1";
+    const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => {
+      if (String(input) === "/api/auth/session") return Promise.resolve({
+        ok: true,
+        json: async () => ({ user: { id: memberId, displayName: "Ali Member", email: "ali@example.com", role: "ATHLETE", capabilities: { administrator: false, coachStatus: "APPROVED" } } }),
+      });
+      if (String(input) === "/api/schedule") return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          userId: memberId,
+          bookings: [
+            { bookingId: "incoming", coachId: memberId, athleteId: "athlete-2", status: "REQUESTED" },
+            { bookingId: "outgoing", coachId: "coach-2", athleteId: memberId, status: "CONFIRMED" },
+            { bookingId: "old", coachId: memberId, athleteId: "athlete-3", status: "COMPLETED" },
+          ],
+          slots: [],
+        }),
+      });
+      return Promise.resolve({ ok: false, json: async () => ({}) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<SiteHeader />);
+
+    const sessions = await screen.findByRole("link", { name: "Sessions, 2 active bookings" });
+    expect(sessions).toHaveAttribute("href", "/sessions");
+    expect(screen.getByTestId("sessions-notification")).toHaveTextContent("2");
   });
 
   it("does not falsely show a signed-in member as logged out while session is loading", async () => {

@@ -35,9 +35,11 @@ export default function SiteHeader({ initialSession, onSessionResolved, hideCoac
       : { status: "loading", user: null },
   );
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sessionNotificationCount, setSessionNotificationCount] = useState(0);
   const [loggingOut, setLoggingOut] = useState(false);
   const [menuError, setMenuError] = useState("");
   const accountMenuRef = useRef<HTMLDivElement>(null);
+  const sessionUserId = session.status === "ready" ? session.user?.id : null;
 
   useEffect(() => {
     if (initialSession) return;
@@ -63,6 +65,24 @@ export default function SiteHeader({ initialSession, onSessionResolved, hideCoac
   }, [initialSession, onSessionResolved]);
 
   useEffect(() => {
+    if (session.status !== "ready" || sessionUserId == null) return;
+    let active = true;
+    fetch("/api/schedule", { credentials: "same-origin", cache: "no-store" })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error("Schedule unavailable");
+        return result;
+      })
+      .then((result) => {
+        if (!active) return;
+        const bookings = Array.isArray(result.bookings) ? result.bookings as Array<{ status?: string }> : [];
+        setSessionNotificationCount(bookings.filter((booking) => booking.status === "REQUESTED" || booking.status === "CONFIRMED").length);
+      })
+      .catch(() => { if (active) setSessionNotificationCount(0); });
+    return () => { active = false; };
+  }, [session.status, sessionUserId]);
+
+  useEffect(() => {
     if (!menuOpen) return;
     function closeOnOutsideClick(event: MouseEvent) {
       if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) setMenuOpen(false);
@@ -85,6 +105,7 @@ export default function SiteHeader({ initialSession, onSessionResolved, hideCoac
       const response = await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
       if (!response.ok) throw new Error("Logout failed");
       setSession({ status: "ready", user: null });
+      setSessionNotificationCount(0);
       setMenuOpen(false);
       onSessionResolved?.(null, "ready");
     } catch {
@@ -114,7 +135,14 @@ export default function SiteHeader({ initialSession, onSessionResolved, hideCoac
           ) : session.user ? (
             <>
               <nav className="nav-workspace-shortcuts" aria-label="Workspace shortcuts">
-                <Link href="/sessions">Sessions</Link>
+                <Link
+                  className="nav-sessions-link"
+                  href="/sessions"
+                  aria-label={sessionNotificationCount > 0 ? `Sessions, ${sessionNotificationCount} active ${sessionNotificationCount === 1 ? "booking" : "bookings"}` : "Sessions"}
+                >
+                  Sessions
+                  {sessionNotificationCount > 0 && <span className="nav-session-badge" data-testid="sessions-notification" aria-hidden="true">{sessionNotificationCount > 9 ? "9+" : sessionNotificationCount}</span>}
+                </Link>
                 <Link href="/training-plans">Plans</Link>
                 <Link href="/recommendations">Recommendation settings</Link>
               </nav>
