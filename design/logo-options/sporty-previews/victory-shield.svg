@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Red and navy athletic victory shield symbol">
-  <path d="M256 40c64 48 130 64 198 59v151c0 111-74 186-198 230C132 436 58 361 58 250V99c68 5 134-11 198-59z" fill="#161B2B"/>
-  <path d="M256 82c48 33 97 45 148 45v117c0 83-53 141-148 179-95-38-148-96-148-179V127c51 0 100-12 148-45z" fill="#E83F36"/>
-  <circle cx="256" cy="246" r="82" fill="#FFF4E8"/>
-  <path d="M256 177l24 32 39 13-23 33 1 41-41-12-41 12 1-41-23-33 39-13z" fill="#161B2B"/>
-  <path d="M183 355l73 43 73-43" fill="none" stroke="#FFB23E" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>

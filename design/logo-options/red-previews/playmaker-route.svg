@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Red tactical playmaker route symbol">
-  <path d="M109 73h294c50 0 72 25 72 72v222c0 47-22 72-72 72H109c-50 0-72-25-72-72V145c0-47 22-72 72-72z" fill="#E83F36" transform="rotate(-5 256 256)"/>
-  <path d="M121 346c38-93 91-137 160-127 49 7 80-19 104-81" fill="none" stroke="#FFF4E8" stroke-width="38" stroke-linecap="round" stroke-dasharray="1 63"/>
-  <path d="M113 347c43-110 105-162 185-147 53 10 85-18 111-91" fill="none" stroke="#FFF4E8" stroke-width="22" stroke-linecap="round"/>
-  <path d="M378 92l52 13-28 46" fill="none" stroke="#161B2B" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="111" cy="349" r="38" fill="#161B2B"/>
-  <path d="M111 327l8 14 17 3-12 12 3 17-16-8-16 8 3-17-12-12 17-3z" fill="#FFB23E"/>
-</svg>
