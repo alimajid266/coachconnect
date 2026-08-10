@@ -462,7 +462,7 @@ export default function AccountPage() {
                   <input id="display-name" autoComplete="name" minLength={2} maxLength={60} required value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
                   <fieldset className="auth-preferences">
                     <legend>Your coaching interests</legend>
-                    <p>These help AI search recommend relevant coaches and plans. You can change them later.</p>
+                    <p>These help CoachConnect rank relevant coaches and personalize plans. You can change them later.</p>
                     <div>{onboardingSports.map((sport) => <label key={sport}><input type="checkbox" checked={interests.includes(sport)} onChange={(event) => setInterests((current) => event.target.checked ? [...current, sport] : current.filter((item) => item !== sport))} />{sport}</label>)}</div>
                     <div className="auth-custom-interest">
                       <label htmlFor="custom-interest">Add another sport or activity</label>

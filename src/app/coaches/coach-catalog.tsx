@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CoachMap from "@/app/coaches/coach-map";
 import SiteHeader from "@/components/site-header";
-import { RECOMMENDATION_WEIGHTS, interpretCoachQuery, recommendCoaches, type CoachQueryInterpretation, type DiscoveryFilters, type Recommendation } from "@/lib/coach-discovery";
+import { interpretCoachQuery, recommendCoaches, recommendCoachesForPreferences, type CoachRecommendationPreferences, type DiscoveryFilters, type Recommendation } from "@/lib/coach-discovery";
 import { coaches as demoCoaches, formatCoachPrice, type Coach } from "@/lib/coaches";
 
 type Props = {
@@ -48,10 +48,10 @@ function CatalogCoachCard({
             {coach.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
           </div>
         )}
-        <span>{coach.badge}</span>
+        {recommended && <span className="catalog-recommended-tag">Recommended</span>}
+        <span className="catalog-card-badge">{coach.badge}</span>
       </div>
       <div className="catalog-card-body">
-        {recommended && <span className="catalog-recommended-tag">Recommended</span>}
         <div className="catalog-card-title">
           <h2>{coach.name}</h2>
           {coach.isDemo
@@ -100,12 +100,8 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
   const [databaseDemoCoaches, setDatabaseDemoCoaches] = useState<Coach[]>(() => initialCoaches.filter((coach) => coach.isDemo));
   const [demoCatalogStatus, setDemoCatalogStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [catalogStatus, setCatalogStatus] = useState<"loading" | "ready" | "unavailable">("loading");
-  const [aiInterpretation, setAiInterpretation] = useState<CoachQueryInterpretation | null>(null);
-  const [aiRanking, setAiRanking] = useState<Array<{ id: string; reasons: string[] }> | null>(null);
-  const [aiStatus, setAiStatus] = useState<"idle" | "loading" | "ready">("idle");
-  const [aiError, setAiError] = useState("");
+  const [preferences, setPreferences] = useState<CoachRecommendationPreferences | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const aiRequestId = useRef(0);
 
   function profileHref(coach: Coach) {
     const params = new URLSearchParams();
@@ -139,6 +135,17 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
           setCatalogStatus("unavailable");
         }
       });
+    return () => { cancelled = true; };
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/preferences", { cache: "no-store", credentials: "same-origin" })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const body = await response.json() as { preferences?: CoachRecommendationPreferences };
+        if (!cancelled && body.preferences?.interests?.length) setPreferences(body.preferences);
+      })
+      .catch(() => undefined);
     return () => { cancelled = true; };
   }, []);
   const catalogCoaches = useMemo(() => {
@@ -180,27 +187,12 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
     ...interpretation,
     filters: effectiveFilters,
   }), [catalogCoaches, effectiveFilters, interpretation]);
-  const recommendations = useMemo(() => {
-    if (!aiRanking) return deterministicRecommendations;
-    const ranked = new Map(aiRanking.map((entry, index) => [entry.id, { ...entry, index }]));
-    const deterministicOrder = new Map(deterministicRecommendations.map((entry, index) => [entry.coach.id, index]));
-    const aiBonus = (coachId: string) => {
-      const rank = ranked.get(coachId)?.index;
-      if (rank === undefined) return 0;
-      return Math.max(0, RECOMMENDATION_WEIGHTS.geminiNudgeCap - (rank * RECOMMENDATION_WEIGHTS.geminiNudgeCap / Math.max(1, aiRanking.length)));
-    };
-    return deterministicRecommendations.map((entry) => {
-      const ai = ranked.get(entry.coach.id);
-      return ai ? {
-        ...entry,
-        reasons: [...entry.reasons, ...ai.reasons.slice(0, 1).map((reason) => `AI suggestion: ${reason}`)].slice(0, 3),
-        label: entry.label,
-      } : entry;
-    }).sort((first, second) => (
-      (second.score + aiBonus(second.coach.id)) - (first.score + aiBonus(first.coach.id))
-      || (deterministicOrder.get(first.coach.id) ?? 0) - (deterministicOrder.get(second.coach.id) ?? 0)
-    ));
-  }, [aiRanking, deterministicRecommendations]);
+  const preferenceRecommendations = useMemo(() => preferences
+    ? recommendCoachesForPreferences(catalogCoaches, preferences)
+    : null, [catalogCoaches, preferences]);
+  const recommendations = query.trim() || !preferenceRecommendations
+    ? deterministicRecommendations
+    : preferenceRecommendations;
 
   const visibleRecommendations = useMemo(() => {
     const matches = recommendations.filter(({ coach }) => (
@@ -255,17 +247,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
     effectiveFilters.day && { key: "day", label: `Day: ${effectiveFilters.day}` },
     ...effectiveFilters.tags.map((tag) => ({ key: `tag:${tag}`, label: `Focus: ${tag}` })),
   ].filter((chip): chip is { key: string; label: string } => Boolean(chip));
-  const aiSuggestedCriteria = aiInterpretation ? [
-    aiInterpretation.filters.sport,
-    aiInterpretation.filters.city,
-    aiInterpretation.filters.level,
-    aiInterpretation.filters.format,
-    aiInterpretation.filters.day,
-    ...aiInterpretation.filters.tags,
-  ].filter((value): value is string => Boolean(value)) : [];
-
   const clearFilters = () => {
-    aiRequestId.current += 1;
     setQuery("");
     setDismissedInterpretations([]);
     setCity("any");
@@ -273,32 +255,7 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
     setMode("any");
     setSort("recommended");
     setCurrentPage(1);
-    setAiInterpretation(null);
-    setAiRanking(null);
-    setAiStatus("idle");
-    setAiError("");
   };
-
-  async function runAiSearch() {
-    if (query.trim().length < 2 || catalogCoaches.length === 0) return;
-    const requestId = ++aiRequestId.current;
-    setAiStatus("loading"); setAiError("");
-    try {
-      const response = await fetch("/api/ai/coach-discovery", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ query: query.trim() }),
-      });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "AI search is temporarily unavailable.");
-      if (requestId !== aiRequestId.current) return;
-      setAiInterpretation(body.interpretation); setAiRanking(body.recommendations);
-      setDismissedInterpretations([]); setSort("recommended"); setCurrentPage(1); setAiStatus("ready");
-    } catch (reason) {
-      if (requestId !== aiRequestId.current) return;
-      setAiError(reason instanceof Error ? reason.message : "AI search is temporarily unavailable.");
-      setAiStatus("idle");
-    }
-  }
 
   return (
     <div className="catalog-page">
@@ -321,10 +278,9 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
               placeholder="Name, sport or specialty"
               value={query}
               onChange={(event) => {
-                aiRequestId.current += 1;
                 setQuery(event.target.value);
                 setDismissedInterpretations([]);
-                setCurrentPage(1); setAiInterpretation(null); setAiRanking(null); setAiStatus("idle"); setAiError("");
+                setCurrentPage(1);
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
@@ -365,23 +321,14 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
             </select>
           </label>
           <button type="button" onClick={clearFilters}>Clear filters</button>
-          <button className="catalog-ai-button" type="button" disabled={aiStatus === "loading" || query.trim().length < 2 || catalogCoaches.length === 0} onClick={() => void runAiSearch()}>{aiStatus === "loading" ? "Asking Gemini…" : "Get AI suggestions"}</button>
         </section>
 
-        <div className="catalog-ai-status">
-          <div>
-            <span>{aiStatus === "ready"
-              ? "Coach suggestions generated with Gemini 3.5 Flash-Lite. AI suggestions only provide a small ranking nudge; your search filters stay authoritative."
-              : "Smart search works instantly without AI. Gemini is optional and can suggest the closest profiles with only a small ranking influence."}</span>
-            {aiStatus === "ready" && aiSuggestedCriteria.length > 0 && <small>Gemini read your request as: {aiSuggestedCriteria.join(", ")}. These are suggestion signals, not active filters.</small>}
-          </div>
-          {aiError && <p role="alert">{aiError} Showing standard search results instead.</p>}
-        </div>
+        <p className="catalog-search-note">Natural-language search works instantly without an external AI request. Signed-in members also see matches from their saved recommendation preferences first.</p>
 
         <details className="catalog-ranking-method">
           <summary>How recommendations are ranked</summary>
           <p>Sport 100 · Focus 25 · Level 20 · City 20 · Format 20 · Budget 15 · Day 10 · Keywords up to 15.</p>
-          <p>Gemini can add at most 4 points. Equal scores rotate daily for fair visibility, so no account keeps a permanent top position.</p>
+          <p>Saved interests, city, level, budget and goal inform the default order. Typed search criteria take priority. Equal scores rotate daily for fair visibility.</p>
         </details>
 
         {(interpretationChips.length > 0 || interpretation.conflicts.length > 0) && (

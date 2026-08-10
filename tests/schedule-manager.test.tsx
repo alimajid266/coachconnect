@@ -131,7 +131,9 @@ describe("account schedule manager", () => {
 
   it("submits only an approved coach format", async () => {
     const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    start.setHours(12, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(13, 0, 0, 0);
     const localDate = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
     const localTime = (value: Date) => `${String(value.getHours()).padStart(2, "0")}:${String(value.getMinutes()).padStart(2, "0")}`;
     const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve({ ok: true, json: async () => String(input) === "/api/schedule" ? { userId, bookings: [], slots: [] } : { slot: {} } }));

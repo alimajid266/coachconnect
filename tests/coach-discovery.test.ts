@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { coaches } from "@/lib/coaches";
-import { RECOMMENDATION_WEIGHTS, interpretCoachQuery, recommendCoaches } from "@/lib/coach-discovery";
+import { RECOMMENDATION_WEIGHTS, interpretCoachQuery, recommendCoaches, recommendCoachesForPreferences } from "@/lib/coach-discovery";
 
 describe("coach discovery interpreter", () => {
   it.each([
@@ -133,15 +133,14 @@ describe("deterministic coach recommendations", () => {
       day: 10,
       keyword: 3,
       keywordCap: 15,
-      geminiNudgeCap: 4,
     });
   });
 
-  it("rotates equal-score profiles daily so one account is not permanently first", () => {
-    const tiedCoaches = coaches.slice(0, 3).map((coach, index) => ({ ...coach, rank: index + 1 }));
-    const empty = interpretCoachQuery("");
+  it("rotates equal positive-score profiles daily so one account is not permanently first", () => {
+    const tiedCoaches = coaches.slice(0, 3).map((coach, index) => ({ ...coach, location: "Lahore", rank: index + 1 }));
+    const interpretation = interpretCoachQuery("coach in Lahore");
     const firstProfiles = ["2026-08-08", "2026-08-09", "2026-08-10"].map(
-      (rotationSeed) => recommendCoaches(tiedCoaches, empty, { rotationSeed })[0].coach.id,
+      (rotationSeed) => recommendCoaches(tiedCoaches, interpretation, { rotationSeed })[0].coach.id,
     );
 
     expect(new Set(firstProfiles)).toEqual(new Set(tiedCoaches.map((coach) => coach.id)));
@@ -180,5 +179,42 @@ describe("deterministic coach recommendations", () => {
     const ranked = recommendCoaches(coaches, interpretCoachQuery("tennis under 3500"));
     expect(ranked[0].coach.price).toBeLessThanOrEqual(3500);
     expect(ranked[0].reasons.some((reason) => /budget/i.test(reason))).toBe(true);
+  });
+
+  it("ranks saved member preferences without hiding the rest of the catalog", () => {
+    const ranked = recommendCoachesForPreferences(coaches, {
+      interests: ["Cricket"],
+      preferredLocation: "Lahore",
+      maxBudgetPkr: 3500,
+      trainingGoal: "Improve batting",
+      experienceLevel: "Beginner",
+    }, { rotationSeed: "2026-08-09" });
+
+    expect(ranked).toHaveLength(coaches.length);
+    expect(ranked[0].coach.id).toBe("ayesha-khan");
+    expect(ranked[0].reasons).toEqual(expect.arrayContaining([
+      expect.stringMatching(/Cricket interest/i),
+      expect.stringMatching(/Lahore/i),
+      expect.stringMatching(/budget/i),
+    ]));
+    expect(ranked[0].label).not.toBeNull();
+  });
+
+  it("keeps zero-match approved coaches ahead of zero-match demos for saved preferences", () => {
+    const mixed = [
+      { ...coaches[0], id: "approved-later", isDemo: false, rank: 20 },
+      { ...coaches[1], id: "demo-first", isDemo: true, rank: 1 },
+      { ...coaches[2], id: "approved-first", isDemo: false, rank: 10 },
+    ];
+    const ranked = recommendCoachesForPreferences(mixed, {
+      interests: [],
+      preferredLocation: "",
+      maxBudgetPkr: 0,
+      trainingGoal: "",
+      experienceLevel: "",
+    }, { rotationSeed: "2026-08-09" });
+
+    expect(ranked.map((entry) => entry.coach.id)).toEqual(["approved-first", "approved-later", "demo-first"]);
+    expect(ranked.every((entry) => entry.score === 0 && !entry.eligible)).toBe(true);
   });
 });

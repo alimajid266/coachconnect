@@ -51,7 +51,11 @@ describe("coach catalog", () => {
     const recommendedCards = within(recommended).getAllByRole("article");
     expect(recommendedCards.length).toBeGreaterThan(0);
     expect(recommendedCards.length).toBeLessThanOrEqual(4);
-    recommendedCards.forEach((card) => expect(within(card).getByText("Recommended")).toBeInTheDocument());
+    recommendedCards.forEach((card) => {
+      const tag = within(card).getByText("Recommended");
+      expect(tag).toBeInTheDocument();
+      expect(tag.parentElement).toHaveClass("catalog-card-image");
+    });
 
     const recommendedLinks = new Set(within(recommended).getAllByRole("link", { name: /view .* profile/i }).map((link) => link.getAttribute("href")));
     const allProfiles = screen.queryByRole("region", { name: "All matching profiles" });
@@ -68,6 +72,28 @@ describe("coach catalog", () => {
     expect(screen.getByRole("heading", { name: /refund and cancellation policy/i })).toBeInTheDocument();
     expect(screen.getByText(/24 hours before the session/i)).toBeInTheDocument();
     expect(screen.getByText(/does not process real payments/i)).toBeInTheDocument();
+  });
+
+  it("puts profiles matching saved preferences first without Gemini search", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const path = String(input);
+      if (path === "/api/coaches") return { ok: true, json: async () => ({ coaches: [], demos: coaches, demosAvailable: true }) };
+      if (path === "/api/preferences") return { ok: true, json: async () => ({ preferences: {
+        interests: ["Cricket"], preferredLocation: "Lahore", maxBudgetPkr: 3500,
+        trainingGoal: "Improve batting", experienceLevel: "Beginner",
+      } }) };
+      if (path === "/api/auth/session") return { ok: true, json: async () => ({ user: { id: "1", displayName: "Ali" } }) };
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
+
+    const recommended = await screen.findByRole("region", { name: "Recommended profiles" });
+    const firstCard = within(recommended).getAllByRole("article")[0];
+    expect(within(firstCard).getByRole("heading", { name: "Ayesha Khan" })).toBeInTheDocument();
+    expect(within(firstCard).getByText("Recommended").parentElement).toHaveClass("catalog-card-image");
+    expect(screen.getByRole("status")).toHaveTextContent(`${coaches.length} coaches`);
+    expect(screen.queryByRole("button", { name: /gemini|ai suggestions/i })).not.toBeInTheDocument();
   });
 
   it("links every catalog card to a standalone profile page", () => {
@@ -367,93 +393,13 @@ describe("coach catalog", () => {
     await waitFor(() => expect(screen.queryByText(/checking account/i)).not.toBeInTheDocument());
   });
 
-  it("ignores an AI response after the member changes the query", async () => {
-    let resolveAi!: (value: { ok: boolean; json: () => Promise<object> }) => void;
-    const pendingAi = new Promise<{ ok: boolean; json: () => Promise<object> }>((resolve) => { resolveAi = resolve; });
-    const fetchMock = vi.fn((input: string | URL | Request) => {
-      const path = String(input);
-      if (path === "/api/coaches") return Promise.resolve({ ok: true, json: async () => ({ coaches: [], demos: coaches, demosAvailable: true }) });
-      if (path === "/api/auth/session") return Promise.resolve({ ok: true, json: async () => ({ user: null }) });
-      if (path === "/api/ai/coach-discovery") return pendingAi;
-      throw new Error(`Unexpected request: ${path}`);
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
-
-    const search = screen.getByRole("searchbox", { name: "Search" });
-    fireEvent.change(search, { target: { value: "tennis coach" } });
-    fireEvent.click(screen.getByRole("button", { name: /get ai suggestions/i }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/ai/coach-discovery", expect.anything()));
-    fireEvent.change(search, { target: { value: "yoga coach" } });
-    resolveAi({ ok: true, json: async () => ({
-      interpretation: { original: "tennis coach", filters: { sport: "Tennis", tags: [] }, corrections: [], conflicts: [], keywords: [] },
-      recommendations: [], model: "Gemini 3.5 Flash-Lite",
-    }) });
-
-    await waitFor(() => expect(screen.getByText(/smart search works instantly without ai/i)).toBeInTheDocument());
-    expect(screen.queryByText(/coach suggestions generated with gemini/i)).not.toBeInTheDocument();
-  });
-
-  it("keeps deterministic search filters authoritative when AI suggests something else", async () => {
-    const tennisCoach = coaches.find((coach) => coach.sports.includes("Tennis") && !coach.sports.includes("Badminton")) ?? coaches.find((coach) => coach.sports.includes("Tennis")) ?? coaches[0];
-    const badmintonCoach = coaches.find((coach) => coach.sports.includes("Badminton") && !coach.sports.includes("Tennis")) ?? coaches.find((coach) => !coach.sports.includes("Tennis")) ?? coaches[1];
-    const fetchMock = vi.fn(async (input: string | URL | Request) => {
-      const path = String(input);
-      if (path === "/api/coaches") return { ok: true, json: async () => ({ coaches: [], demos: coaches, demosAvailable: true }) };
-      if (path === "/api/auth/session") return { ok: true, json: async () => ({ user: { id: "1", displayName: "Ali", email: "ali@example.com", role: "ATHLETE" } }) };
-      if (path === "/api/ai/coach-discovery") return { ok: true, json: async () => ({
-        interpretation: { original: "tennis coach", filters: { sport: "Badminton", tags: [] }, corrections: [], conflicts: [], keywords: [] },
-        recommendations: [{ id: badmintonCoach.id, reasons: ["AI suggested this profile"] }],
-        model: "Gemini 3.5 Flash-Lite",
-      }) };
-      throw new Error(`Unexpected request: ${path}`);
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
-
-    const search = screen.getByRole("searchbox", { name: "Search" });
-    fireEvent.change(search, { target: { value: "tennis coach" } });
-    fireEvent.click(screen.getByRole("button", { name: /get ai suggestions/i }));
-
-    expect(await screen.findByText(/generated with gemini 3.5 flash-lite/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: tennisCoach.name })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: badmintonCoach.name })).not.toBeInTheDocument();
-    expect(screen.getByText(/ai suggestions only provide a small ranking nudge/i)).toBeInTheDocument();
-  });
-
-  it("does not label zero-score AI results as recommended", async () => {
-    const fetchMock = vi.fn(async (input: string | URL | Request) => {
-      const path = String(input);
-      if (path === "/api/coaches") return { ok: true, json: async () => ({ coaches: [], demos: coaches, demosAvailable: true }) };
-      if (path === "/api/auth/session") return { ok: true, json: async () => ({ user: null }) };
-      if (path === "/api/ai/coach-discovery") return { ok: true, json: async () => ({
-        interpretation: { original: "find a coach", filters: { tags: [] }, corrections: [], conflicts: [], keywords: [] },
-        recommendations: [{ id: coaches[0].id, reasons: ["First source row"] }],
-        model: "Gemini 3.5 Flash-Lite",
-      }) };
-      throw new Error(`Unexpected request: ${path}`);
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    render(<CoachCatalog initialQuery="" initialCity="any" initialCoaches={coaches} />);
-
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search" }), { target: { value: "find a coach" } });
-    fireEvent.click(screen.getByRole("button", { name: /get ai suggestions/i }));
-
-    expect(await screen.findByText(/generated with gemini 3.5 flash-lite/i)).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Recommended profiles" })).not.toBeInTheDocument();
-  });
-
-  it("keeps Enter fast and deterministic instead of spending an AI request", async () => {
+  it("uses normal NLP search without calling Gemini", async () => {
     const tennisCoach = coaches.find((coach) => coach.sports.includes("Tennis")) ?? coaches[0];
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const path = String(input);
       if (path === "/api/coaches") return { ok: true, json: async () => ({ coaches: [], demos: coaches, demosAvailable: true }) };
-      if (path === "/api/auth/session") return { ok: true, json: async () => ({ user: { id: "1", displayName: "Ali", email: "ali@example.com", role: "ATHLETE" } }) };
-      if (path === "/api/ai/coach-discovery") return { ok: true, json: async () => ({
-        interpretation: { original: "tennis coach", filters: { sport: "Tennis", tags: [] }, corrections: [], conflicts: [], keywords: [] },
-        recommendations: [{ id: tennisCoach.id, reasons: ["Offers Tennis coaching"] }],
-        model: "Gemini 3.5 Flash-Lite",
-      }) };
+      if (path === "/api/preferences") return { ok: false, json: async () => ({ error: "Sign in" }) };
+      if (path === "/api/auth/session") return { ok: true, json: async () => ({ user: null }) };
       throw new Error(`Unexpected request: ${path}`);
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -465,7 +411,7 @@ describe("coach catalog", () => {
 
     expect(await screen.findByRole("heading", { name: tennisCoach.name })).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalledWith("/api/ai/coach-discovery", expect.anything());
-    expect(screen.getByText(/smart search works instantly without ai/i)).toBeInTheDocument();
+    expect(screen.getByText(/natural-language search works instantly without an external ai request/i)).toBeInTheDocument();
   });
 
   it("does not claim a member is signed out when session status is unavailable", async () => {

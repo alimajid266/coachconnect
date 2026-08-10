@@ -5,7 +5,8 @@ CoachConnect is a sports-coach marketplace MVP for adults in Pakistan. The proto
 ## Current status
 
 - Simple public home page and dedicated `/coaches` catalog are implemented.
-- The catalog reads approved coach profiles from Supabase and supports search, city, sport, format, and sorting controls.
+- The catalog reads approved coach profiles from Supabase and supports typo-tolerant natural-language search, city, sport, format, and sorting controls without an external AI request.
+- Signed-in members' saved interests, city, level, budget, and goal rank matching profiles first. The top four positive matches carry a visible **Recommended** tag in the card's upper-left corner; typed search criteria take priority.
 - The optional Mapbox view keeps visible coach cards synchronized with approximate public training areas; online-only coaches are not pinned.
 - Supabase account foundation and Phase 2B coach applications are implemented. Members can save and submit applications; administrators can review, approve, request changes, remove listings, or restore them.
 - Bundled coach fixtures are retained only for isolated UI tests and are not published by the production catalog.
@@ -19,15 +20,15 @@ CoachConnect is a sports-coach marketplace MVP for adults in Pakistan. The proto
 | User authentication | **Live** | Supabase email/password accounts and server-managed sessions |
 | Browse and search coaches | **Live** | Approved catalog, ordinary filters, typo-tolerant natural-language interpretation |
 | Coach profiles | **Live** | Dedicated public profile routes with publication-safe fields |
-| Explainable coach recommendations | **Live in current code** | Deterministic ranking with visible match reasons; no paid AI API |
-| Natural-language search | **Live in current code** | Extracts sport, city, level, format, budget, day, and goals; corrections remain editable |
+| Explainable coach recommendations | **Live in current code** | Saved member preferences rank positive matches first with visible reasons and tags; no AI API call |
+| Natural-language search | **Live in current code** | Deterministically extracts sport, city, level, format, budget, day, and goals; corrections remain editable |
 | Booking system | **Release candidate verified locally** | Conflict-safe request, acceptance, cancellation, completion, participant schedules, private meeting details, and cancellation-policy outcomes are implemented; hosted migration and live verification remain required |
 | Coach availability management | **Release candidate verified locally** | Approved coaches can add and remove slots; database serialization protects booking, suspension, deletion, and cross-role schedule conflicts; hosted migration and live verification remain required |
 | Ratings and reviews | **Planned** | Only reviews tied to completed bookings may become public; demo profiles must not fabricate them |
-| Dockerized application | **Implemented locally** | Hardened loopback-only Compose workflow |
+| Dockerized application | **Implemented locally** | The Next.js application is containerized with a hardened loopback-only Compose workflow; Supabase, Mapbox, and optional Gemini training plans remain managed external services |
 | Maintained documentation | **Required continuously** | Requirements, plan, scope, README, screens, and architecture must change with the code |
 
-The required AI baseline is satisfied by two meaningful, zero-cost systems: **explainable coach recommendations** and **natural-language search**. AI-generated training plans remain optional until booking, availability, and verified reviews are complete.
+The zero-cost discovery baseline is satisfied by **explainable deterministic recommendations** and **natural-language search**. Gemini is not used for coach search or ranking. AI-generated training plans remain an optional, separate feature.
 
 ## Documentation map
 
@@ -60,7 +61,7 @@ The product uses one member identity with ordinary customer access plus optional
 2. In the project dashboard, keep email/password authentication enabled.
 3. For this Rs 0 MVP, disable mandatory email confirmation so registration does not depend on paid/custom SMTP.
 4. Copy `.env.example` to `.env.local`.
-5. Add the project URL, **publishable** key, and the public `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN`. Never add a Supabase secret/service-role key or Mapbox secret token to the web application.
+5. Add the project URL, **publishable** key, and the public `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN`. Add `GEMINI_API_KEY` only if optional training-plan generation is required. Never expose a Supabase service-role key, Gemini key, or Mapbox secret token to browser code.
 6. Link the CLI and apply committed migrations:
 
 ```bash
@@ -125,6 +126,8 @@ docker compose ps
 ```
 
 Compose optionally reads ignored `.env.local`, publishes only `127.0.0.1:3000`, runs as `node`, uses a read-only root filesystem, drops all Linux capabilities, and enables `no-new-privileges`.
+
+Compose contains the **web application only**. Hosted Supabase (authentication/database), Mapbox, and optional Gemini training-plan generation are external services and are configured through environment variables rather than additional local containers. This is intentional for the Rs 0 hosted MVP.
 
 ## Privacy and payments
 

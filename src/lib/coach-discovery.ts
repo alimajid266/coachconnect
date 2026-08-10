@@ -45,8 +45,15 @@ export const RECOMMENDATION_WEIGHTS = {
   day: 10,
   keyword: 3,
   keywordCap: 15,
-  geminiNudgeCap: 4,
 } as const;
+
+export type CoachRecommendationPreferences = {
+  interests: string[];
+  preferredLocation: string;
+  maxBudgetPkr: number;
+  trainingGoal: string;
+  experienceLevel: string;
+};
 
 type ConceptMap = Record<string, readonly string[]>;
 
@@ -384,6 +391,62 @@ export function recommendCoaches(
     if (first.eligible !== second.eligible) return first.eligible ? -1 : 1;
     if (second.score !== first.score) return second.score - first.score;
     if (filters.affordability && first.coach.price !== second.coach.price) return first.coach.price - second.coach.price;
+    if (first.score === 0 && second.score === 0) {
+      if (first.coach.isDemo !== second.coach.isDemo) return first.coach.isDemo ? 1 : -1;
+      return first.coach.rank - second.coach.rank || String(first.coach.id).localeCompare(String(second.coach.id));
+    }
+    return (fairTieOrder.get(String(first.coach.id)) ?? 0) - (fairTieOrder.get(String(second.coach.id)) ?? 0);
+  });
+}
+
+export function recommendCoachesForPreferences(
+  coaches: Coach[],
+  preferences: CoachRecommendationPreferences,
+  options: { rotationSeed?: string } = {},
+): Recommendation[] {
+  const goal = interpretCoachQuery(preferences.trainingGoal);
+  const rotationSeed = options.rotationSeed ?? new Date().toISOString().slice(0, 10);
+  const recommendations = coaches.map((coach): Recommendation => {
+    let score = 0;
+    const reasons: string[] = [];
+    const matchingInterest = preferences.interests.find((interest) => includesCaseInsensitive(coach.sports, interest));
+    if (matchingInterest) {
+      score += RECOMMENDATION_WEIGHTS.sport;
+      reasons.push(`Matches your ${matchingInterest} interest`);
+    }
+    if (preferences.preferredLocation && normalize(coach.location) === normalize(preferences.preferredLocation)) {
+      score += RECOMMENDATION_WEIGHTS.city;
+      reasons.push(`Based in ${preferences.preferredLocation}`);
+    }
+    if (preferences.experienceLevel && includesCaseInsensitive(coach.levels, preferences.experienceLevel)) {
+      score += RECOMMENDATION_WEIGHTS.level;
+      reasons.push(`Supports your ${preferences.experienceLevel.toLowerCase()} level`);
+    }
+    if (Number.isFinite(preferences.maxBudgetPkr) && preferences.maxBudgetPkr > 0 && coach.price <= preferences.maxBudgetPkr) {
+      score += RECOMMENDATION_WEIGHTS.budget;
+      reasons.push(`Within your saved budget of Rs ${preferences.maxBudgetPkr.toLocaleString("en-PK")}`);
+    }
+    const searchable = normalize([coach.name, ...coach.sports, ...coach.tags, coach.specialty, coach.bio].join(" "));
+    const goalTerms = [...goal.filters.tags, ...goal.keywords];
+    const goalMatches = goalTerms.filter((term) => searchable.includes(normalize(term)));
+    if (goalMatches.length > 0) {
+      score += Math.min(RECOMMENDATION_WEIGHTS.keywordCap, goalMatches.length * RECOMMENDATION_WEIGHTS.keyword);
+      reasons.push(`Matches your goal: ${goalMatches.slice(0, 2).join(", ")}`);
+    }
+    const eligible = score > 0;
+    const label = !eligible ? null : score >= 80 ? "Strong match" : score >= 35 ? "Good match" : "Possible match";
+    return { coach, score, eligible, label, reasons };
+  });
+  const fairTieOrder = fairDailyBucketTieOrder(recommendations.map((entry) => ({
+    id: String(entry.coach.id),
+    bucket: String(entry.score),
+  })), rotationSeed);
+  return recommendations.sort((first, second) => {
+    if (second.score !== first.score) return second.score - first.score;
+    if (first.score === 0 && second.score === 0) {
+      if (first.coach.isDemo !== second.coach.isDemo) return first.coach.isDemo ? 1 : -1;
+      return first.coach.rank - second.coach.rank || String(first.coach.id).localeCompare(String(second.coach.id));
+    }
     return (fairTieOrder.get(String(first.coach.id)) ?? 0) - (fairTieOrder.get(String(second.coach.id)) ?? 0);
   });
 }
