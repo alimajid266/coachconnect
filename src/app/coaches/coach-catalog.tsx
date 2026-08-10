@@ -268,6 +268,13 @@ export default function CoachCatalog({ initialQuery, initialCity, initialCoaches
             <h1>Coach catalog</h1>
             <span>Browse approved coaches and interactive demo profiles across every sport, city and training format.</span>
           </div>
+          <aside className="catalog-recommendation-cta" aria-label="Personalize coach recommendations">
+            <div>
+              <strong>Not sure where to start?</strong>
+              <p>Tell us your sport, budget and goals. We&apos;ll put your best matches first.</p>
+            </div>
+            <Link href="/recommendations">Set my recommendations</Link>
+          </aside>
         </section>
 
         <section className="catalog-controls" aria-label="Coach filters">

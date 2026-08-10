@@ -12,7 +12,6 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "pretest": "DATABASE_URL=file:/tmp/coachconnect-test.db prisma db push --force-reset",
-    "test:phase0": "node --test scripts/phase0-preview-check.mjs",
     "test:watch": "vitest",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",

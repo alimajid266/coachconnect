@@ -1,0 +1,40 @@
+flowchart LR
+  Visitor[Visitor]
+  Member[Member or athlete]
+  Coach[Approved coach]
+  Admin[Administrator]
+
+  subgraph NextApp[Next.js 16 application]
+    UI[React 19 pages and components]
+    API[Server route handlers]
+    Discovery[Deterministic search and recommendations]
+    Plans[Optional training-plan generator]
+  end
+
+  subgraph Supabase[Supabase managed backend]
+    Auth[Authentication and sessions]
+    DB[(PostgreSQL records)]
+    RPC[RLS and transaction-safe RPC functions]
+    Storage[Private profile-image storage]
+  end
+
+  Mapbox[Mapbox approximate-area map]
+  Gemini[Gemini optional plan generation]
+  Vercel[Vercel production hosting]
+  Docker[Docker or Docker Hub runtime]
+
+  Visitor --> UI
+  Member --> UI
+  Coach --> UI
+  Admin --> UI
+  UI --> API
+  UI --> Discovery
+  UI -. public map data .-> Mapbox
+  API --> Auth
+  API --> RPC
+  RPC --> DB
+  API --> Storage
+  Plans --> Gemini
+  Plans --> DB
+  NextApp --> Vercel
+  NextApp --> Docker

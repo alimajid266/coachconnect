@@ -8,4 +8,9 @@ describe("coach catalog card sizing", () => {
     expect(css).toMatch(/\.catalog-card-body\s*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column[^}]*flex:\s*1/);
     expect(css).toMatch(/\.catalog-card-footer\s*\{[^}]*margin-top:\s*auto/);
   });
+
+  it("uses a solid high-contrast focus outline for the recommendation setup link", () => {
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).toMatch(/\.catalog-recommendation-cta a:focus-visible\s*\{[^}]*outline:\s*3px solid #10294a/);
+  });
 });

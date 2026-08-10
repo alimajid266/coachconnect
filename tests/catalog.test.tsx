@@ -39,6 +39,15 @@ describe("coach catalog", () => {
     expect(screen.getByRole("heading", { name: "Bilal Raza" })).toBeInTheDocument();
   });
 
+  it("gives first-time users a clear recommendation setup button before browsing", () => {
+    renderCatalog();
+
+    const personalization = screen.getByRole("complementary", { name: /personalize coach recommendations/i });
+    const setupLink = within(personalization).getByRole("link", { name: /set my recommendations/i });
+    expect(setupLink).toHaveAttribute("href", "/recommendations");
+    expect(within(personalization).getByText(/tell us your sport, budget and goals/i)).toBeInTheDocument();
+  });
+
   it("explains recommendation weightages and separates positive matches into a tagged top row", () => {
     renderCatalog();
 

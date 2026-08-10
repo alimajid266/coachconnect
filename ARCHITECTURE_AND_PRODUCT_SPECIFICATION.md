@@ -1,11 +1,11 @@
 # CoachConnect Architecture and Product Specification
 
-**Document status:** Maintained technical specification  
-**Architecture view:** Current local implementation plus explicitly marked release gaps  
+**Document status:** Archived technical snapshot; retained for historical traceability  
+**Architecture view:** Source state captured on 2026-08-07  
 **Snapshot:** 2026-08-07 03:44 UTC  
 **Product:** CoachConnect — zero-cost sports-coach marketplace for Pakistan
 
-> **Status boundary:** This document describes the current local source tree. The public Vercel site at `https://coachconnect-sigma.vercel.app` may run an older release. Booking and availability are release-candidate features in local code, but their hosted Supabase migration and production end-to-end verification are still pending. Ratings and reviews are planned.
+> **Archive notice:** This document is not the current release-status source. Booking, reviews, notifications, Docker publication, and production deployment advanced after this snapshot. Use [`README.md`](README.md) for current architecture, flows, implementation status, setup, and verification. The remaining status wording below is preserved as historical evidence of the August 7 checkpoint.
 
 ---
 

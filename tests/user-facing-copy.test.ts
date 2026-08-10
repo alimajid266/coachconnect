@@ -17,4 +17,17 @@ describe("user-facing copy", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it("does not claim a prebuilt image can receive a Next.js public token at runtime", () => {
+    const readme = fs.readFileSync(path.join(process.cwd(), "README.md"), "utf8");
+    const publishedImageSection = readme.split("### Run the published image on Ubuntu")[1]
+      .split("### Build from source with Compose")[0];
+    const sourceBuildSection = readme.split("### Build from source with Compose")[1]
+      .split("### When the Docker image must be updated")[0];
+
+    expect(publishedImageSection).not.toContain("NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN");
+    expect(publishedImageSection).toMatch(/Mapbox view is unavailable[\s\S]*Build from source/i);
+    expect(sourceBuildSection).toContain("NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN");
+    expect(sourceBuildSection).toMatch(/embedded[\s\S]*build/i);
+  });
 });

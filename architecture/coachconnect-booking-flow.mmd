@@ -1,40 +1,41 @@
 sequenceDiagram
   autonumber
   actor Athlete
-  participant UI as CoachConnect page
-  participant API as Vercel booking API
+  participant UI as CoachConnect
+  participant API as Next.js booking route
   participant Auth as Supabase Auth
-  participant DB as PostgreSQL transaction
-  participant RLS as RLS permission rules
-  participant Coach as Coach dashboard
+  participant DB as PostgreSQL RPC
+  actor Coach
 
-  Athlete->>UI: Choose an available future slot
-  UI->>API: POST booking request + slot ID
-  API->>Auth: Verify secure session
-  alt Not signed in
-    Auth-->>API: No valid member
-    API-->>UI: 401 — sign in first
-  else Signed in
-    Auth-->>API: Authenticated member ID
-    API->>RLS: Check athlete may book this coach
-    alt Self-booking or unauthorized
-      RLS-->>API: Denied
-      API-->>UI: Clear permission message
-    else Allowed
-      RLS-->>API: Allowed
-      API->>DB: Begin one atomic transaction
-      Note right of DB: Atomic means all booking steps succeed together or none are saved.
-      DB->>DB: Recheck future slot, coach status and availability
-      DB->>DB: Insert booking under unique active-slot rule
-      alt Another athlete already booked it
-        DB-->>API: Conflict — transaction rolled back
-        API-->>UI: Slot just became unavailable - choose another
-      else Booking succeeds
-        DB-->>API: Confirmed booking record
-        API-->>UI: Show confirmation once
-        API-->>Coach: Booking appears in coach dashboard
-      end
-    end
+  Athlete->>UI: Choose an open future slot
+  UI->>API: Request booking
+  API->>Auth: Verify member session
+  Auth-->>API: Authenticated member ID
+  API->>DB: request_coach_booking
+  DB->>DB: Recheck coach, slot, self-booking and conflicts
+  alt Slot is no longer available
+    DB-->>API: Conflict
+    API-->>UI: Ask athlete to choose another slot
+  else Request stored
+    DB-->>API: Pending booking
+    API-->>UI: Show pending request
+    DB-->>Coach: Request appears in Sessions
+    Coach->>API: Accept or decline
+    API->>DB: respond_to_coach_booking
+    DB-->>UI: Both schedules show the same result
   end
 
-  Note over Athlete,Coach: Cancellation records who cancelled and when.<br/>It frees the slot safely and displays policy wording.<br/>CoachConnect never holds money and cannot issue refunds.
+  opt Accepted booking
+    Coach->>API: Add participant-only meeting details
+    API->>DB: Save private meeting details
+    DB-->>Athlete: Sessions notification becomes available
+  end
+
+  opt Cancellation or completion
+    Athlete->>API: Cancel eligible booking
+    Coach->>API: Cancel or complete eligible booking
+    API->>DB: Apply one atomic state transition
+    DB-->>UI: Show status and demo refund-policy outcome
+  end
+
+  Note over Athlete,Coach: CoachConnect records demo accounting only and never transfers money.

@@ -33,13 +33,13 @@ Testing steps are provided briefly in chat rather than stored as a separate test
 
 ## Automated verification
 
-Command:
+The disposable Phase-0 preview checker was retired with the prototype files. Current application verification uses:
 
 ```bash
-node --test scripts/phase0-preview-check.mjs
+npm run check
 ```
 
-Verified result before checkpoint: 2 tests passed, 0 failed.
+Historical checkpoint result: 2 preview tests passed, 0 failed.
 
 ## Operational issues encountered
 
