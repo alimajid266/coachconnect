@@ -33,8 +33,8 @@ export default function HomePage() {
               <HomeVideoPlayer />
               <div className="hero-video-overlay">
                 <p className="eyebrow light">Pakistan&apos;s coaching marketplace</p>
-                <h1><span>Train smarter.</span><span>Play bolder.</span></h1>
-                <p className="hero-lead">Focused coaching across team sports, racquet sports, fitness, swimming and more, built around your goals.</p>
+                <h1><span>Find your coach.</span><span>Reach your next level.</span></h1>
+                <p className="hero-lead">Discover trusted coaching for your sport, schedule and goals across Pakistan.</p>
                 <form className="search-console" action="/coaches" method="get" aria-label="Find a coach">
                   <div className="search-field search-main">
                     <label htmlFor="home-coach-search">Sport, coach or specialty</label>
