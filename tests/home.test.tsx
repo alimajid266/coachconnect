@@ -8,7 +8,7 @@ describe("CoachConnect home page", () => {
   it("uses the stronger athletic homepage layout without becoming the catalog", () => {
     render(<HomePage />);
 
-    expect(screen.getByRole("heading", { level: 1, name: /train smarter.*play bolder/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /find your coach.*reach your next level/i })).toBeInTheDocument();
     const videos = Array.from(document.querySelectorAll("video"));
     expect(videos).toHaveLength(1);
     expect(screen.getByRole("button", { name: /play homepage sports video/i })).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe("CoachConnect home page", () => {
     fireEvent.loadedData(secondVideo);
     expect(secondVideo).not.toHaveClass("is-transitioning");
     expect(screen.getByRole("button", { name: /play homepage sports video/i })).toBeInTheDocument();
-    expect(document.querySelector(".hero-primary-card h1")).toHaveTextContent(/train smarter.*play bolder/i);
+    expect(document.querySelector(".hero-primary-card h1")).toHaveTextContent(/find your coach.*reach your next level/i);
     expect(document.body.textContent).not.toMatch(/12 sports|view all 12/i);
     expect(screen.queryByRole("region", { name: /coach results/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /view .*profile/i })).not.toBeInTheDocument();
