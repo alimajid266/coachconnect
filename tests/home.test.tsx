@@ -9,6 +9,7 @@ describe("CoachConnect home page", () => {
     render(<HomePage />);
 
     expect(screen.getByRole("heading", { level: 1, name: /find your coach.*reach your next level/i })).toBeInTheDocument();
+    expect(screen.getByText("Connect with trusted coaches for your sport, schedule and goals across Pakistan.")).toBeInTheDocument();
     const videos = Array.from(document.querySelectorAll("video"));
     expect(videos).toHaveLength(1);
     expect(screen.getByRole("button", { name: /play homepage sports video/i })).toBeInTheDocument();
